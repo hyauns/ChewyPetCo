@@ -1,0 +1,4 @@
+httpx
+playwright
+rich
+streamlit

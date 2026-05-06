@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+output/
+scraper_jobs.db
+*.db
+*.html
+.DS_Store
+urls.txt
+.env
