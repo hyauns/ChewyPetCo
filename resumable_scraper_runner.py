@@ -22,7 +22,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+import config
 import job_store
+import adsp_profile_pool_manager
 from ui_file_browser import OUTPUT_DIR, PROJECT_ROOT, read_json_file, write_json_file
 from ui_log_parser import detect_redirected_plp, strip_ansi, summarize_error, summarize_run
 
@@ -95,11 +97,13 @@ def mode_flags(mode: str, threshold: int, save_grouped_output: bool) -> dict[str
     }
 
 
-def build_env(mode: str, threshold: int, save_grouped_output: bool) -> dict[str, str]:
+def build_env(mode: str, threshold: int, save_grouped_output: bool, profile_id: str | None = None) -> dict[str, str]:
     env = os.environ.copy()
     env.update(mode_flags(mode, threshold, save_grouped_output))
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
+    if profile_id:
+        env["ADSPOWER_PROFILE_ID"] = profile_id
     return env
 
 
@@ -455,10 +459,22 @@ def process_single_item(
     log_name = f"item_{int(item['index_number']):05d}_{source_id or 'unknown'}.log"
     log_path = logs_dir / log_name
     attempts = job_store.increment_attempt_and_start(item_id, run_log_path=str(log_path.resolve()), source_product_id=source_id)
+    
+    # Phase 4 - Select Profile
+    profile_id = adsp_profile_pool_manager.get_next_available_profile(job_id, item_id)
+    if not profile_id:
+        job_store.set_job_status(job_id, "paused", last_error="all_profiles_exhausted")
+        print(f"[red]Job {job_id} paused: All configured AdsPower profiles produced white screen or are quarantined. Manual action required.[/red]")
+        job_store.update_item_status(item_id, "paused", error_type="all_profiles_exhausted", error_message="No profiles available.")
+        return job_store.get_item(item_id) or {}
+        
+    adsp_profile_pool_manager.mark_profile_in_use(profile_id)
+    job_store.update_item(item_id, profile_id_used=profile_id)
+    
     started_at = time.time()
     started_iso = job_store.utc_now()
     command = [sys.executable, "-u", "test_single_product.py", url]
-    env = build_env(mode, threshold, bool(job["save_grouped_output"]))
+    env = build_env(mode, threshold, bool(job["save_grouped_output"]), profile_id)
     lines: list[str] = []
 
     with open(log_path, "w", encoding="utf-8", errors="replace") as log_file:
@@ -489,6 +505,45 @@ def process_single_item(
 
     duration = round(time.time() - started_at, 2)
     log_text = "".join(lines)
+    
+    # Phase 4 - Check for White Screen Detection
+    white_screen_str = "[WHITE_SCREEN_RESULT] "
+    for line in lines:
+        if white_screen_str in line:
+            json_str = line.split(white_screen_str, 1)[1].strip()
+            try:
+                detection_result = json.loads(json_str)
+                adsp_profile_pool_manager.quarantine_profile(profile_id, f"White screen on {url}")
+                adsp_profile_pool_manager.record_white_screen_event(job_id, item_id, url, profile_id, "profile_quarantined", detection_result)
+                
+                # Update item state
+                ws_count = int(item.get("white_screen_count") or 0) + 1
+                job_store.update_item(item_id, white_screen_count=ws_count, last_white_screen_at=job_store.utc_now())
+                
+                # Append to profile_attempts_json
+                attempts_json = json.loads(item.get("profile_attempts_json") or "[]")
+                attempts_json.append({
+                    "attempt": attempts,
+                    "profile_id": profile_id,
+                    "result": "white_screen_block",
+                    "screenshot_path": detection_result.get("screenshot_path"),
+                    "timestamp": job_store.utc_now()
+                })
+                
+                if attempts < config.ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM:
+                    job_store.update_item_status(item_id, "pending", error_type="white_screen_block", error_message=f"White screen detected, retrying. (Attempt {attempts})", profile_attempts_json=json.dumps(attempts_json))
+                else:
+                    job_store.update_item_status(item_id, "failed", error_type="white_screen_block", error_message=f"White screen detected, max attempts reached.", profile_attempts_json=json.dumps(attempts_json))
+                
+                job_store.update_job_counts(job_id)
+                return job_store.get_item(item_id) or {}
+            except Exception as e:
+                pass
+                
+    # If not white screen, mark success for profile if it actually exited cleanly or got data
+    # (We can be conservative and just mark available)
+    adsp_profile_pool_manager.mark_profile_success(profile_id)
+    
     output_paths = discover_item_outputs(source_id, started_at, mode, job_dir)
     diagnostic = read_diagnostic(output_paths.get("diagnostic_output_path"))
     status_info = summarize_run(
@@ -794,6 +849,10 @@ def build_parser() -> argparse.ArgumentParser:
     retry.add_argument("--force", action="store_true")
     retry.add_argument("--no-start", action="store_true")
     retry.add_argument("--max-items", type=int)
+    
+    retry_next = sub.add_parser("retry-next-profile", help="Retry a specific paused/failed item with the next profile")
+    retry_next.add_argument("--job-id", required=True)
+    retry_next.add_argument("--item-id", required=True, type=int)
 
     stat = sub.add_parser("status", help="Show job status")
     stat.add_argument("--job-id", required=True)
@@ -868,6 +927,18 @@ def main(argv: list[str] | None = None) -> int:
             on_line=print,
         )
         print(json.dumps(result, indent=2))
+        return 0
+        
+    if args.command == "retry-next-profile":
+        import adsp_profile_pool_manager
+        job_store.update_item_status(args.item_id, "pending")
+        profile_id = adsp_profile_pool_manager.get_next_available_profile(args.job_id, args.item_id)
+        if not profile_id:
+            print("No profiles available in the pool. Release one first.")
+            return 1
+        print(f"Retrying item {args.item_id} with profile {profile_id}...")
+        res = process_single_item(args.job_id, args.item_id, force_retry=True, on_line=print)
+        print(json.dumps(res, indent=2))
         return 0
 
     if args.command == "status":

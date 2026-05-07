@@ -118,6 +118,7 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
                 price_max REAL,
                 mode TEXT NOT NULL,
                 output_dir TEXT NOT NULL,
+                max_pages INTEGER,
                 last_error TEXT
             );
 
@@ -148,8 +149,55 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
 
             CREATE INDEX IF NOT EXISTS idx_category_items_job_status
                 ON category_discovery_items(category_job_id, status);
+                
+            CREATE TABLE IF NOT EXISTS adsp_profile_pool (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_id TEXT NOT NULL UNIQUE,
+                label TEXT,
+                status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','in_use','quarantined','disabled')),
+                last_used_at TEXT,
+                last_white_screen_at TEXT,
+                quarantine_until TEXT,
+                total_attempts INTEGER NOT NULL DEFAULT 0,
+                total_success INTEGER NOT NULL DEFAULT 0,
+                total_white_screen INTEGER NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS white_screen_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL UNIQUE,
+                job_id TEXT,
+                item_id INTEGER,
+                input_url TEXT,
+                profile_id TEXT NOT NULL,
+                proxy_uuid TEXT,
+                event_type TEXT NOT NULL CHECK(event_type IN ('detected','profile_quarantined','retry_scheduled','retry_started','retry_success','retry_failed','all_profiles_exhausted','manual_resume_required')),
+                detection_confidence REAL,
+                signals_json TEXT,
+                screenshot_path TEXT,
+                html_snapshot_path TEXT,
+                message TEXT,
+                created_at TEXT NOT NULL
+            );
             """
         )
+        try:
+            conn.execute("ALTER TABLE category_discovery_jobs ADD COLUMN max_pages INTEGER")
+        except sqlite3.OperationalError:
+            pass
+            
+        # Phase 4 scrape_job_items alterations
+        try:
+            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN profile_id_used TEXT")
+            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN profile_attempts_json TEXT")
+            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN white_screen_count INTEGER NOT NULL DEFAULT 0")
+            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN last_white_screen_at TEXT")
+            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN retry_queue_status TEXT")
+        except sqlite3.OperationalError:
+            pass
 
 
 def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -566,6 +614,7 @@ def create_category_job(
     price_min: float | None = None,
     price_max: float | None = None,
     mode: str = "hybrid",
+    max_pages: int | None = None,
     output_dir: str | None = None
 ) -> str:
     init_db()
@@ -579,13 +628,13 @@ def create_category_job(
             """
             INSERT INTO category_discovery_jobs (
                 category_job_id, name, category_url, created_at, updated_at, status,
-                price_min, price_max, mode, output_dir
+                price_min, price_max, mode, output_dir, max_pages
             )
-            VALUES (?, ?, ?, ?, ?, 'created', ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, 'created', ?, ?, ?, ?, ?)
             """,
             (
                 job_id, name.strip() or job_id, category_url.strip(), now, now,
-                price_min, price_max, mode, str(job_output_dir.resolve())
+                price_min, price_max, mode, str(job_output_dir.resolve()), max_pages
             )
         )
         conn.commit()

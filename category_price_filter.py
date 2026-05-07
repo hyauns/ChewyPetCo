@@ -21,7 +21,7 @@ def parse_price_to_float(raw_price: str) -> dict:
     
     # Find all floats/ints that look like currency amounts
     # e.g., $40, 40.00, 1,000.50
-    matches = re.findall(r'\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', clean_str)
+    matches = re.findall(r'(?<!\d)\d+(?:,\d{3})*(?:\.\d{2})?(?!\d)', clean_str)
     
     if not matches:
         return {

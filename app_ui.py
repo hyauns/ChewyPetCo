@@ -37,6 +37,9 @@ from ui_runner import (
     run_single_product,
     validate_chewy_url,
 )
+
+import importlib
+
 import job_store
 import resumable_scraper_runner as job_runner
 
@@ -1055,6 +1058,59 @@ def tab_run_history() -> None:
             st.code(read_text_file(selected["run_log"], limit_chars=20000), language="text")
 
 
+def tab_adsp_pool() -> None:
+    st.header("AdsPower Profile Pool")
+    st.warning("This tool does not bypass captcha or anti-bot systems. Profile rotation is limited to user-configured profiles and controlled retries. If all profiles are blocked, job will pause for manual action.")
+    
+    import adsp_profile_pool_manager
+    import config
+    
+    if not config.ADSP_PROFILE_POOL_ENABLED:
+        st.info("Profile Pool is disabled in config. To enable it, set ADSP_PROFILE_POOL_ENABLED=true")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if st.button("Refresh Profile Pool", key="btn_refresh_pool"):
+            adsp_profile_pool_manager.sync_profile_pool_to_db()
+            st.rerun()
+            
+    profiles = adsp_profile_pool_manager.get_profile_health_summary()
+    st.dataframe(profiles, use_container_width=True)
+    
+    st.subheader("Manual Controls")
+    c1, c2, c3 = st.columns(3)
+    
+    selected_profile = st.selectbox("Select Profile ID", [p["profile_id"] for p in profiles]) if profiles else None
+    
+    with c1:
+        if st.button("Release Quarantined Profile") and selected_profile:
+            adsp_profile_pool_manager.release_profile(selected_profile)
+            st.rerun()
+            
+    with c2:
+        if st.button("Quarantine Profile (30m)") and selected_profile:
+            adsp_profile_pool_manager.quarantine_profile(selected_profile, "Manual UI Quarantine", 30)
+            st.rerun()
+            
+    with c3:
+        if st.button("Disable Profile") and selected_profile:
+            import job_store
+            with job_store.connect() as conn:
+                conn.execute("UPDATE adsp_profile_pool SET status = 'disabled' WHERE profile_id = ?", (selected_profile,))
+                conn.commit()
+            st.rerun()
+            
+    st.divider()
+    st.subheader("White Screen Events")
+    import job_store
+    try:
+        with job_store.connect() as conn:
+            events = job_store.rows_to_dicts(conn.execute("SELECT * FROM white_screen_events ORDER BY created_at DESC LIMIT 50").fetchall())
+        st.dataframe(events, use_container_width=True)
+    except Exception:
+        st.info("No white screen events table found yet.")
+
+
 def sidebar_settings() -> tuple[str, int, bool]:
     st.sidebar.header("Run Settings")
     mode = st.sidebar.selectbox("Default mode", MODES, index=MODES.index(MODE_JSON_FALLBACK))
@@ -1081,6 +1137,7 @@ def main() -> None:
             "Grouped Output Preview",
             "Validation",
             "Diagnostics",
+            "AdsPower Pool",
             "Run History",
         ]
     )
@@ -1103,6 +1160,8 @@ def main() -> None:
     with tabs[7]:
         tab_diagnostics()
     with tabs[8]:
+        tab_adsp_pool()
+    with tabs[9]:
         tab_run_history()
 
 

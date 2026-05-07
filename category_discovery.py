@@ -8,6 +8,9 @@ from urllib.parse import urljoin, urlparse
 from playwright.async_api import async_playwright
 import category_price_filter
 import job_store
+import adspower
+import adsp_profile_pool_manager
+import config
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
@@ -32,11 +35,21 @@ async def discover_category_products(
     # Extract base URL without page
     parsed = urlparse(category_url)
     
+    profile_id = adsp_profile_pool_manager.get_next_available_profile()
+    if not profile_id:
+        logger.error("No profiles available in pool.")
+        job_store.update_category_job(category_job_id, status="paused", last_error="all_profiles_exhausted")
+        return
+        
+    adsp_profile_pool_manager.mark_profile_in_use(profile_id)
+    
     async with async_playwright() as p:
         try:
-            browser = await p.chromium.connect_over_cdp("http://127.0.0.1:9222")
+            profile_data = adspower.start_profile(profile_id)
+            ws_url = adspower.get_ws_endpoint(profile_data)
+            browser = await p.chromium.connect_over_cdp(ws_url)
             context = browser.contexts[0]
-            logger.info("Connected to AdsPower CDP")
+            logger.info(f"Connected to AdsPower CDP at {ws_url}")
         except Exception as e:
             logger.info(f"Failed to connect to AdsPower CDP, falling back to launch: {e}")
             browser = await p.chromium.launch(headless=True)
@@ -65,6 +78,37 @@ async def discover_category_products(
                     logger.error(f"Failed to load page {current_page}: {e}")
                     job_store.update_category_job(category_job_id, status="paused", last_error=str(e))
                     break
+                
+                # Phase 4 - White Screen Detection
+                detection_result = await adsp_profile_pool_manager.detect_white_screen_block(page, page_url)
+                if detection_result["is_white_screen"]:
+                    logger.error(f"White screen detected on category page {current_page}")
+                    
+                    if config.ADSP_SAVE_WHITE_SCREEN_SCREENSHOT:
+                        try:
+                            import uuid, os
+                            os.makedirs("output/white_screen_events", exist_ok=True)
+                            screenshot_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.png"
+                            await page.screenshot(path=screenshot_path)
+                            detection_result["screenshot_path"] = screenshot_path
+                        except: pass
+                    if config.ADSP_SAVE_WHITE_SCREEN_HTML:
+                        try:
+                            import uuid
+                            html_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.html"
+                            with open(html_path, "w", encoding="utf-8") as f:
+                                f.write(await page.content())
+                            detection_result["html_snapshot_path"] = html_path
+                        except: pass
+                        
+                    adsp_profile_pool_manager.quarantine_profile(profile_id, f"White screen on {page_url}")
+                    adsp_profile_pool_manager.record_white_screen_event(category_job_id, 0, page_url, profile_id, "profile_quarantined", detection_result)
+                    
+                    # Pause the job for manual intervention, do NOT increment page, so we retry this page later
+                    job_store.update_category_job(category_job_id, status="paused", last_error="white_screen_block")
+                    break
+                    
+                adsp_profile_pool_manager.mark_profile_success(profile_id)
                 
                 # Check if it's a 404 or no products
                 content = await page.content()

@@ -11,13 +11,14 @@ from pathlib import Path
 import job_store
 import category_discovery
 
-def create_category_discovery_job(name: str, url: str, price_min: float | None = None, price_max: float | None = None, mode: str = "hybrid") -> str:
+def create_category_discovery_job(name: str, url: str, price_min: float | None = None, price_max: float | None = None, mode: str = "hybrid", max_pages: int | None = None) -> str:
     return job_store.create_category_job(
         name=name,
         category_url=url,
         price_min=price_min,
         price_max=price_max,
-        mode=mode
+        mode=mode,
+        max_pages=max_pages
     )
 
 async def run_category_discovery_job(category_job_id: str, max_pages: int | None = None):
@@ -26,13 +27,17 @@ async def run_category_discovery_job(category_job_id: str, max_pages: int | None
         print(f"Job not found: {category_job_id}")
         return
         
+    actual_max_pages = max_pages
+    if actual_max_pages is None:
+        actual_max_pages = job.get("max_pages")
+    
     await category_discovery.discover_category_products(
         category_job_id=category_job_id,
         category_url=job["category_url"],
         price_min=job["price_min"],
         price_max=job["price_max"],
         mode=job["mode"],
-        max_pages=max_pages
+        max_pages=actual_max_pages
     )
     import category_discovery_validation
     report = category_discovery_validation.validate_category_discovery(category_job_id)
@@ -90,6 +95,7 @@ if __name__ == "__main__":
     create_p.add_argument("--price-min", type=float)
     create_p.add_argument("--price-max", type=float)
     create_p.add_argument("--mode", default="hybrid", choices=["hybrid", "card_price_prefilter", "pdp_variant_filter"])
+    create_p.add_argument("--max-pages", type=int, help="Optional max pages to discover")
     
     start_p = subparsers.add_parser("start")
     start_p.add_argument("--category-job-id", required=True)
@@ -113,7 +119,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if args.command == "create":
-        jid = create_category_discovery_job(args.name, args.category_url, args.price_min, args.price_max, args.mode)
+        jid = create_category_discovery_job(args.name, args.category_url, args.price_min, args.price_max, args.mode, args.max_pages)
         print(f"Created category job: {jid}")
     elif args.command in ("start", "resume"):
         asyncio.run(run_category_discovery_job(args.category_job_id, args.max_pages))

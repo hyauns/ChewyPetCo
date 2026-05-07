@@ -8,6 +8,7 @@ from playwright.async_api import async_playwright
 
 import config
 import adspower
+import adsp_profile_pool_manager
 
 console = Console()
 OUT_DIR = Path(config.OUTPUT_DIR)
@@ -108,6 +109,57 @@ def detect_chewy_architecture(next_data: dict) -> str:
     else:
         console.print("[yellow]Diagnostic warning: Unknown architecture. Neither __APOLLO_STATE__ nor initialState found.[/yellow]")
         return "unknown"
+
+
+def classify_gtin(value: str) -> dict:
+    if not value:
+        return {"raw": value, "normalized": value, "type": "unknown", "is_valid_length": False, "checksum_valid": None}
+    
+    val_str = str(value).replace(" ", "").replace("-", "")
+    digits_only = "".join(c for c in val_str if c.isdigit())
+    
+    length = len(digits_only)
+    id_type = "unknown"
+    is_valid_length = False
+    
+    if length == 12:
+        id_type = "upc"
+        is_valid_length = True
+    elif length == 13:
+        id_type = "ean"
+        is_valid_length = True
+    elif length == 14:
+        id_type = "gtin14"
+        is_valid_length = True
+        
+    return {
+        "raw": str(value).strip(),
+        "normalized": digits_only if is_valid_length else val_str,
+        "type": id_type,
+        "is_valid_length": is_valid_length,
+        "checksum_valid": None
+    }
+
+def build_variant_identifiers(gtin: str, source_sku: str, source_item_id: str, mpn: str = None) -> dict:
+    idents = {
+        "upc": None,
+        "gtin": None,
+        "ean": None,
+        "mpn": mpn,
+        "source_sku": str(source_sku) if source_sku else None,
+        "source_item_id": str(source_item_id) if source_item_id else None
+    }
+    
+    if gtin:
+        classified = classify_gtin(gtin)
+        if classified["is_valid_length"]:
+            idents["gtin"] = classified["raw"]
+            if classified["type"] == "upc":
+                idents["upc"] = classified["raw"]
+            elif classified["type"] == "ean":
+                idents["ean"] = classified["raw"]
+                
+    return idents
 
 def parse_apollo_product(next_data: dict, source_url: str) -> dict:
     props = next_data.get("props", {}).get("pageProps", {})
@@ -222,9 +274,14 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
                         v_images.append(img_v)
                         break
                         
+        raw_gtin = v.get("gtin")
+        mpn = v.get("manufacturerPartNumber")
+        idents = build_variant_identifiers(raw_gtin, v_id, v_id, mpn)
+        
         normalized_variants.append({
             "source_variant_id": v_id,
             "sku": v_id,
+            "identifiers": idents,
             "title": v.get("name", ""),
             "option_values": option_values,
             "price": price,
@@ -357,9 +414,14 @@ def parse_redux_product(next_data: dict, source_url: str) -> dict:
                             
                 v_imgs = []
                 
+                raw_gtin = v.get("gtin")
+                mpn = v.get("manufacturerPartNumber")
+                idents = build_variant_identifiers(raw_gtin, v_id, v_id, mpn)
+                
                 variants_list.append({
                     "source_variant_id": v_id,
                     "sku": v_id,
+                    "identifiers": idents,
                     "title": v.get("name", title),
                     "option_values": option_values,
                     "price": price,
@@ -373,9 +435,14 @@ def parse_redux_product(next_data: dict, source_url: str) -> dict:
                 
     if not variants_list and best_product:
         v_id = best_product.get("partNumber", base_product_id)
+        raw_gtin = best_product.get("gtin")
+        mpn = best_product.get("manufacturerPartNumber")
+        idents = build_variant_identifiers(raw_gtin, v_id, v_id, mpn)
+        
         variants_list.append({
             "source_variant_id": v_id,
             "sku": v_id,
+            "identifiers": idents,
             "title": title,
             "option_values": {},
             "price": best_product.get("price") or best_product.get("advertisedPrice"),
@@ -907,6 +974,13 @@ def validate_normalized_product(normalized_product: dict, grouped_product: dict)
         missing_preferred.append("specifications")
         
     variants = normalized_product.get("variants", [])
+    
+    total_variants = 0
+    variants_with_gtin = 0
+    variants_with_upc = 0
+    variants_with_ean = 0
+    variants_missing_gtin = 0
+    
     if not variants:
         missing_required.append("variants")
     else:
@@ -952,6 +1026,49 @@ def validate_normalized_product(normalized_product: dict, grouped_product: dict)
                 for v in p["variants"]:
                     if v.get("option1_name") == "Flavor" or v.get("option_values", {}).get("flavor"):
                         warnings.append(f"Group {i} variant incorrectly retains Flavor option.")
+                        
+                    total_variants += 1
+                    idents = v.get("identifiers")
+                    if not idents:
+                        warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} missing identifiers object.")
+                        variants_missing_gtin += 1
+                    else:
+                        if v.get("sku") and not idents.get("source_sku"):
+                            warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} identifiers.source_sku missing when sku exists.")
+                        if v.get("source_variant_id") and not idents.get("source_item_id"):
+                            warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} identifiers.source_item_id missing when source_variant_id exists.")
+                            
+                        gtin = idents.get("gtin")
+                        if gtin:
+                            variants_with_gtin += 1
+                            if not isinstance(gtin, str):
+                                warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} identifiers.gtin is not a string.")
+                            
+                            digits_only = "".join(c for c in str(gtin) if c.isdigit())
+                            if len(digits_only) not in [12, 13, 14]:
+                                warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} has invalid gtin length ({len(digits_only)} digits).")
+                                
+                            if len(str(gtin)) > 0 and str(gtin)[0] != digits_only[0]:
+                                pass # Non-digit leading character is odd but maybe possible
+                        else:
+                            warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} missing gtin.")
+                            variants_missing_gtin += 1
+                            
+                        upc = idents.get("upc")
+                        if upc:
+                            variants_with_upc += 1
+                            upc_digits = "".join(c for c in str(upc) if c.isdigit())
+                            if len(upc_digits) != 12:
+                                warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} identifiers.upc must be 12 digits.")
+                            if upc_digits in [str(v.get("sku", "")), str(v.get("source_variant_id", ""))]:
+                                warnings.append(f"Internal sku was mapped as UPC for variant {v.get('source_variant_id', 'unknown')}.")
+                                
+                        ean = idents.get("ean")
+                        if ean:
+                            variants_with_ean += 1
+                            ean_digits = "".join(c for c in str(ean) if c.isdigit())
+                            if len(ean_digits) != 13:
+                                warnings.append(f"Variant {v.get('source_variant_id', 'unknown')} identifiers.ean must be 13 digits.")
             
             t = p.get("title", "").lower()
             if re.search(r'(bag|can|pouch|tray|bottle|box|cartons?|count|pack|pouches?)$', t):
@@ -987,12 +1104,24 @@ def validate_normalized_product(normalized_product: dict, grouped_product: dict)
     score -= len(warnings) * 2
     score = max(0, score)
     
+    gtin_coverage = 0
+    if total_variants > 0:
+        gtin_coverage = (variants_with_gtin / total_variants) * 100
+        
     return {
         "is_valid": len(missing_required) == 0,
         "confidence_score": score,
         "missing_required_fields": missing_required,
         "missing_preferred_fields": missing_preferred,
-        "warnings": warnings
+        "warnings": warnings,
+        "identifier_coverage": {
+            "total_variants": total_variants,
+            "variants_with_gtin": variants_with_gtin,
+            "variants_with_upc": variants_with_upc,
+            "variants_with_ean": variants_with_ean,
+            "variants_missing_gtin": variants_missing_gtin,
+            "gtin_coverage_percent": gtin_coverage
+        }
     }
 
 
@@ -1008,6 +1137,33 @@ async def extract_chewy_product(url: str):
         page = context.pages[0] if context.pages else await context.new_page()
         
         html = await fetch_initial_html(url, page)
+        
+        # Phase 4 - White Screen Detection
+        detection_result = await adsp_profile_pool_manager.detect_white_screen_block(page, url)
+        if detection_result["is_white_screen"]:
+            if config.ADSP_SAVE_WHITE_SCREEN_SCREENSHOT:
+                try:
+                    import uuid
+                    import os
+                    os.makedirs("output/white_screen_events", exist_ok=True)
+                    screenshot_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.png"
+                    await page.screenshot(path=screenshot_path)
+                    detection_result["screenshot_path"] = screenshot_path
+                except Exception:
+                    pass
+            if config.ADSP_SAVE_WHITE_SCREEN_HTML:
+                try:
+                    import uuid
+                    html_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.html"
+                    with open(html_path, "w", encoding="utf-8") as f:
+                        f.write(html)
+                    detection_result["html_snapshot_path"] = html_path
+                except Exception:
+                    pass
+            console.print("[red][WHITE_SCREEN_DETECTED][/red]")
+            print(f"[WHITE_SCREEN_RESULT] {json.dumps(detection_result)}")
+            return
+            
         next_data = extract_next_data_from_html(html)
         
         build_id = detect_next_build_id(next_data, html)

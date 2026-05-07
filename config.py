@@ -3,11 +3,11 @@ Configuration for Pet Product Scraper (Chewy / Petco).
 Update ADSPOWER_PROFILE_ID with your actual AdsPower browser profile ID.
 """
 
+import os
+
 # AdsPower Local API
 ADSPOWER_API_BASE = "http://127.0.0.1:50325"
-ADSPOWER_PROFILE_ID = "k1bxat0h"  # <-- Set your AdsPower profile ID here
-
-import os
+ADSPOWER_PROFILE_ID = os.environ.get("ADSPOWER_PROFILE_ID", "k143x098")  # <-- Set your AdsPower profile ID here
 
 # ---------------------------------------------------------------------------
 # Feature Flags - Phase 3C
@@ -44,3 +44,16 @@ CHEWY_PRICE_FILTERS = [
 
 # Output
 OUTPUT_DIR = "output"
+
+# ---------------------------------------------------------------------------
+# Phase 4 - Profile Pool & White Screen Recovery
+# ---------------------------------------------------------------------------
+ADSP_PROFILE_POOL_ENABLED = os.environ.get("ADSP_PROFILE_POOL_ENABLED", "true").lower() == "true"
+ADSP_PROFILE_POOL_IDS = [p.strip() for p in os.environ.get("ADSP_PROFILE_POOL_IDS", "k143x098,k1bpayje,k136h396").split(",") if p.strip()]
+ADSP_PROFILE_ROTATION_MODE = os.environ.get("ADSP_PROFILE_ROTATION_MODE", "controlled")
+ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM = int(os.environ.get("ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM", "3"))
+ADSP_PROFILE_QUARANTINE_MINUTES = int(os.environ.get("ADSP_PROFILE_QUARANTINE_MINUTES", "30"))
+ADSP_WHITE_SCREEN_RETRY_DELAY_SECONDS = int(os.environ.get("ADSP_WHITE_SCREEN_RETRY_DELAY_SECONDS", "60"))
+ADSP_WHITE_SCREEN_DETECTION_ENABLED = os.environ.get("ADSP_WHITE_SCREEN_DETECTION_ENABLED", "true").lower() == "true"
+ADSP_SAVE_WHITE_SCREEN_SCREENSHOT = os.environ.get("ADSP_SAVE_WHITE_SCREEN_SCREENSHOT", "true").lower() == "true"
+ADSP_SAVE_WHITE_SCREEN_HTML = os.environ.get("ADSP_SAVE_WHITE_SCREEN_HTML", "true").lower() == "true"
