@@ -887,7 +887,7 @@ def process_job(
     if not job:
         raise ValueError(f"Job not found: {job_id}")
 
-     orphaned = job_store.mark_orphan_running_items(job_id)
+    orphaned = job_store.mark_orphan_running_items(job_id)
     if orphaned and on_line:
         on_line(f"[job {job_id}] Reset {orphaned} orphan running item(s) to pending.")
     effective_stale = 0 if force_retry else stale_minutes
