@@ -31,7 +31,10 @@ def connect(db_path: str | Path = DB_PATH) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+    except sqlite3.OperationalError:
+        pass  # WAL may already be set or DB is temporarily locked
     return conn
 
 
@@ -1026,6 +1029,9 @@ def update_registry_extraction_status(product_id: str, status: str, pdp_job_id: 
         
     params.append(product_id)
     
-    with connect() as conn:
-        conn.execute(f"UPDATE chewy_product_registry SET {', '.join(update_fields)} WHERE product_id = ?", tuple(params))
-        conn.commit()
+    try:
+        with connect() as conn:
+            conn.execute(f"UPDATE chewy_product_registry SET {', '.join(update_fields)} WHERE product_id = ?", tuple(params))
+            conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Non-critical: registry update failed due to DB lock, item processing continues
