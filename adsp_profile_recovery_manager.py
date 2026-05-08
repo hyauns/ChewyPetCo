@@ -509,10 +509,20 @@ def consume_rebuild_request(slot_id: str) -> bool:
 
 
 def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
-    response = httpx.post(_api_url(path), json=payload, timeout=timeout)
-    data = response.json()
+    try:
+        response = httpx.post(_api_url(path), json=payload, timeout=timeout)
+    except Exception as exc:
+        raise RuntimeError(f"AdsPower API request failed for {path}: {exc}") from exc
+    try:
+        data = response.json()
+    except Exception as exc:
+        body = response.text[:500] if response.text else ""
+        raise RuntimeError(
+            f"AdsPower API returned non-JSON response for {path}: "
+            f"status={response.status_code} body={body}"
+        ) from exc
     if data.get("code") != 0:
-        raise RuntimeError(f"AdsPower API failed: {data.get('msg', data)}")
+        raise RuntimeError(f"AdsPower API failed for {path}: {data.get('msg', data)}")
     return data
 
 
@@ -688,6 +698,7 @@ def auto_rebuild_profile(
 
 def rebuild_all_slots(*, reason: str = "all_profiles_white_screen") -> dict[str, Any]:
     """Rebuild all CW profile slots. Returns summary with success bool."""
+    sync_profile_templates_to_db()
     results = []
     all_ok = True
     for slot_id in get_template_slots():
