@@ -544,6 +544,7 @@ def _create_adspower_profile(template: dict[str, Any]) -> str:
         "group_id": str(getattr(config, "ADSP_PROFILE_GROUP_ID", "0")),
         "remark": f"Controlled Chewy worker slot {template['slot_id']}",
         "user_proxy_config": {
+            "proxy_soft": "other",
             "proxy_type": template["proxy_type"],
             "proxy_host": template["proxy_host"],
             "proxy_port": template["proxy_port"],
@@ -555,7 +556,11 @@ def _create_adspower_profile(template: dict[str, Any]) -> str:
         "fingerprint_config": {"automatic_timezone": "1"},
     }
     data = _post_adspower("/api/v1/user/create", payload, timeout=90)
-    profile_id = (data.get("data") or {}).get("id") or (data.get("data") or {}).get("user_id")
+    profile_id = (
+        (data.get("data") or {}).get("id")
+        or (data.get("data") or {}).get("profile_id")
+        or (data.get("data") or {}).get("user_id")
+    )
     if not profile_id:
         raise RuntimeError(f"AdsPower create returned no profile id: {data}")
     return str(profile_id)

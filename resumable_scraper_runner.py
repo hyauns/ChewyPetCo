@@ -858,7 +858,14 @@ def process_item_with_rotation(
         )
 
         if not rebuild_result.get("success"):
-            msg = f"Auto-rebuild failed (Round {rebuild_round}). Manual action required."
+            slot_errors = []
+            for slot_result in rebuild_result.get("slots", []):
+                if not slot_result.get("success"):
+                    slot_errors.append(
+                        f"{slot_result.get('slot_id')}: {slot_result.get('message') or 'unknown error'}"
+                    )
+            detail = "; ".join(slot_errors) if slot_errors else "No slot detail returned."
+            msg = f"Auto-rebuild failed (Round {rebuild_round}). Manual action required. Details: {detail}"
             if on_line:
                 on_line(f"[job {job_id}] {msg}")
             job_store.update_item_status(item_id, "paused", error_type="rebuild_failed", error_message=msg)

@@ -29,7 +29,7 @@ def _load_local_env(path: str = ".env") -> None:
 _load_local_env()
 
 # AdsPower Local API
-ADSPOWER_API_BASE = "http://127.0.0.1:50325"
+ADSPOWER_API_BASE = os.environ.get("ADSPOWER_API_BASE", "http://127.0.0.1:50325")
 ADSPOWER_PROFILE_ID = os.environ.get("ADSPOWER_PROFILE_ID", "k143x098")  # <-- Set your AdsPower profile ID here
 
 # ---------------------------------------------------------------------------
