@@ -38,6 +38,44 @@ def sync_profile_pool_to_db() -> None:
             )
         conn.commit()
 
+def sync_template_profiles_to_pool() -> dict[str, str]:
+    """Insert currently mapped CW template profile ids into the runtime pool.
+
+    Returns {profile_id: slot_id}. If no CW templates are configured/mapped,
+    callers should fall back to the legacy ADSP_PROFILE_POOL_IDS behavior.
+    """
+    if not getattr(config, "ADSP_PROFILE_RECOVERY_ENABLED", False):
+        return {}
+    try:
+        import adsp_profile_recovery_manager
+    except Exception:
+        return {}
+
+    adsp_profile_recovery_manager.sync_profile_templates_to_db()
+    rows = adsp_profile_recovery_manager.get_profile_template_status()
+    active: dict[str, str] = {}
+    now = utc_now()
+    with job_store.connect() as conn:
+        for row in rows:
+            profile_id = row.get("adspower_profile_id")
+            if not profile_id or row.get("status") in {"disabled", "rebuild_failed", "rebuilding"}:
+                continue
+            active[str(profile_id)] = row["slot_id"]
+            conn.execute(
+                """
+                INSERT INTO adsp_profile_pool (
+                    profile_id, label, status, created_at, updated_at
+                )
+                VALUES (?, ?, 'available', ?, ?)
+                ON CONFLICT(profile_id) DO UPDATE SET
+                    label = excluded.label,
+                    updated_at = excluded.updated_at
+                """,
+                (str(profile_id), row.get("display_name") or row["slot_id"], now, now),
+            )
+        conn.commit()
+    return active
+
 def release_stale_in_use_profiles() -> int:
     """Release profiles left in_use when no item is currently running with them."""
     if not config.ADSP_PROFILE_POOL_ENABLED:
@@ -76,6 +114,7 @@ def get_next_available_profile(job_id: str = None, item_id: int = None) -> str |
         return config.ADSPOWER_PROFILE_ID
         
     sync_profile_pool_to_db()
+    template_profiles = sync_template_profiles_to_pool()
     release_stale_in_use_profiles()
     now = utc_now()
     
@@ -91,18 +130,64 @@ def get_next_available_profile(job_id: str = None, item_id: int = None) -> str |
         )
         conn.commit()
         
-        row = conn.execute(
-            """
-            SELECT profile_id FROM adsp_profile_pool 
-            WHERE status = 'available'
-            ORDER BY last_used_at ASC NULLS FIRST
-            LIMIT 1
-            """
-        ).fetchone()
+        if template_profiles:
+            placeholders = ",".join("?" for _ in template_profiles)
+            row = conn.execute(
+                f"""
+                SELECT profile_id FROM adsp_profile_pool
+                WHERE status = 'available'
+                  AND profile_id IN ({placeholders})
+                ORDER BY last_used_at ASC NULLS FIRST
+                LIMIT 1
+                """,
+                tuple(template_profiles.keys()),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                SELECT profile_id FROM adsp_profile_pool 
+                WHERE status = 'available'
+                ORDER BY last_used_at ASC NULLS FIRST
+                LIMIT 1
+                """
+            ).fetchone()
         
         if row:
             return row["profile_id"]
     return None
+
+def activate_only_profiles(profile_ids: list[str], reason: str = "Activated after auto-rebuild") -> int:
+    """Make rebuilt profiles available and keep older pool profiles disabled."""
+    clean_ids = [str(pid) for pid in profile_ids if pid]
+    if not clean_ids:
+        return 0
+    now = utc_now()
+    placeholders = ",".join("?" for _ in clean_ids)
+    with job_store.connect() as conn:
+        conn.execute(
+            f"""
+            UPDATE adsp_profile_pool
+            SET status = 'disabled',
+                notes = ?,
+                quarantine_until = NULL,
+                updated_at = ?
+            WHERE profile_id NOT IN ({placeholders})
+            """,
+            (reason, now, *clean_ids),
+        )
+        cursor = conn.execute(
+            f"""
+            UPDATE adsp_profile_pool
+            SET status = 'available',
+                quarantine_until = NULL,
+                notes = ?,
+                updated_at = ?
+            WHERE profile_id IN ({placeholders})
+            """,
+            (reason, now, *clean_ids),
+        )
+        conn.commit()
+        return cursor.rowcount
 
 def mark_profile_in_use(profile_id: str) -> None:
     if not config.ADSP_PROFILE_POOL_ENABLED:

@@ -54,6 +54,7 @@ HARD_ERROR_TYPES = {
     "invalid_url",
     "low_confidence",
     "validation_failed",
+    "dependency_error",
 }
 
 
@@ -297,6 +298,12 @@ def classify_failure(
         return "validation_failed", diag_error or "Validation failed.", False
     if output_paths.get("confidence_score") is not None and float(output_paths["confidence_score"]) < threshold:
         return "low_confidence", "Extraction confidence is below threshold.", False
+    if "greenlet" in lower and ("dll load failed" in lower or "no module named" in lower or "importerror" in lower):
+        return (
+            "dependency_error",
+            "Playwright/greenlet dependency is broken for the active Python environment. Reinstall dependencies or run with the supported project Python before resuming.",
+            False,
+        )
     if "adspower" in lower and any(token in lower for token in ["failed", "refused", "connection", "get_ws_endpoint"]):
         return "adspower_error", "AdsPower/browser connection failed.", True
     if "timeout" in lower or "net::" in lower or "network" in lower:
@@ -641,7 +648,7 @@ def process_single_item(
             warnings.append(f"Transient failure queued for retry attempt {attempts + 1}.")
         else:
             item_status = "failed"
-        job_status = None
+        job_status = "paused" if error_type == "dependency_error" else None
 
     job_store.update_item_status(
         item_id,
@@ -862,7 +869,21 @@ def process_item_with_rotation(
             on_line(f"[job {job_id}] Rebuild successful (Round {rebuild_round}). Retrying item with fresh profiles...")
 
         # Rebuild succeeded — release all quarantined profiles so they're available
-        adsp_profile_pool_manager.release_all_quarantined()
+        new_profile_ids = [str(pid) for pid in rebuild_result.get("new_profile_ids", []) if pid]
+        if not new_profile_ids:
+            msg = "Auto-rebuild did not return any new AdsPower profile IDs. Manual action required."
+            if on_line:
+                on_line(f"[job {job_id}] {msg}")
+            job_store.update_item_status(item_id, "paused", error_type="rebuild_failed", error_message=msg)
+            job_store.set_job_status(job_id, "paused", last_error=msg)
+            return job_store.get_item(item_id) or {}
+
+        activated = adsp_profile_pool_manager.activate_only_profiles(
+            new_profile_ids,
+            reason=f"Activated rebuilt profiles for item {result.get('index_number', '?')} round {rebuild_round}",
+        )
+        if on_line:
+            on_line(f"[job {job_id}] Activated {activated} rebuilt profile(s).")
         # Loop continues → process_single_item will pick a fresh profile
 
 

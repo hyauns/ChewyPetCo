@@ -4,6 +4,29 @@ Update ADSPOWER_PROFILE_ID with your actual AdsPower browser profile ID.
 """
 
 import os
+from pathlib import Path
+
+
+def _load_local_env(path: str = ".env") -> None:
+    """Load local .env values without adding a dependency.
+
+    Existing process environment variables win over values in .env.
+    """
+    env_path = Path(__file__).resolve().parent / path
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_local_env()
 
 # AdsPower Local API
 ADSPOWER_API_BASE = "http://127.0.0.1:50325"
@@ -69,9 +92,9 @@ ADSP_PROFILE_RECOVERY_ENABLED = os.environ.get("ADSP_PROFILE_RECOVERY_ENABLED", 
 ADSP_TEMPLATE_PREFIX = os.environ.get("ADSP_TEMPLATE_PREFIX", "CW")
 ADSP_WORKER_COUNT = int(os.environ.get("ADSP_WORKER_COUNT", "3"))
 
-ADSP_CW_1_PROXY = os.environ.get("ADSP_CW_1_PROXY", "51.77.190.247:9595:pcSpLDMEO7-resfix-us-nnid-0ddf719492a53fbee7e2:PC_1eisIH1PFIgEaXOij")
-ADSP_CW_2_PROXY = os.environ.get("ADSP_CW_2_PROXY", "mia7-5g.proxydns.tech:5306:uwka0deo:p3484050")
-ADSP_CW_3_PROXY = os.environ.get("ADSP_CW_3_PROXY", "mobile.owlproxy.com:1086:6209259-737b9b6e:7e346086-US-y10qsTfn-90m")
+ADSP_CW_1_PROXY = os.environ.get("ADSP_CW_1_PROXY", "")
+ADSP_CW_2_PROXY = os.environ.get("ADSP_CW_2_PROXY", "")
+ADSP_CW_3_PROXY = os.environ.get("ADSP_CW_3_PROXY", "")
 
 ADSP_CW_1_NAME = os.environ.get("ADSP_CW_1_NAME", "CW_1")
 ADSP_CW_2_NAME = os.environ.get("ADSP_CW_2_NAME", "CW_2")

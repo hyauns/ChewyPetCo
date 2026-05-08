@@ -55,6 +55,30 @@ def validate_proxy_template(proxy_url: str) -> dict[str, str]:
     """Parse and validate a configured SOCKS5 proxy URL."""
     if not proxy_url:
         raise ValueError("Missing proxy URL.")
+    if proxy_url.lower().startswith("socks5://") and "@" not in proxy_url:
+        compact = proxy_url.split("://", 1)[1]
+        if compact.count(":") >= 3:
+            host, port, username, password = compact.split(":", 3)
+            if not host or not port:
+                raise ValueError("Proxy host or port is missing.")
+            return {
+                "proxy_type": "socks5",
+                "proxy_host": host,
+                "proxy_port": port,
+                "proxy_username": username,
+                "proxy_password": password,
+            }
+    if "://" not in proxy_url and proxy_url.count(":") >= 3:
+        host, port, username, password = proxy_url.split(":", 3)
+        if not host or not port:
+            raise ValueError("Proxy host or port is missing.")
+        return {
+            "proxy_type": "socks5",
+            "proxy_host": host,
+            "proxy_port": port,
+            "proxy_username": username,
+            "proxy_password": password,
+        }
     parsed = urlparse(proxy_url)
     if parsed.scheme.lower() != "socks5":
         raise ValueError("Only socks5:// proxies are supported for CW slots.")
@@ -75,6 +99,14 @@ def mask_proxy_url(proxy_url: str) -> str:
     if not proxy_url:
         return "(not configured)"
     try:
+        if proxy_url.lower().startswith("socks5://") and "@" not in proxy_url:
+            compact = proxy_url.split("://", 1)[1]
+            if compact.count(":") >= 3:
+                host, port, username, _password = compact.split(":", 3)
+                return f"socks5://{_mask_user(username)}:***@{host}:{port}"
+        if "://" not in proxy_url and proxy_url.count(":") >= 3:
+            host, port, username, _password = proxy_url.split(":", 3)
+            return f"socks5://{_mask_user(username)}:***@{host}:{port}"
         parsed = urlparse(proxy_url)
         host = parsed.hostname or ""
         port = f":{parsed.port}" if parsed.port else ""
@@ -662,12 +694,20 @@ def rebuild_all_slots(*, reason: str = "all_profiles_white_screen") -> dict[str,
         row = get_template(slot_id)
         if row and row.get("status") == "disabled":
             results.append({"slot_id": slot_id, "success": False, "message": "disabled"})
+            all_ok = False
             continue
         res = auto_rebuild_profile(slot_id, reason=reason, delay_seconds=5)
         results.append(res)
         if not res.get("success"):
             all_ok = False
-    return {"success": all_ok, "slots": results}
+    new_profile_ids = [
+        str(res["new_profile_id"])
+        for res in results
+        if res.get("success") and res.get("new_profile_id")
+    ]
+    if not new_profile_ids:
+        all_ok = False
+    return {"success": all_ok, "slots": results, "new_profile_ids": new_profile_ids}
 
 
 def ensure_slot_profile(slot_id: str, *, delay_seconds: int = 0) -> dict[str, Any]:

@@ -609,10 +609,10 @@ def get_next_item(
             ORDER BY
                 CASE status
                     WHEN 'pending' THEN 0
-                    WHEN 'failed' THEN 1
-                    WHEN 'paused' THEN 2
-                    WHEN 'done' THEN 3
-                    ELSE 4
+                    WHEN 'failed' THEN 0
+                    WHEN 'paused' THEN 1
+                    WHEN 'done' THEN 2
+                    ELSE 3
                 END,
                 index_number ASC
             LIMIT 1
@@ -665,10 +665,10 @@ def claim_next_item(
             ORDER BY
                 CASE status
                     WHEN 'pending' THEN 0
-                    WHEN 'failed' THEN 1
-                    WHEN 'paused' THEN 2
-                    WHEN 'done' THEN 3
-                    ELSE 4
+                    WHEN 'failed' THEN 0
+                    WHEN 'paused' THEN 1
+                    WHEN 'done' THEN 2
+                    ELSE 3
                 END,
                 index_number ASC
             LIMIT 1
@@ -776,21 +776,14 @@ def get_job_summary(job_id: str) -> dict[str, Any]:
     failure_breakdown: dict[str, int] = {}
     products_generated = 0
     last_processed_index = None
-    first_pending_index = None
-    first_retryable_failed_index = None
+    first_active_resume_index = None
     first_paused_index = None
 
     for item in items:
         if item.get("status") in {"done", "failed", "skipped", "paused"}:
             last_processed_index = item.get("index_number")
-        if item.get("status") in {"pending", "running"} and first_pending_index is None:
-            first_pending_index = item.get("index_number")
-        if (
-            item.get("status") == "failed"
-            and int(item.get("attempts") or 0) < int(item.get("max_attempts") or 0)
-            and first_retryable_failed_index is None
-        ):
-            first_retryable_failed_index = item.get("index_number")
+        if item.get("status") in {"pending", "running", "failed"} and first_active_resume_index is None:
+            first_active_resume_index = item.get("index_number")
         if item.get("status") == "paused" and first_paused_index is None:
             first_paused_index = item.get("index_number")
         if item.get("status") == "done" and item.get("grouped_output_path"):
@@ -826,7 +819,7 @@ def get_job_summary(job_id: str) -> dict[str, Any]:
         "products_generated": products_generated,
         "failure_breakdown_by_error_type": failure_breakdown,
         "last_processed_index": last_processed_index,
-        "next_resume_index": first_pending_index or first_retryable_failed_index or first_paused_index,
+        "next_resume_index": first_active_resume_index or first_paused_index,
     }
 
 
