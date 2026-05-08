@@ -15,6 +15,10 @@ ADSPOWER_PROFILE_ID = os.environ.get("ADSPOWER_PROFILE_ID", "k143x098")  # <-- S
 USE_CHEWY_NEXT_JSON_EXTRACTOR = os.environ.get("USE_CHEWY_NEXT_JSON_EXTRACTOR", "false").lower() == "true"
 CHEWY_JSON_FALLBACK_TO_OLD_SCRAPER = os.environ.get("CHEWY_JSON_FALLBACK_TO_OLD_SCRAPER", "false").lower() == "true"
 CHEWY_JSON_CONFIDENCE_THRESHOLD = int(os.environ.get("CHEWY_JSON_CONFIDENCE_THRESHOLD", "75"))
+
+# Category Discovery settings
+CATEGORY_DISCOVERY_SAVE_PAGE_DEBUG = os.environ.get("CATEGORY_DISCOVERY_SAVE_PAGE_DEBUG", "true").lower() == "true"
+CATEGORY_EXCLUDE_SPONSORED_PRODUCTS = os.environ.get("CATEGORY_EXCLUDE_SPONSORED_PRODUCTS", "true").lower() == "true"
 CHEWY_JSON_SAVE_GROUPED_OUTPUT = os.environ.get("CHEWY_JSON_SAVE_GROUPED_OUTPUT", "true").lower() == "true"
 
 # Scraping behavior — conservative for Akamai
@@ -49,7 +53,7 @@ OUTPUT_DIR = "output"
 # Phase 4 - Profile Pool & White Screen Recovery
 # ---------------------------------------------------------------------------
 ADSP_PROFILE_POOL_ENABLED = os.environ.get("ADSP_PROFILE_POOL_ENABLED", "true").lower() == "true"
-ADSP_PROFILE_POOL_IDS = [p.strip() for p in os.environ.get("ADSP_PROFILE_POOL_IDS", "k143x098,k1bpayje,k136h396").split(",") if p.strip()]
+ADSP_PROFILE_POOL_IDS = [p.strip() for p in os.environ.get("ADSP_PROFILE_POOL_IDS", "k143x098,k1cacstm,k1bps235").split(",") if p.strip()]
 ADSP_PROFILE_ROTATION_MODE = os.environ.get("ADSP_PROFILE_ROTATION_MODE", "controlled")
 ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM = int(os.environ.get("ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM", "3"))
 ADSP_PROFILE_QUARANTINE_MINUTES = int(os.environ.get("ADSP_PROFILE_QUARANTINE_MINUTES", "30"))
@@ -57,3 +61,41 @@ ADSP_WHITE_SCREEN_RETRY_DELAY_SECONDS = int(os.environ.get("ADSP_WHITE_SCREEN_RE
 ADSP_WHITE_SCREEN_DETECTION_ENABLED = os.environ.get("ADSP_WHITE_SCREEN_DETECTION_ENABLED", "true").lower() == "true"
 ADSP_SAVE_WHITE_SCREEN_SCREENSHOT = os.environ.get("ADSP_SAVE_WHITE_SCREEN_SCREENSHOT", "true").lower() == "true"
 ADSP_SAVE_WHITE_SCREEN_HTML = os.environ.get("ADSP_SAVE_WHITE_SCREEN_HTML", "true").lower() == "true"
+
+# ---------------------------------------------------------------------------
+# Phase 6 - AdsPower Profile Template Recovery & Controlled Workers
+# ---------------------------------------------------------------------------
+ADSP_PROFILE_RECOVERY_ENABLED = os.environ.get("ADSP_PROFILE_RECOVERY_ENABLED", "true").lower() == "true"
+ADSP_TEMPLATE_PREFIX = os.environ.get("ADSP_TEMPLATE_PREFIX", "CW")
+ADSP_WORKER_COUNT = int(os.environ.get("ADSP_WORKER_COUNT", "3"))
+
+ADSP_CW_1_PROXY = os.environ.get("ADSP_CW_1_PROXY", "")
+ADSP_CW_2_PROXY = os.environ.get("ADSP_CW_2_PROXY", "")
+ADSP_CW_3_PROXY = os.environ.get("ADSP_CW_3_PROXY", "")
+
+ADSP_CW_1_NAME = os.environ.get("ADSP_CW_1_NAME", "CW_1")
+ADSP_CW_2_NAME = os.environ.get("ADSP_CW_2_NAME", "CW_2")
+ADSP_CW_3_NAME = os.environ.get("ADSP_CW_3_NAME", "CW_3")
+
+# Optional existing AdsPower profile IDs for the fixed slots. If left empty,
+# the recovery manager can create a profile for that slot through AdsPower API.
+ADSP_CW_1_PROFILE_ID = os.environ.get("ADSP_CW_1_PROFILE_ID", "")
+ADSP_CW_2_PROFILE_ID = os.environ.get("ADSP_CW_2_PROFILE_ID", "")
+ADSP_CW_3_PROFILE_ID = os.environ.get("ADSP_CW_3_PROFILE_ID", "")
+
+ADSP_PROFILE_GROUP_ID = os.environ.get("ADSP_PROFILE_GROUP_ID", "0")
+ADSP_AUTO_REBUILD_ON_BLOCKED = os.environ.get("ADSP_AUTO_REBUILD_ON_BLOCKED", "true").lower() == "true"
+ADSP_AUTO_RESUME_AFTER_REBUILD = os.environ.get("ADSP_AUTO_RESUME_AFTER_REBUILD", "true").lower() == "true"
+ADSP_REBUILD_DELAY_SECONDS = int(os.environ.get("ADSP_REBUILD_DELAY_SECONDS", "30"))
+
+# ---------------------------------------------------------------------------
+# Phase 5 - Global Product Registry & Dedupe
+# ---------------------------------------------------------------------------
+CHEWY_GLOBAL_DEDUP_ENABLED = os.environ.get("CHEWY_GLOBAL_DEDUP_ENABLED", "true").lower() == "true"
+CHEWY_SKIP_ALREADY_EXTRACTED = os.environ.get("CHEWY_SKIP_ALREADY_EXTRACTED", "true").lower() == "true"
+CHEWY_REPROCESS_EXISTING = os.environ.get("CHEWY_REPROCESS_EXISTING", "false").lower() == "true"
+CHEWY_DEDUP_BY_PRODUCT_ID = os.environ.get("CHEWY_DEDUP_BY_PRODUCT_ID", "true").lower() == "true"
+CHEWY_JSON_CONFIDENCE_THRESHOLD = int(os.environ.get("CHEWY_JSON_CONFIDENCE_THRESHOLD", "70"))
+CHEWY_AUTO_EXPORT_ON_JOB_COMPLETE = os.environ.get("CHEWY_AUTO_EXPORT_ON_JOB_COMPLETE", "false").lower() == "true"
+CHEWY_REPROCESS_EXISTING = os.environ.get("CHEWY_REPROCESS_EXISTING", "false").lower() == "true"
+CHEWY_DEDUP_BY_PRODUCT_ID = os.environ.get("CHEWY_DEDUP_BY_PRODUCT_ID", "true").lower() == "true"

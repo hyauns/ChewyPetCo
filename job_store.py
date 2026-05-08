@@ -182,6 +182,73 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
                 message TEXT,
                 created_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS adsp_profile_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                slot_id TEXT NOT NULL UNIQUE,
+                display_name TEXT NOT NULL,
+                proxy_type TEXT,
+                proxy_host TEXT,
+                proxy_port TEXT,
+                proxy_username_masked TEXT,
+                adspower_profile_id TEXT,
+                status TEXT NOT NULL DEFAULT 'available'
+                    CHECK(status IN ('available','in_use','rebuilding','disabled','rebuild_failed')),
+                last_rebuild_at TEXT,
+                last_used_at TEXT,
+                last_white_screen_at TEXT,
+                total_rebuilds INTEGER NOT NULL DEFAULT 0,
+                total_success INTEGER NOT NULL DEFAULT 0,
+                total_white_screen INTEGER NOT NULL DEFAULT 0,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS adsp_profile_rebuild_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL UNIQUE,
+                slot_id TEXT NOT NULL,
+                old_profile_id TEXT,
+                new_profile_id TEXT,
+                event_type TEXT NOT NULL,
+                message TEXT,
+                metadata_json TEXT,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS chewy_product_registry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id TEXT NOT NULL UNIQUE,
+                canonical_url TEXT,
+                latest_url TEXT,
+                first_seen_category_job_id TEXT,
+                first_seen_at TEXT,
+                last_seen_category_job_id TEXT,
+                last_seen_at TEXT,
+                discovery_count INTEGER NOT NULL DEFAULT 1,
+                extraction_status TEXT NOT NULL DEFAULT 'never_extracted' CHECK(extraction_status IN ('never_extracted','extracted_success','extracted_failed','skipped_existing')),
+                grouped_output_path TEXT,
+                normalized_output_path TEXT,
+                validation_output_path TEXT,
+                confidence_score REAL,
+                last_pdp_job_id TEXT,
+                last_error_type TEXT,
+                last_error_message TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS chewy_product_url_aliases (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id TEXT NOT NULL,
+                url TEXT NOT NULL,
+                slug TEXT,
+                category_job_id TEXT,
+                seen_at TEXT NOT NULL,
+                UNIQUE(product_id, url)
+            );
             """
         )
         try:
@@ -189,15 +256,21 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
         except sqlite3.OperationalError:
             pass
             
-        # Phase 4 scrape_job_items alterations
-        try:
-            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN profile_id_used TEXT")
-            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN profile_attempts_json TEXT")
-            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN white_screen_count INTEGER NOT NULL DEFAULT 0")
-            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN last_white_screen_at TEXT")
-            conn.execute("ALTER TABLE scrape_job_items ADD COLUMN retry_queue_status TEXT")
-        except sqlite3.OperationalError:
-            pass
+        # Phase 4/6 scrape_job_items alterations. Run independently so a
+        # pre-existing older column does not prevent newer columns being added.
+        for ddl in [
+            "ALTER TABLE scrape_job_items ADD COLUMN profile_id_used TEXT",
+            "ALTER TABLE scrape_job_items ADD COLUMN profile_attempts_json TEXT",
+            "ALTER TABLE scrape_job_items ADD COLUMN white_screen_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE scrape_job_items ADD COLUMN last_white_screen_at TEXT",
+            "ALTER TABLE scrape_job_items ADD COLUMN retry_queue_status TEXT",
+            "ALTER TABLE scrape_job_items ADD COLUMN profile_slot_id TEXT",
+            "ALTER TABLE scrape_job_items ADD COLUMN worker_id TEXT",
+        ]:
+            try:
+                conn.execute(ddl)
+            except sqlite3.OperationalError:
+                pass
 
 
 def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -466,28 +539,131 @@ def get_next_item(
     retry_failed: bool = False,
     include_paused: bool = False,
     reprocess_completed: bool = False,
+    force_retry: bool = False,
 ) -> dict[str, Any] | None:
     init_db()
-    statuses = ["pending"]
-    if retry_failed:
-        statuses.append("failed")
+    statuses = ["'pending'"]
     if include_paused:
-        statuses.append("paused")
+        statuses.append("'paused'")
     if reprocess_completed:
-        statuses.append("done")
-    placeholders = ",".join("?" for _ in statuses)
-    params: list[Any] = [job_id, *statuses]
+        statuses.append("'done'")
+        
+    status_in_clause = ",".join(statuses)
+    
+    failed_condition = "1=0"
+    if retry_failed:
+        if force_retry:
+            failed_condition = "status = 'failed'"
+        else:
+            failed_condition = "status = 'failed' AND attempts < max_attempts"
+
     with connect() as conn:
         row = conn.execute(
             f"""
             SELECT * FROM scrape_job_items
-            WHERE job_id = ? AND status IN ({placeholders})
-            ORDER BY index_number ASC
+            WHERE job_id = ?
+            AND (status IN ({status_in_clause}) OR ({failed_condition}))
+            ORDER BY
+                CASE status
+                    WHEN 'pending' THEN 0
+                    WHEN 'failed' THEN 1
+                    WHEN 'paused' THEN 2
+                    WHEN 'done' THEN 3
+                    ELSE 4
+                END,
+                index_number ASC
             LIMIT 1
             """,
-            params,
+            [job_id],
         ).fetchone()
     return row_to_dict(row)
+
+
+def claim_next_item(
+    job_id: str,
+    *,
+    retry_failed: bool = False,
+    include_paused: bool = False,
+    force_retry: bool = False,
+    reprocess_completed: bool = False,
+    worker_id: str | None = None,
+    profile_slot_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Atomically claim one unfinished item for a worker.
+
+    This is used by the controlled multi-worker runner. It prevents two
+    workers from selecting the same pending URL before either one has time to
+    mark it running.
+    """
+    init_db()
+    statuses = ["'pending'"]
+    if include_paused:
+        statuses.append("'paused'")
+    if reprocess_completed:
+        statuses.append("'done'")
+
+    failed_condition = "1=0"
+    if retry_failed:
+        if force_retry:
+            failed_condition = "status = 'failed'"
+        else:
+            failed_condition = "status = 'failed' AND attempts < max_attempts"
+
+    status_in_clause = ",".join(statuses)
+    now = utc_now()
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            f"""
+            SELECT *
+            FROM scrape_job_items
+            WHERE job_id = ?
+              AND (status IN ({status_in_clause}) OR ({failed_condition}))
+            ORDER BY
+                CASE status
+                    WHEN 'pending' THEN 0
+                    WHEN 'failed' THEN 1
+                    WHEN 'paused' THEN 2
+                    WHEN 'done' THEN 3
+                    ELSE 4
+                END,
+                index_number ASC
+            LIMIT 1
+            """,
+            (job_id,),
+        ).fetchone()
+        if not row:
+            conn.commit()
+            return None
+
+        metadata = json.loads(row["metadata_json"] or "{}")
+        if worker_id:
+            metadata["claimed_by_worker"] = worker_id
+        if profile_slot_id:
+            metadata["claimed_profile_slot_id"] = profile_slot_id
+        metadata["claimed_at"] = now
+
+        conn.execute(
+            """
+            UPDATE scrape_job_items
+            SET status = 'running',
+                worker_id = ?,
+                profile_slot_id = ?,
+                updated_at = ?,
+                metadata_json = ?
+            WHERE id = ?
+            """,
+            (
+                worker_id,
+                profile_slot_id,
+                now,
+                normalize_json(metadata),
+                int(row["id"]),
+            ),
+        )
+        conn.commit()
+
+    return get_item(int(row["id"]))
 
 
 def reset_failed_items(job_id: str, *, force: bool = False) -> int:
@@ -557,13 +733,23 @@ def get_job_summary(job_id: str) -> dict[str, Any]:
     failure_breakdown: dict[str, int] = {}
     products_generated = 0
     last_processed_index = None
-    next_resume_index = None
+    first_pending_index = None
+    first_retryable_failed_index = None
+    first_paused_index = None
 
     for item in items:
         if item.get("status") in {"done", "failed", "skipped", "paused"}:
             last_processed_index = item.get("index_number")
-        if item.get("status") in {"pending", "running", "paused"} and next_resume_index is None:
-            next_resume_index = item.get("index_number")
+        if item.get("status") in {"pending", "running"} and first_pending_index is None:
+            first_pending_index = item.get("index_number")
+        if (
+            item.get("status") == "failed"
+            and int(item.get("attempts") or 0) < int(item.get("max_attempts") or 0)
+            and first_retryable_failed_index is None
+        ):
+            first_retryable_failed_index = item.get("index_number")
+        if item.get("status") == "paused" and first_paused_index is None:
+            first_paused_index = item.get("index_number")
         if item.get("status") == "done" and item.get("grouped_output_path"):
             products_generated += 1
         if item.get("status") == "failed":
@@ -597,7 +783,7 @@ def get_job_summary(job_id: str) -> dict[str, Any]:
         "products_generated": products_generated,
         "failure_breakdown_by_error_type": failure_breakdown,
         "last_processed_index": last_processed_index,
-        "next_resume_index": next_resume_index,
+        "next_resume_index": first_pending_index or first_retryable_failed_index or first_paused_index,
     }
 
 
@@ -614,6 +800,7 @@ def create_category_job(
     price_min: float | None = None,
     price_max: float | None = None,
     mode: str = "hybrid",
+    start_page: int = 1,
     max_pages: int | None = None,
     output_dir: str | None = None
 ) -> str:
@@ -628,13 +815,13 @@ def create_category_job(
             """
             INSERT INTO category_discovery_jobs (
                 category_job_id, name, category_url, created_at, updated_at, status,
-                price_min, price_max, mode, output_dir, max_pages
+                price_min, price_max, mode, output_dir, current_page, max_pages
             )
-            VALUES (?, ?, ?, ?, ?, 'created', ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, 'created', ?, ?, ?, ?, ?, ?)
             """,
             (
                 job_id, name.strip() or job_id, category_url.strip(), now, now,
-                price_min, price_max, mode, str(job_output_dir.resolve()), max_pages
+                price_min, price_max, mode, str(job_output_dir.resolve()), start_page, max_pages
             )
         )
         conn.commit()
@@ -733,3 +920,72 @@ def get_category_items(job_id: str) -> list[dict[str, Any]]:
             (job_id,)
         ).fetchall()
     return rows_to_dicts(rows)
+
+import re
+
+def extract_chewy_product_id(url: str) -> str | None:
+    if not url:
+        return None
+    match = re.search(r"/dp/(\d+)", url)
+    if match:
+        return match.group(1)
+    return None
+
+def check_and_update_product_registry(product_id: str, url: str, category_job_id: str) -> dict[str, Any]:
+    now = utc_now()
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM chewy_product_registry WHERE product_id = ?", (product_id,)).fetchone()
+        if not row:
+            conn.execute(
+                """
+                INSERT INTO chewy_product_registry (
+                    product_id, canonical_url, latest_url, first_seen_category_job_id, first_seen_at,
+                    last_seen_category_job_id, last_seen_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (product_id, url, url, category_job_id, now, category_job_id, now, now, now)
+            )
+            registry_item = row_to_dict(conn.execute("SELECT * FROM chewy_product_registry WHERE product_id = ?", (product_id,)).fetchone())
+            is_new = True
+        else:
+            conn.execute(
+                """
+                UPDATE chewy_product_registry 
+                SET discovery_count = discovery_count + 1,
+                    last_seen_category_job_id = ?,
+                    last_seen_at = ?,
+                    latest_url = ?,
+                    updated_at = ?
+                WHERE product_id = ?
+                """,
+                (category_job_id, now, url, now, product_id)
+            )
+            registry_item = row_to_dict(conn.execute("SELECT * FROM chewy_product_registry WHERE product_id = ?", (product_id,)).fetchone())
+            is_new = False
+            
+        conn.execute(
+            """
+            INSERT INTO chewy_product_url_aliases (product_id, url, category_job_id, seen_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(product_id, url) DO NOTHING
+            """,
+            (product_id, url, category_job_id, now)
+        )
+        conn.commit()
+    
+    return {"is_new": is_new, "registry_item": registry_item}
+
+def update_registry_extraction_status(product_id: str, status: str, pdp_job_id: str, **kwargs: Any) -> None:
+    now = utc_now()
+    update_fields = ["extraction_status = ?", "last_pdp_job_id = ?", "updated_at = ?"]
+    params = [status, pdp_job_id, now]
+    
+    for k, v in kwargs.items():
+        update_fields.append(f"{k} = ?")
+        params.append(v)
+        
+    params.append(product_id)
+    
+    with connect() as conn:
+        conn.execute(f"UPDATE chewy_product_registry SET {', '.join(update_fields)} WHERE product_id = ?", tuple(params))
+        conn.commit()

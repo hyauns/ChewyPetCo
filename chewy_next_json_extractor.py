@@ -46,11 +46,50 @@ def find_json_paths(data, target_keywords, current_path="", results=None):
     return results
 
 # 1. Refactor into clear parser functions
+async def read_page_content_with_retry(page, attempts: int = 5) -> str:
+    """Read page HTML, retrying when Playwright catches the page mid-navigation."""
+    last_error = None
+    transient_messages = (
+        "page is navigating",
+        "unable to retrieve content",
+        "execution context was destroyed",
+        "navigation",
+    )
+
+    for attempt in range(1, attempts + 1):
+        try:
+            if attempt > 1:
+                try:
+                    await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                except Exception:
+                    pass
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=5000)
+                except Exception:
+                    pass
+            return await page.content()
+        except Exception as exc:
+            last_error = exc
+            message = str(exc).lower()
+            if not any(token in message for token in transient_messages):
+                raise
+            if attempt == attempts:
+                break
+            delay = min(2 * attempt, 8)
+            console.print(
+                f"[yellow]Page content changed during navigation; retrying HTML read "
+                f"({attempt}/{attempts}) after {delay}s...[/]"
+            )
+            await asyncio.sleep(delay)
+
+    raise last_error
+
+
 async def fetch_initial_html(url: str, page) -> str:
     console.print(f"Fetching initial HTML for: {url}")
     await page.goto(url, timeout=config.PAGE_LOAD_TIMEOUT, wait_until="domcontentloaded")
     await asyncio.sleep(4)
-    return await page.content()
+    return await read_page_content_with_retry(page)
 
 def extract_next_data_from_html(html: str) -> dict:
     m = re.search(r'<script id="__NEXT_DATA__" type="application/json">([^<]+)</script>', html)

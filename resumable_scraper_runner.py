@@ -507,6 +507,9 @@ def process_single_item(
     log_text = "".join(lines)
     
     # Phase 4 - Check for White Screen Detection
+    # Strategy: on white screen, ALWAYS put item back to "pending" and quarantine the profile.
+    # The process_job loop will re-pick this same item and try the next available profile.
+    # If all profiles are quarantined, get_next_available_profile returns None → job pauses.
     white_screen_str = "[WHITE_SCREEN_RESULT] "
     for line in lines:
         if white_screen_str in line:
@@ -530,10 +533,16 @@ def process_single_item(
                     "timestamp": job_store.utc_now()
                 })
                 
-                if attempts < config.ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM:
-                    job_store.update_item_status(item_id, "pending", error_type="white_screen_block", error_message=f"White screen detected, retrying. (Attempt {attempts})", profile_attempts_json=json.dumps(attempts_json))
-                else:
-                    job_store.update_item_status(item_id, "failed", error_type="white_screen_block", error_message=f"White screen detected, max attempts reached.", profile_attempts_json=json.dumps(attempts_json))
+                # Always set back to pending — let the loop retry with the next profile.
+                # The only thing that stops retrying is running out of available profiles.
+                job_store.update_item_status(
+                    item_id, "pending",
+                    error_type="white_screen_block",
+                    error_message=f"White screen with profile {profile_id}, rotating to next. (Attempt {attempts})",
+                    profile_attempts_json=json.dumps(attempts_json),
+                )
+                if on_line:
+                    on_line(f"[job {job_id}] White screen on item {item['index_number']} with profile {profile_id}. Rotating profile...")
                 
                 job_store.update_job_counts(job_id)
                 return job_store.get_item(item_id) or {}
@@ -663,6 +672,35 @@ def process_single_item(
         "metadata": metadata,
     }
     write_json_file(summaries_dir / f"item_{int(item['index_number']):05d}_summary.json", item_summary)
+    
+    import config
+    if config.CHEWY_GLOBAL_DEDUP_ENABLED and source_id:
+        reg_status = "extracted_failed"
+        if item_after.get("status") == "done":
+            reg_status = "extracted_success"
+        elif item_after.get("status") == "skipped":
+            reg_status = "skipped_existing"
+            
+        with job_store.connect() as conn:
+            prev = conn.execute("SELECT extraction_status FROM chewy_product_registry WHERE product_id = ?", (source_id,)).fetchone()
+            
+        if prev and prev[0] == "extracted_success" and reg_status in ("extracted_failed", "skipped_existing"):
+            reg_status = "extracted_success"
+            
+        job_store.check_and_update_product_registry(source_id, final_url or url, job_id)
+        
+        update_kwargs = {}
+        if item_after.get("status") == "done":
+            update_kwargs["grouped_output_path"] = output_paths.get("grouped_output_path")
+            update_kwargs["normalized_output_path"] = output_paths.get("normalized_output_path")
+            update_kwargs["validation_output_path"] = output_paths.get("validation_output_path")
+            update_kwargs["confidence_score"] = item_after.get("confidence_score")
+        elif item_after.get("status") == "failed":
+            update_kwargs["last_error_type"] = error_type
+            update_kwargs["last_error_message"] = error_message
+            
+        job_store.update_registry_extraction_status(source_id, reg_status, job_id, **update_kwargs)
+        
     job_store.update_job_counts(job_id)
     return item_after
 
@@ -729,6 +767,10 @@ def process_job(
         raise ValueError(f"Job not found: {job_id}")
 
     job_store.mark_stale_running_items(job_id, stale_minutes=stale_minutes)
+    if config.ADSP_PROFILE_POOL_ENABLED:
+        released = adsp_profile_pool_manager.release_stale_in_use_profiles()
+        if released and on_line:
+            on_line(f"[job {job_id}] Released {released} stale AdsPower profile(s) from in_use.")
     job_store.set_job_status(job_id, "running")
     processed = 0
 
@@ -742,11 +784,9 @@ def process_job(
             retry_failed=retry_failed,
             include_paused=resume_paused,
             reprocess_completed=reprocess_completed,
+            force_retry=force_retry,
         )
         if not item:
-            break
-
-        if item["status"] == "failed" and not force_retry and int(item["attempts"]) >= int(item["max_attempts"]):
             break
 
         if on_line:
@@ -762,6 +802,8 @@ def process_job(
 
         current_job = job_store.get_job(job_id)
         if current_job and current_job["status"] == "paused":
+            if result.get("error_type") == "all_profiles_exhausted":
+                break
             break
         if result.get("status") == "paused":
             job_store.set_job_status(job_id, "paused", last_error=result.get("error_message"))
@@ -786,6 +828,19 @@ def process_job(
     summary = write_job_reports(job_id)
     if on_line:
         on_line(f"[job {job_id}] Status: {summary['status']} completed={summary['completed_count']} failed={summary['failed_count']} pending={summary['pending_count']}")
+        
+    if config.CHEWY_AUTO_EXPORT_ON_JOB_COMPLETE and summary["status"] == "completed":
+        try:
+            import job_exporter
+            if on_line:
+                on_line(f"[job {job_id}] Auto-exporting consolidated products...")
+            exp_sum = job_exporter.export_job_products(job_id)
+            if exp_sum and on_line:
+                on_line(f"[job {job_id}] Exported {exp_sum.get('successful_base_products', 0)} products to {exp_sum['files'].get('success_json')}")
+        except Exception as e:
+            if on_line:
+                on_line(f"[job {job_id}] Auto-export failed: {e}")
+                
     return summary
 
 

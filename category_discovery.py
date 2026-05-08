@@ -59,6 +59,9 @@ async def discover_category_products(
         page = await context.new_page()
         
         try:
+            previous_first_urls = []
+            stale_attempts = 0
+            
             while True:
                 if max_pages and current_page > max_pages:
                     logger.info(f"Reached max pages limit ({max_pages}). Stopping discovery.")
@@ -67,7 +70,7 @@ async def discover_category_products(
                 page_url = category_url
                 if current_page > 1:
                     sep = "&" if "?" in category_url else "?"
-                    page_url = f"{category_url}{sep}p={current_page}"
+                    page_url = f"{category_url}{sep}page={current_page}"
                 
                 logger.info(f"[{category_job_id}] Discovering page {current_page}: {page_url}")
                 try:
@@ -79,8 +82,10 @@ async def discover_category_products(
                     job_store.update_category_job(category_job_id, status="paused", last_error=str(e))
                     break
                 
+                final_url = page.url
+                
                 # Phase 4 - White Screen Detection
-                detection_result = await adsp_profile_pool_manager.detect_white_screen_block(page, page_url)
+                detection_result = await adsp_profile_pool_manager.detect_white_screen_block(page, final_url)
                 if detection_result["is_white_screen"]:
                     logger.error(f"White screen detected on category page {current_page}")
                     
@@ -101,8 +106,8 @@ async def discover_category_products(
                             detection_result["html_snapshot_path"] = html_path
                         except: pass
                         
-                    adsp_profile_pool_manager.quarantine_profile(profile_id, f"White screen on {page_url}")
-                    adsp_profile_pool_manager.record_white_screen_event(category_job_id, 0, page_url, profile_id, "profile_quarantined", detection_result)
+                    adsp_profile_pool_manager.quarantine_profile(profile_id, f"White screen on {final_url}")
+                    adsp_profile_pool_manager.record_white_screen_event(category_job_id, 0, final_url, profile_id, "profile_quarantined", detection_result)
                     
                     # Pause the job for manual intervention, do NOT increment page, so we retry this page later
                     job_store.update_category_job(category_job_id, status="paused", last_error="white_screen_block")
@@ -122,9 +127,53 @@ async def discover_category_products(
                     logger.info(f"No product cards extracted on page {current_page}. Ending discovery.")
                     break
                     
-                logger.info(f"Found {len(cards_data)} cards on page {current_page}")
+                # Calculate counts
+                raw_card_count = len(cards_data)
+                sponsored_cards = [c for c in cards_data if c.get("is_sponsored")]
+                organic_cards = [c for c in cards_data if not c.get("is_sponsored")]
+                organic_card_count = len(organic_cards)
+                sponsored_card_count = len(sponsored_cards)
                 
+                # Unique URLs
+                unique_urls_on_page = len(set(c["url"] for c in organic_cards))
+                
+                logger.info(f"Found {raw_card_count} raw cards, {organic_card_count} organic cards on page {current_page}")
+                
+                # Verification for stale page
+                current_first_urls = [c["url"] for c in organic_cards[:5]]
+                if current_page > 1 and current_first_urls == previous_first_urls:
+                    logger.warning(f"Page {current_page} has identical first 5 URLs as previous page. Possible stale pagination.")
+                    stale_attempts += 1
+                    if stale_attempts > 1:
+                        logger.error("Pagination is definitely stale/repeating. Stopping discovery.")
+                        break
+                else:
+                    stale_attempts = 0
+                previous_first_urls = current_first_urls
+                
+                page_summary = {
+                    "category_job_id": category_job_id,
+                    "page_number": current_page,
+                    "target_url": page_url,
+                    "final_url": final_url,
+                    "page_title": await page.title(),
+                    "raw_card_count": raw_card_count,
+                    "organic_card_count": organic_card_count,
+                    "sponsored_card_count": sponsored_card_count,
+                    "excluded_card_count": 0,
+                    "unique_product_urls_on_page": unique_urls_on_page,
+                    "first_5_product_urls": current_first_urls,
+                    "page_status": "ok" if stale_attempts == 0 else "stale_repeated_page"
+                }
+                
+                new_urls_added = 0
+                excluded_card_count = 0
                 for card in cards_data:
+                    # Skip sponsored if configured
+                    if config.CATEGORY_EXCLUDE_SPONSORED_PRODUCTS and card.get("is_sponsored"):
+                        excluded_card_count += 1
+                        continue
+                        
                     raw_price = card.get("price", "")
                     parsed_price = category_price_filter.parse_price_to_float(raw_price)
                     
@@ -132,21 +181,53 @@ async def discover_category_products(
                         parsed_price, price_min, price_max, mode
                     )
                     
-                    job_store.add_category_item(
-                        category_job_id=category_job_id,
-                        page_number=current_page,
-                        source_category_url=page_url,
-                        product_url=card["url"],
-                        status=filter_res["status"],
-                        title=card.get("title"),
-                        brand=card.get("brand"),
-                        card_price_raw=raw_price,
-                        card_price_min=parsed_price["price_min"],
-                        card_price_max=parsed_price["price_max"],
-                        image_url=card.get("image"),
-                        filter_reason=filter_res["reason"],
-                        metadata_json={"parsed_price_confidence": parsed_price["confidence"]}
-                    )
+                    product_id = job_store.extract_chewy_product_id(card["url"])
+                    if config.CHEWY_GLOBAL_DEDUP_ENABLED and product_id:
+                        reg_res = job_store.check_and_update_product_registry(product_id, card["url"], category_job_id)
+                        registry_item = reg_res["registry_item"]
+                        
+                        # Only skip if it's already extracted, output exists, and we don't force reprocess
+                        if registry_item["extraction_status"] == "extracted_success" and config.CHEWY_SKIP_ALREADY_EXTRACTED and not config.CHEWY_REPROCESS_EXISTING:
+                            grouped_path = registry_item.get("grouped_output_path")
+                            conf_score = registry_item.get("confidence_score", 0)
+                            if grouped_path and Path(grouped_path).exists() and conf_score >= config.CHEWY_JSON_CONFIDENCE_THRESHOLD:
+                                filter_res["status"] = "duplicate_existing_success"
+                                filter_res["reason"] = f"Product already extracted successfully (Score: {conf_score})"
+                    
+                    try:
+                        job_store.add_category_item(
+                            category_job_id=category_job_id,
+                            page_number=current_page,
+                            source_category_url=final_url,
+                            product_url=card["url"],
+                            product_id=product_id,
+                            status=filter_res["status"],
+                            title=card.get("title"),
+                            brand=card.get("brand"),
+                            card_price_raw=raw_price,
+                            card_price_min=parsed_price["price_min"],
+                            card_price_max=parsed_price["price_max"],
+                            image_url=card.get("image"),
+                            filter_reason=filter_res["reason"],
+                            metadata_json={"parsed_price_confidence": parsed_price["confidence"], "product_id": product_id, "is_sponsored": card.get("is_sponsored", False)}
+                        )
+                        new_urls_added += 1
+                    except Exception as ins_e:
+                        # Ignore unique constraint errors within same page
+                        pass
+                
+                page_summary["excluded_card_count"] = excluded_card_count
+                page_summary["new_urls_added_on_page"] = new_urls_added
+                
+                if config.CATEGORY_DISCOVERY_SAVE_PAGE_DEBUG:
+                    import os, json
+                    job = job_store.get_category_job(category_job_id)
+                    job_dir = job.get("output_dir")
+                    if job_dir:
+                        pages_dir = os.path.join(job_dir, "pages")
+                        os.makedirs(pages_dir, exist_ok=True)
+                        with open(os.path.join(pages_dir, f"page_{current_page}_summary.json"), "w", encoding="utf-8") as f:
+                            json.dump(page_summary, f, indent=2)
                 
                 job_store.update_category_job(
                     category_job_id,
@@ -156,14 +237,12 @@ async def discover_category_products(
                 job_store.update_category_job_counts(category_job_id)
                 
                 # Pagination check
-                # Typically chewy pagination has "Next" button or we just check if cards < 10 (usually 36 per page)
-                if len(cards_data) < 10:
-                    logger.info(f"Fewer than 10 cards on page {current_page}, assuming last page.")
+                if organic_card_count < 10:
+                    logger.info(f"Fewer than 10 organic cards on page {current_page}, assuming last page.")
                     break
                     
                 current_page += 1
                 await asyncio.sleep(delay_seconds)
-                
             # Done
             if job_store.get_category_job(category_job_id)["status"] == "running":
                 job_store.update_category_job(category_job_id, status="completed")
@@ -189,8 +268,35 @@ async def extract_product_cards(page) -> List[Dict[str, Any]]:
             for (const el of cardElements) {
                 const link = el.querySelector('a');
                 if (!link) continue;
-                const url = link.href;
-                if (!url.includes('/dp/')) continue;
+                let url = link.href;
+                
+                // Exclude dynamic tracker URLs completely if they don't resolve to /dp/ immediately, 
+                // but sometimes Chewy uses /api/event/p/sar/click.
+                // We'll mark them as sponsored.
+                let isSponsored = false;
+                
+                // Check for sponsored tracker URL
+                if (url.includes('/api/event/') || url.includes('adsOrigin=')) {
+                    isSponsored = true;
+                    // Try to find the real URL in data attributes if possible, or fallback
+                    if (el.dataset && el.dataset.trackUrl) {
+                         // Some chewy cards have real urls in dataset
+                    }
+                }
+                
+                // Check text labels for "Sponsored"
+                const textContent = el.innerText.toLowerCase();
+                if (textContent.includes('sponsored') || textContent.includes('ad ')) {
+                    isSponsored = true;
+                }
+                
+                // Check aria-labels or data attributes
+                if (el.getAttribute('aria-label') && el.getAttribute('aria-label').toLowerCase().includes('sponsored')) {
+                    isSponsored = true;
+                }
+                
+                // If it's not a /dp/ link and not a tracker, maybe skip
+                if (!url.includes('/dp/') && !isSponsored) continue;
                 
                 const titleEl = el.querySelector('h2, .kib-product-title, [data-testid="product-title"]');
                 const title = titleEl ? titleEl.innerText : '';
@@ -201,24 +307,28 @@ async def extract_product_cards(page) -> List[Dict[str, Any]]:
                 const imgEl = el.querySelector('img');
                 const image = imgEl ? imgEl.src : '';
                 
-                results.push({url, title, price, image});
+                results.push({url, title, price, image, is_sponsored: isSponsored});
             }
         } else {
             // Fallback: just look for all /dp/ links and find nearby price
-            const links = document.querySelectorAll('a[href*="/dp/"]');
+            const links = document.querySelectorAll('a[href*="/dp/"], a[href*="/api/event/"]');
             const seen = new Set();
             for (const link of links) {
                 const url = link.href;
                 if (seen.has(url)) continue;
                 seen.add(url);
                 
+                let isSponsored = url.includes('/api/event/') || url.includes('adsOrigin=');
                 const container = link.closest('div');
                 let price = '';
                 if (container) {
                     const priceEl = container.querySelector('.price, [data-testid*="price"]');
                     if (priceEl) price = priceEl.innerText;
+                    if (container.innerText.toLowerCase().includes('sponsored')) {
+                        isSponsored = true;
+                    }
                 }
-                results.push({url, title: link.innerText, price: price, image: ''});
+                results.push({url, title: link.innerText, price: price, image: '', is_sponsored: isSponsored});
             }
         }
         return results;

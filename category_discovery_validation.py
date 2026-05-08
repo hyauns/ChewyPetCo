@@ -13,6 +13,28 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
 
     items = job_store.get_category_items(category_job_id)
     
+    out_dir = job.get("output_dir", "")
+    pages_dir = os.path.join(out_dir, "pages") if out_dir else ""
+    
+    page_summaries = []
+    total_raw_cards = 0
+    total_organic_cards = 0
+    total_sponsored_excluded = 0
+    
+    if pages_dir and os.path.exists(pages_dir):
+        for fname in os.listdir(pages_dir):
+            if fname.endswith("_summary.json"):
+                with open(os.path.join(pages_dir, fname), "r", encoding="utf-8") as f:
+                    try:
+                        p_sum = json.load(f)
+                        page_summaries.append(p_sum)
+                        total_raw_cards += p_sum.get("raw_card_count", 0)
+                        total_organic_cards += p_sum.get("organic_card_count", 0)
+                        total_sponsored_excluded += p_sum.get("excluded_card_count", 0)
+                    except:
+                        pass
+    page_summaries.sort(key=lambda x: x.get("page_number", 0))
+
     # Base counts
     total_items_in_db = len(items)
     unique_urls = set()
@@ -36,8 +58,19 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
     sample_ambiguous = []
     sample_invalid = []
     sample_duplicates = []
+    sample_already_extracted = []
+    sample_global_duplicates = []
+    sample_new_products = []
     
-    # Detailed CSV rows
+    global_duplicates_found = 0
+    already_extracted_count = 0
+    skipped_already_extracted_count = 0
+    new_products_count = 0
+    previously_seen_but_not_extracted_count = 0
+    internal_duplicates_count = 0
+
+    import config
+    
     csv_rows = []
 
     for item in items:
@@ -48,14 +81,19 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         img = item.get("image_url", "")
         pid = item.get("product_id", "")
         
-        # Determine valid/invalid
+        meta = {}
+        try:
+            if item.get("metadata_json"):
+                meta = json.loads(item.get("metadata_json")) if isinstance(item.get("metadata_json"), str) else item.get("metadata_json")
+        except: pass
+        
+        is_sponsored = meta.get("is_sponsored", False)
+        
         if not url.startswith("http") or "chewy.com" not in url:
             invalid_urls_count += 1
             if len(sample_invalid) < 10: sample_invalid.append(url)
             
         if not pid:
-            # We don't have product_id parsed directly in extraction yet usually, but maybe we do.
-            # If not parsed, we can try to extract from url
             try:
                 extracted_pid = url.rstrip("/").split("/")[-1]
                 if not extracted_pid.isdigit():
@@ -69,11 +107,37 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         
         status_counts[status] += 1
         
-        if url in unique_urls:
-            duplicate_count += 1
+        if pid in unique_urls or url in unique_urls:
+            internal_duplicates_count += 1
             if len(sample_duplicates) < 10: sample_duplicates.append(url)
+            continue # Don't count for other global stats
         else:
-            unique_urls.add(url)
+            if pid: 
+                unique_urls.add(pid)
+            else:
+                unique_urls.add(url)
+            
+        if pid:
+            with job_store.connect() as conn:
+                # Need to check if it existed before this job started
+                # Wait, discovery count > 1 means it was discovered by another job too
+                reg_row = conn.execute("SELECT discovery_count, extraction_status, created_at FROM chewy_product_registry WHERE product_id = ?", (pid,)).fetchone()
+            if reg_row:
+                # If created_at is older than this job's created_at, it's a global duplicate
+                # But we can approximate by checking if discovery_count > 1
+                if reg_row[0] > 1:
+                    global_duplicates_found += 1
+                    if len(sample_global_duplicates) < 10: sample_global_duplicates.append(url)
+                    if reg_row[1] == "extracted_success":
+                        already_extracted_count += 1
+                    else:
+                        previously_seen_but_not_extracted_count += 1
+                else:
+                    new_products_count += 1
+                    if len(sample_new_products) < 10: sample_new_products.append(url)
+            else:
+                new_products_count += 1
+                if len(sample_new_products) < 10: sample_new_products.append(url)
             
         if status in ("filtered_in", "discovered"):
             filtered_in_count += 1
@@ -85,6 +149,9 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         elif status == "filtered_out":
             filtered_out_count += 1
             if len(sample_filtered_out) < 10: sample_filtered_out.append(url)
+        elif status == "duplicate_existing_success":
+            skipped_already_extracted_count += 1
+            if len(sample_already_extracted) < 10: sample_already_extracted.append(url)
             
         csv_rows.append({
             "product_id": pid,
@@ -95,56 +162,39 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
             "card_price_max": item.get("card_price_max"),
             "status": status,
             "filter_reason": item.get("filter_reason", ""),
-            "validation_issue": "duplicate" if url in unique_urls and csv_rows and any(r["product_url"]==url for r in csv_rows) else "",
+            "is_sponsored": is_sponsored,
             "valid_for_pdp_job": status in ("filtered_in", "discovered")
         })
 
-    # Calculations
-    total_cards_found = job.get("total_cards_found", 0) or total_items_in_db
     valid_for_pdp_job_count = filtered_in_count
     not_valid_for_pdp_job_count = total_items_in_db - valid_for_pdp_job_count
     
-    dup_rate = duplicate_count / max(1, total_items_in_db)
+    dup_rate = internal_duplicates_count / max(1, total_items_in_db)
     miss_id_rate = missing_id_count / max(1, total_items_in_db)
     miss_price_rate = missing_price_count / max(1, total_items_in_db)
-    miss_img_rate = missing_image_count / max(1, total_items_in_db)
-    miss_title_rate = missing_title_count / max(1, total_items_in_db)
     
-    # Score logic
     score = 100
     warnings = []
     
     if total_items_in_db == 0:
         score -= 20
         warnings.append("No items found in DB.")
+        
+    stale_pages = [p for p in page_summaries if p.get("page_status") == "stale_repeated_page"]
+    if stale_pages:
+        warnings.append(f"Found {len(stale_pages)} stale/repeating pages in pagination.")
+        score -= 10
+        
+    if new_products_count == 0 and global_duplicates_found == 0 and total_items_in_db > 0:
+        warnings.append("No new products and no global duplicates, registry logic might be failing.")
     
     if valid_for_pdp_job_count == 0:
         score -= 15
         warnings.append("No valid URLs available for PDP extraction.")
         
-    if dup_rate > 0.20:
-        score -= 10
-        warnings.append(f"High duplicate rate: {dup_rate:.1%}")
-        
-    if miss_id_rate > 0.10:
-        score -= 10
-        warnings.append(f"High missing product ID rate: {miss_id_rate:.1%}")
-        
-    if miss_title_rate > 0.20:
-        score -= 5
-        warnings.append(f"High missing title rate: {miss_title_rate:.1%}")
-        
-    if miss_img_rate > 0.50:
-        score -= 5
-        warnings.append(f"High missing image rate: {miss_img_rate:.1%}")
-        
     if miss_price_rate > 0.50 and job.get("mode") == "card_price_prefilter":
         score -= 10
         warnings.append("High missing price rate while using strict card_price_prefilter.")
-        
-    if job.get("mode") == "card_price_prefilter" and ambiguous_price_kept_count > (total_items_in_db * 0.3):
-        score -= 10
-        warnings.append("Many ambiguous prices in strict mode (not effectively filtering).")
 
     score = max(0, score)
     
@@ -154,40 +204,20 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         validation_status = "good"
     elif score >= 50:
         validation_status = "warning"
-    elif score >= 25:
-        validation_status = "poor"
     else:
         validation_status = "failed"
         
     safe_to_create = score >= 50 and valid_for_pdp_job_count > 0
     
-    # Recommendations
     recs = []
-    if total_items_in_db == 0:
-        recs.append("Không tìm thấy product URLs. Hãy kiểm tra Category URL, AdsPower/browser session, hoặc thử giảm blocking.")
-    if duplicate_count > 0 and dup_rate > 0.20:
-        recs.append("Phát hiện nhiều URL trùng. Dedupe đã xử lý, nhưng nên kiểm tra pagination/category selector.")
-    if miss_price_rate > 0.50:
-        if job.get("mode") == "hybrid":
-            recs.append("Nhiều sản phẩm thiếu giá trên card. Hybrid mode vẫn giữ lại để kiểm tra giá chính xác ở bước PDP.")
-        elif job.get("mode") == "card_price_prefilter":
-            recs.append("Nhiều sản phẩm thiếu giá nhưng đang dùng strict prefilter. Có thể bị loại nhầm sản phẩm tốt. Nên chuyển sang hybrid.")
-    if valid_for_pdp_job_count == 0:
-        recs.append("Không có URL nào sau bộ lọc giá. Hãy giảm price_min hoặc chuyển sang hybrid/pdp_variant_filter.")
-    elif safe_to_create:
+    if safe_to_create:
         recs.append("Có thể tạo PDP extraction job từ filtered_urls.txt.")
     else:
-        recs.append("Không nên tạo PDP job ngay. Hãy kiểm tra report và chạy lại category discovery.")
+        recs.append("Không nên tạo PDP job ngay. Hãy kiểm tra report.")
         
-    # Check files
-    out_dir = job.get("output_dir", "")
     disc_path = os.path.join(out_dir, "discovered_urls.txt")
     filt_path = os.path.join(out_dir, "filtered_urls.txt")
     
-    disc_exists = os.path.exists(disc_path)
-    filt_exists = os.path.exists(filt_path)
-    
-    # Construct report
     report = {
         "category_job_id": category_job_id,
         "category_url": job.get("category_url", ""),
@@ -199,29 +229,32 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
             "mode": job.get("mode")
         },
         "summary": {
-            "total_cards_found": total_cards_found,
+            "total_raw_cards_found": total_raw_cards,
+            "total_organic_cards_found": total_organic_cards,
+            "total_sponsored_cards_excluded": total_sponsored_excluded,
+            "total_db_items": total_items_in_db,
             "unique_product_urls": len(unique_urls),
-            "duplicate_product_urls": duplicate_count,
+            "internal_duplicates_count": internal_duplicates_count,
             "invalid_product_urls": invalid_urls_count,
             "filtered_in_count": filtered_in_count,
             "filtered_out_count": filtered_out_count,
             "ambiguous_price_kept_count": ambiguous_price_kept_count,
-            "needs_pdp_price_check_count": ambiguous_price_kept_count,
             "valid_for_pdp_job_count": valid_for_pdp_job_count,
-            "not_valid_for_pdp_job_count": not_valid_for_pdp_job_count
+            "global_duplicates_found": global_duplicates_found,
+            "already_extracted_count": already_extracted_count,
+            "skipped_already_extracted_count": skipped_already_extracted_count,
+            "new_products_count": new_products_count,
+            "reprocess_existing_enabled": config.CHEWY_REPROCESS_EXISTING
         },
+        "pages": page_summaries,
         "quality": {
             "missing_product_id_count": missing_id_count,
-            "missing_title_count": missing_title_count,
-            "missing_price_count": missing_price_count,
-            "missing_image_count": missing_image_count,
             "duplicate_rate": round(dup_rate, 4),
-            "missing_price_rate": round(miss_price_rate, 4),
-            "missing_product_id_rate": round(miss_id_rate, 4)
+            "missing_price_rate": round(miss_price_rate, 4)
         },
         "output_files": {
-            "discovered_urls_exists": disc_exists,
-            "filtered_urls_exists": filt_exists,
+            "discovered_urls_exists": os.path.exists(disc_path),
+            "filtered_urls_exists": os.path.exists(filt_path),
             "discovered_urls_count": total_items_in_db,
             "filtered_urls_count": filtered_in_count
         },
@@ -231,29 +264,19 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
             "safe_to_create_pdp_job": safe_to_create,
             "warnings": warnings,
             "recommendations": recs
-        },
-        "sample_items": {
-            "filtered_in": sample_filtered_in,
-            "filtered_out": sample_filtered_out,
-            "ambiguous_price": sample_ambiguous,
-            "invalid": sample_invalid,
-            "duplicates": sample_duplicates
         }
     }
     
-    # Save Report JSON
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-        report_path = os.path.join(out_dir, "category_validation_report.json")
-        with open(report_path, "w", encoding="utf-8") as f:
+        with open(os.path.join(out_dir, "category_validation_report.json"), "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
             
-        csv_path = os.path.join(out_dir, "category_validation_items.csv")
-        with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        with open(os.path.join(out_dir, "category_validation_items.csv"), "w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[
                 "product_id", "product_url", "title", "card_price_raw", 
                 "card_price_min", "card_price_max", "status", "filter_reason", 
-                "validation_issue", "valid_for_pdp_job"
+                "is_sponsored", "valid_for_pdp_job"
             ])
             writer.writeheader()
             writer.writerows(csv_rows)
@@ -266,45 +289,20 @@ def print_validation_report(report: Dict[str, Any]) -> None:
     print(f"Job ID: {report['category_job_id']}")
     print(f"Category URL: {report['category_url']}")
     
-    pf = report['price_filter']
-    p_min = pf['price_min']
-    p_max = pf['price_max']
-    min_str = f"min=${p_min}" if p_min is not None else "no_min"
-    max_str = f", max=${p_max}" if p_max is not None else ""
-    print(f"Price Filter: {pf['mode']}, {min_str}{max_str}")
+    print("\nPer-page:")
+    for p in report.get('pages', []):
+        print(f"Page {p['page_number']}: raw={p['raw_card_count']}, sponsored={p['sponsored_card_count']}, organic={p['organic_card_count']}, unique={p['unique_product_urls_on_page']}, new={p['new_urls_added_on_page']}")
+    
     print("\nSummary:")
     s = report['summary']
-    print(f"- Total cards found: {s['total_cards_found']}")
+    print(f"- Total raw cards: {s['total_raw_cards_found']}")
+    print(f"- Total organic cards: {s['total_organic_cards_found']}")
+    print(f"- Sponsored excluded: {s['total_sponsored_cards_excluded']}")
     print(f"- Unique PDP URLs: {s['unique_product_urls']}")
-    print(f"- Duplicates removed: {s['duplicate_product_urls']}")
     print(f"- Filtered in: {s['filtered_in_count']}")
     print(f"- Filtered out by price: {s['filtered_out_count']}")
-    print(f"- Ambiguous price kept: {s['ambiguous_price_kept_count']}")
-    print(f"- Invalid URLs: {s['invalid_product_urls']}")
-    
-    q = report['quality']
-    print(f"- Missing product ID: {q['missing_product_id_count']}")
-    
-    v = report['validation']
-    print("\nQuality:")
-    print(f"- Validation score: {v['validation_score']}/100")
-    print(f"- Status: {v['validation_status']}")
-    print(f"- Safe to create PDP job: {'yes' if v['safe_to_create_pdp_job'] else 'no'}")
-    
-    if v['warnings']:
-        print("\nWarnings:")
-        for w in v['warnings']:
-            print(f"- {w}")
-            
-    print("\nRecommendation:")
-    for r in v['recommendations']:
-        print(f"- {r}")
-        
-    print("\nFiles:")
-    print("- category_validation_report.json")
-    print("- category_validation_items.csv")
-    print("- filtered_urls.txt")
+    print(f"- Internal duplicates: {s['internal_duplicates_count']}")
+    print(f"- Global duplicates: {s['global_duplicates_found']}")
+    print(f"- Already extracted: {s['already_extracted_count']}")
+    print(f"- New products: {s['new_products_count']}")
     print("==================================================")
-    
-    if not v['safe_to_create_pdp_job']:
-        print("\nKhông nên tạo PDP job ngay. Hãy kiểm tra report trước.")

@@ -6,7 +6,10 @@ Usage: python test_single_product.py
 import asyncio
 import csv
 import json
+import os
 import random
+import sys
+import uuid
 from pathlib import Path
 
 from rich.console import Console
@@ -271,13 +274,41 @@ async def main():
 
             # Navigate
             console.print(f"Navigating to product page...")
-            await page.goto(test_url, timeout=config.PAGE_LOAD_TIMEOUT, wait_until="domcontentloaded")
+            try:
+                await page.goto(test_url, timeout=config.PAGE_LOAD_TIMEOUT, wait_until="domcontentloaded")
+            except Exception as e:
+                console.print(f"[red]Playwright Navigation Error: {str(e)}[/red]")
+                sys.exit(1)
             await asyncio.sleep(random.uniform(3, 5))
 
             # Scroll down to load all content
             for _ in range(3):
                 await page.mouse.wheel(0, random.randint(300, 500))
                 await asyncio.sleep(random.uniform(0.5, 1.0))
+                
+            # Phase 4 - White Screen Detection
+            from adsp_profile_pool_manager import detect_white_screen_block
+            detection_result = await detect_white_screen_block(page, test_url)
+            if detection_result["is_white_screen"]:
+
+                if getattr(config, 'ADSP_SAVE_WHITE_SCREEN_SCREENSHOT', True):
+                    try:
+                        os.makedirs("output/white_screen_events", exist_ok=True)
+                        screenshot_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.png"
+                        await page.screenshot(path=screenshot_path)
+                        detection_result["screenshot_path"] = screenshot_path
+                    except: pass
+                if getattr(config, 'ADSP_SAVE_WHITE_SCREEN_HTML', True):
+                    try:
+                        html_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.html"
+                        with open(html_path, "w", encoding="utf-8") as f:
+                            f.write(await page.content())
+                        detection_result["html_path"] = html_path
+                    except: pass
+                console.print("[red][WHITE_SCREEN_DETECTED][/red]")
+                print(f"[WHITE_SCREEN_RESULT] {json.dumps(detection_result)}")
+                # We must abort extraction so the runner can catch this and quarantine
+                return
 
             # Phase 3C Integration
             from chewy_next_json_extractor import (
@@ -309,6 +340,7 @@ async def main():
                 
                 # Fetch and parse
                 html = await fetch_initial_html(test_url, page)
+                
                 next_data = extract_next_data_from_html(html)
                 
                 match = re.search(r"chewy\.com/(.*?)/dp/(\d+)", test_url)

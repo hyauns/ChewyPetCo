@@ -594,11 +594,17 @@ def tab_category_discovery() -> None:
         price_max = cols[1].number_input("Price Max ($)", value=0.0, step=1.0, key="cat-disc-max")
         mode = cols[2].selectbox("Price Filter Mode", ["hybrid", "card_price_prefilter", "pdp_variant_filter"], index=0, key="cat-disc-mode")
         
+        page_cols = st.columns(2)
+        start_page = page_cols[0].number_input("Start Page", min_value=1, value=1, step=1, key="cat-disc-start-page")
+        max_pages = page_cols[1].number_input("Max Pages (0 = No limit)", min_value=0, value=0, step=1, key="cat-disc-max-pages")
+        
         if st.button("Create Discovery Job", type="primary", key="cat-disc-create"):
             import category_job_runner
-            max_val = None if price_max == 0 else price_max
+            max_price_val = None if price_max == 0 else price_max
+            max_pages_val = None if max_pages == 0 else max_pages
+            
             jid = category_job_runner.create_category_discovery_job(
-                name=job_name, url=cat_url, price_min=price_min, price_max=max_val, mode=mode
+                name=job_name, url=cat_url, price_min=price_min, price_max=max_price_val, mode=mode, start_page=start_page, max_pages=max_pages_val
             )
             st.success(f"Created category discovery job: {jid}")
             st.session_state["selected_cat_job"] = jid
@@ -685,8 +691,14 @@ def tab_category_discovery() -> None:
         c5, c6, c7, c8 = st.columns(4)
         c5.metric("Filtered In", s.get("filtered_in_count"))
         c6.metric("Filtered Out", s.get("filtered_out_count"))
-        c7.metric("Duplicates", s.get("duplicate_product_urls"))
-        c8.metric("Missing Prices", q.get("missing_price_count"))
+        c7.metric("Duplicates", s.get("duplicate_product_urls", s.get("internal_duplicates_count", 0)))
+        c8.metric("Sponsored Excluded", s.get("total_sponsored_cards_excluded", 0))
+
+        c9, c10, c11, c12 = st.columns(4)
+        c9.metric("Global Duplicates", s.get("global_duplicates_found", 0))
+        c10.metric("Already Extracted", s.get("already_extracted_count", 0))
+        c11.metric("New Products", s.get("new_products_count", 0))
+        c12.metric("Missing Prices", q.get("missing_price_count", 0))
         
         for rec in v.get("recommendations", []):
             if "Không nên" in rec or "kiểm tra" in rec.lower():
@@ -694,6 +706,28 @@ def tab_category_discovery() -> None:
             else:
                 st.success(rec)
                 
+
+        pages = report.get("pages", [])
+        if pages:
+            st.subheader("Per-Page Breakdown")
+            page_rows = []
+            for p in pages:
+                page_rows.append({
+                    "Page": p.get("page_number"),
+                    "Raw Cards": p.get("raw_card_count"),
+                    "Organic": p.get("organic_card_count"),
+                    "Sponsored": p.get("sponsored_card_count"),
+                    "Unique URLs": p.get("unique_product_urls_on_page"),
+                    "New URLs": p.get("new_urls_added_on_page"),
+                    "Status": p.get("page_status", "ok")
+                })
+            st.dataframe(page_rows, hide_index=True)
+            
+            if st.checkbox("Show First 5 URLs per page (Debug)"):
+                for p in pages:
+                    with st.expander(f"Page {p.get('page_number')} First URLs"):
+                        st.json(p.get("first_5_product_urls", []))
+                        
         with st.expander("Detailed Metrics"):
             st.json(report)
             
@@ -821,8 +855,8 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
     if current_item:
         st.caption(f"Current/next: #{current_item['index_number']} {current_item['input_url']}")
 
-    retry_failed = st.checkbox("Include failed items when starting/resuming", value=False, key=f"job-retry-failed-{job_id}")
-    resume_paused = st.checkbox("Resume from paused item", value=True, key=f"job-resume-paused-{job_id}")
+    retry_failed = st.checkbox("Include failed items when starting/resuming", value=True, key=f"job-retry-failed-{job_id}")
+    resume_paused = st.checkbox("Include paused items after pending/failed items", value=True, key=f"job-resume-paused-{job_id}")
     force_retry = st.checkbox("Force retry beyond max attempts", value=False, key=f"job-force-retry-{job_id}")
     reprocess_completed = st.checkbox("Reprocess completed items", value=False, key=f"job-reprocess-completed-{job_id}")
     reprocess_existing = st.checkbox("Ignore existing output check", value=False, key=f"job-reprocess-existing-{job_id}")
@@ -856,7 +890,7 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
             with st.spinner("Resuming job..."):
                 result = job_runner.resume_job(
                     job_id,
-                    retry_failed=retry_failed,
+                    retry_failed=True,
                     resume_paused=resume_paused,
                     reprocess_completed=reprocess_completed,
                     reprocess_existing=reprocess_existing,
@@ -881,6 +915,27 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
                 st.info("No current item to skip.")
             st.rerun()
 
+    st.subheader("Job Exporter")
+    with st.expander("Consolidate & Export Job", expanded=False):
+        export_name = st.text_input("Custom Export Name (Optional)", key=f"export-name-{job_id}")
+        archive_raw = st.checkbox("Archive raw per-product JSON files", value=False, key=f"export-archive-{job_id}")
+        delete_after = st.checkbox("Delete raw files after archiving (Destructive)", value=False, key=f"export-delete-{job_id}")
+        
+        if st.button("Export Job", key=f"export-btn-{job_id}"):
+            with st.spinner("Consolidating products..."):
+                import job_exporter
+                summary = job_exporter.export_job_products(
+                    pdp_job_id=job_id,
+                    custom_name=export_name if export_name else None,
+                    archive_raw=archive_raw,
+                    delete_after_archive=delete_after
+                )
+                if summary:
+                    st.success(f"Export completed! {summary['successful_base_products']} products exported.")
+                    st.json(summary)
+                else:
+                    st.error("Export failed. See logs.")
+                    
     job = job_store.get_job(job_id)
     if job:
         job_dir = Path(job["output_dir"])
@@ -1110,6 +1165,83 @@ def tab_adsp_pool() -> None:
     except Exception:
         st.info("No white screen events table found yet.")
 
+def tab_exports():
+    st.header("Consolidated Exports")
+    st.write("Manage your generated job exports in `output/exports/`.")
+    
+    exports_dir = Path(OUTPUT_FOLDERS["exports"]) if "exports" in OUTPUT_FOLDERS else Path("output/exports")
+    if not exports_dir.exists():
+        st.info("No exports directory found.")
+        return
+        
+    export_files = [f for f in exports_dir.glob("*_summary.json")]
+    if not export_files:
+        st.info("No export summaries found.")
+        return
+        
+    export_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    
+    for sum_file in export_files:
+        with st.expander(f"Export: {sum_file.name.replace('_summary.json', '')}", expanded=False):
+            try:
+                import json
+                with open(sum_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                st.write(f"**Created At:** {data.get('created_at')}")
+                st.write(f"**Job ID:** {data.get('pdp_job_id')}")
+                st.write(f"**Products:** {data.get('successful_base_products')} | **Variants:** {data.get('total_variants')}")
+                
+                files = data.get("files", {})
+                st.json(data)
+                
+                # Show file downloads
+                for k, path in files.items():
+                    if path and os.path.exists(path):
+                        with open(path, "rb") as bf:
+                            st.download_button(f"Download {k}", bf, file_name=os.path.basename(path), key=f"dl-{sum_file.name}-{k}")
+            except Exception as e:
+                st.error(f"Could not read {sum_file.name}: {e}")
+
+def tab_registry_browser():
+    st.header("Global Product Registry Browser")
+    st.write("Browse and search the global product deduplication registry.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        search_pid = st.text_input("Search by Product ID", "")
+    with col2:
+        status_filter = st.selectbox(
+            "Filter by Status", 
+            ["all", "never_extracted", "extracted_success", "extracted_failed", "skipped_existing"]
+        )
+        
+    if st.button("Refresh / Search", key="reg_refresh"):
+        import job_store
+        import pandas as pd
+        try:
+            with job_store.connect() as conn:
+                query = "SELECT product_id, latest_url, extraction_status, discovery_count, updated_at FROM chewy_product_registry"
+                params = []
+                conditions = []
+                
+                if search_pid:
+                    conditions.append("product_id LIKE ?")
+                    params.append(f"%{search_pid}%")
+                if status_filter != "all":
+                    conditions.append("extraction_status = ?")
+                    params.append(status_filter)
+                    
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+                    
+                query += " ORDER BY updated_at DESC LIMIT 200"
+                
+                df = pd.read_sql_query(query, conn, params=params)
+            
+            st.dataframe(df, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error loading registry: {e}")
 
 def sidebar_settings() -> tuple[str, int, bool]:
     st.sidebar.header("Run Settings")
@@ -1138,6 +1270,8 @@ def main() -> None:
             "Validation",
             "Diagnostics",
             "AdsPower Pool",
+            "Registry Browser",
+            "Exports",
             "Run History",
         ]
     )
@@ -1162,6 +1296,10 @@ def main() -> None:
     with tabs[8]:
         tab_adsp_pool()
     with tabs[9]:
+        tab_registry_browser()
+    with tabs[10]:
+        tab_exports()
+    with tabs[11]:
         tab_run_history()
 
 

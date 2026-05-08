@@ -38,11 +38,45 @@ def sync_profile_pool_to_db() -> None:
             )
         conn.commit()
 
+def release_stale_in_use_profiles() -> int:
+    """Release profiles left in_use when no item is currently running with them."""
+    if not config.ADSP_PROFILE_POOL_ENABLED:
+        return 0
+
+    now = utc_now()
+    with job_store.connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT profile_id
+            FROM adsp_profile_pool
+            WHERE status = 'in_use'
+            AND profile_id NOT IN (
+                SELECT DISTINCT profile_id_used
+                FROM scrape_job_items
+                WHERE status = 'running' AND profile_id_used IS NOT NULL
+            )
+            """
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                """
+                UPDATE adsp_profile_pool
+                SET status = 'available',
+                    notes = 'Auto-released stale in_use profile',
+                    updated_at = ?
+                WHERE profile_id = ?
+                """,
+                (now, row["profile_id"]),
+            )
+        conn.commit()
+    return len(rows)
+
 def get_next_available_profile(job_id: str = None, item_id: int = None) -> str | None:
     if not config.ADSP_PROFILE_POOL_ENABLED:
         return config.ADSPOWER_PROFILE_ID
         
     sync_profile_pool_to_db()
+    release_stale_in_use_profiles()
     now = utc_now()
     
     with job_store.connect() as conn:
