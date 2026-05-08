@@ -887,10 +887,13 @@ def process_job(
     if not job:
         raise ValueError(f"Job not found: {job_id}")
 
-    orphaned = job_store.mark_orphan_running_items(job_id)
+     orphaned = job_store.mark_orphan_running_items(job_id)
     if orphaned and on_line:
         on_line(f"[job {job_id}] Reset {orphaned} orphan running item(s) to pending.")
-    job_store.mark_stale_running_items(job_id, stale_minutes=stale_minutes)
+    effective_stale = 0 if force_retry else stale_minutes
+    stale_reset = job_store.mark_stale_running_items(job_id, stale_minutes=effective_stale)
+    if stale_reset and on_line:
+        on_line(f"[job {job_id}] Reset {stale_reset} stale running item(s) to pending.")
     if config.ADSP_PROFILE_RECOVERY_ENABLED:
         adsp_profile_recovery_manager.sync_profile_templates_to_db()
         released_slots = adsp_profile_recovery_manager.release_stale_template_slots()
