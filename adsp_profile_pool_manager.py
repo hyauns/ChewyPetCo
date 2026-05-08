@@ -173,6 +173,22 @@ def release_profile(profile_id: str) -> None:
         )
         conn.commit()
 
+def release_all_quarantined() -> int:
+    """Release all quarantined profiles back to available. Used after auto-rebuild."""
+    now = utc_now()
+    with job_store.connect() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE adsp_profile_pool
+            SET status = 'available', quarantine_until = NULL,
+                notes = 'Released after auto-rebuild', updated_at = ?
+            WHERE status = 'quarantined'
+            """,
+            (now,)
+        )
+        conn.commit()
+        return cursor.rowcount
+
 def get_profile_health_summary() -> list[dict]:
     with job_store.connect() as conn:
         rows = conn.execute("SELECT * FROM adsp_profile_pool ORDER BY updated_at DESC").fetchall()

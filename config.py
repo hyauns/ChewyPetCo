@@ -87,6 +87,7 @@ ADSP_PROFILE_GROUP_ID = os.environ.get("ADSP_PROFILE_GROUP_ID", "0")
 ADSP_AUTO_REBUILD_ON_BLOCKED = os.environ.get("ADSP_AUTO_REBUILD_ON_BLOCKED", "true").lower() == "true"
 ADSP_AUTO_RESUME_AFTER_REBUILD = os.environ.get("ADSP_AUTO_RESUME_AFTER_REBUILD", "true").lower() == "true"
 ADSP_REBUILD_DELAY_SECONDS = int(os.environ.get("ADSP_REBUILD_DELAY_SECONDS", "30"))
+ADSP_MAX_REBUILD_ROUNDS_PER_ITEM = int(os.environ.get("ADSP_MAX_REBUILD_ROUNDS_PER_ITEM", "3"))
 
 # ---------------------------------------------------------------------------
 # Phase 5 - Global Product Registry & Dedupe

@@ -654,6 +654,22 @@ def auto_rebuild_profile(
         return {"success": False, "slot_id": slot_id, "old_profile_id": old_profile_id, "message": message}
 
 
+def rebuild_all_slots(*, reason: str = "all_profiles_white_screen") -> dict[str, Any]:
+    """Rebuild all CW profile slots. Returns summary with success bool."""
+    results = []
+    all_ok = True
+    for slot_id in get_template_slots():
+        row = get_template(slot_id)
+        if row and row.get("status") == "disabled":
+            results.append({"slot_id": slot_id, "success": False, "message": "disabled"})
+            continue
+        res = auto_rebuild_profile(slot_id, reason=reason, delay_seconds=5)
+        results.append(res)
+        if not res.get("success"):
+            all_ok = False
+    return {"success": all_ok, "slots": results}
+
+
 def ensure_slot_profile(slot_id: str, *, delay_seconds: int = 0) -> dict[str, Any]:
     sync_profile_templates_to_db()
     row = get_template(slot_id)
