@@ -1160,7 +1160,6 @@ def main(argv: list[str] | None = None) -> int:
         return 0
         
     if args.command == "retry-next-profile":
-        import adsp_profile_pool_manager
         job_store.update_item_status(args.item_id, "pending")
         profile_id = adsp_profile_pool_manager.get_next_available_profile(args.job_id, args.item_id)
         if not profile_id:
