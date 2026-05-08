@@ -25,6 +25,7 @@ from typing import Any, Callable
 import config
 import job_store
 import adsp_profile_pool_manager
+import adsp_profile_recovery_manager
 from ui_file_browser import OUTPUT_DIR, PROJECT_ROOT, read_json_file, write_json_file
 from ui_log_parser import detect_redirected_plp, strip_ansi, summarize_error, summarize_run
 
@@ -350,6 +351,9 @@ def process_single_item(
     *,
     reprocess_existing: bool = False,
     force_retry: bool = False,
+    profile_id_override: str | None = None,
+    profile_slot_id: str | None = None,
+    worker_id: str | None = None,
     on_line: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     job = job_store.get_job(job_id)
@@ -460,16 +464,23 @@ def process_single_item(
     log_path = logs_dir / log_name
     attempts = job_store.increment_attempt_and_start(item_id, run_log_path=str(log_path.resolve()), source_product_id=source_id)
     
-    # Phase 4 - Select Profile
-    profile_id = adsp_profile_pool_manager.get_next_available_profile(job_id, item_id)
+    # Phase 4/6 - Select AdsPower profile. Parallel workers pass a fixed
+    # profile/slot; sequential mode keeps the existing pool behavior.
+    profile_id = profile_id_override
+    slot_id = profile_slot_id
+    if not profile_id:
+        profile_id = adsp_profile_pool_manager.get_next_available_profile(job_id, item_id)
+        slot_id = adsp_profile_recovery_manager.get_slot_for_profile_id(profile_id)
     if not profile_id:
         job_store.set_job_status(job_id, "paused", last_error="all_profiles_exhausted")
         print(f"[red]Job {job_id} paused: All configured AdsPower profiles produced white screen or are quarantined. Manual action required.[/red]")
         job_store.update_item_status(item_id, "paused", error_type="all_profiles_exhausted", error_message="No profiles available.")
         return job_store.get_item(item_id) or {}
-        
+
+    if slot_id:
+        adsp_profile_recovery_manager.mark_template_in_use(slot_id, worker_id=worker_id)
     adsp_profile_pool_manager.mark_profile_in_use(profile_id)
-    job_store.update_item(item_id, profile_id_used=profile_id)
+    job_store.update_item(item_id, profile_id_used=profile_id, profile_slot_id=slot_id, worker_id=worker_id)
     
     started_at = time.time()
     started_iso = job_store.utc_now()
@@ -505,6 +516,104 @@ def process_single_item(
 
     duration = round(time.time() - started_at, 2)
     log_text = "".join(lines)
+
+    white_screen_str = "[WHITE_SCREEN_RESULT] "
+    for line in lines:
+        if white_screen_str not in line:
+            continue
+        json_str = line.split(white_screen_str, 1)[1].strip()
+        try:
+            detection_result = json.loads(json_str)
+            adsp_profile_pool_manager.quarantine_profile(profile_id, f"White screen on {url}")
+            adsp_profile_pool_manager.record_white_screen_event(
+                job_id,
+                item_id,
+                url,
+                profile_id,
+                "profile_quarantined",
+                detection_result,
+            )
+
+            ws_count = int(item.get("white_screen_count") or 0) + 1
+            job_store.update_item(item_id, white_screen_count=ws_count, last_white_screen_at=job_store.utc_now())
+
+            attempts_json = json.loads(item.get("profile_attempts_json") or "[]")
+            attempt_record = {
+                "attempt": attempts,
+                "profile_id": profile_id,
+                "slot_id": slot_id,
+                "worker_id": worker_id,
+                "result": "white_screen_block",
+                "screenshot_path": detection_result.get("screenshot_path"),
+                "html_snapshot_path": detection_result.get("html_snapshot_path"),
+                "timestamp": job_store.utc_now(),
+            }
+
+            retry_limit = min(
+                int(item.get("max_attempts") or attempts),
+                int(getattr(config, "ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM", item.get("max_attempts") or attempts)),
+            )
+            can_retry_after_block = attempts < retry_limit
+            rebuild_result: dict[str, Any] | None = None
+            if (
+                can_retry_after_block
+                and slot_id
+                and config.ADSP_PROFILE_RECOVERY_ENABLED
+                and config.ADSP_AUTO_REBUILD_ON_BLOCKED
+            ):
+                adsp_profile_recovery_manager.mark_template_white_screen(
+                    slot_id,
+                    profile_id,
+                    f"White screen on item {item['index_number']}",
+                )
+                if on_line:
+                    on_line(f"[job {job_id}] Triggering auto-rebuild for slot {slot_id}")
+                rebuild_result = adsp_profile_recovery_manager.auto_rebuild_profile(
+                    slot_id,
+                    reason=f"white_screen_block item={item['index_number']}",
+                )
+                attempt_record["rebuild_result"] = {
+                    "success": rebuild_result.get("success"),
+                    "new_profile_id": rebuild_result.get("new_profile_id"),
+                    "message": rebuild_result.get("message"),
+                    }
+            attempts_json.append(attempt_record)
+
+            if attempts >= retry_limit:
+                next_status = "paused" if slot_id else "failed"
+                next_message = (
+                    f"White screen retry limit reached after {attempts} attempt(s). "
+                    "Manual action required before continuing."
+                )
+            elif rebuild_result is not None and not rebuild_result.get("success"):
+                next_status = "paused"
+                next_message = f"Profile rebuild failed for slot {slot_id}: {rebuild_result.get('message')}"
+                job_store.set_job_status(job_id, "paused", last_error=next_message)
+            else:
+                next_status = "pending"
+                if slot_id and rebuild_result and rebuild_result.get("new_profile_id"):
+                    next_message = (
+                        f"White screen with profile {profile_id}; slot {slot_id} rebuilt as "
+                        f"{rebuild_result.get('new_profile_id')}."
+                    )
+                else:
+                    next_message = f"White screen with profile {profile_id}, rotating to next. (Attempt {attempts})"
+
+            job_store.update_item_status(
+                item_id,
+                next_status,
+                error_type="white_screen_block",
+                error_message=next_message,
+                profile_attempts_json=json.dumps(attempts_json),
+            )
+            if on_line:
+                on_line(f"[job {job_id}] White screen on item {item['index_number']} with profile {profile_id}. {next_message}")
+            job_store.update_job_counts(job_id)
+            return job_store.get_item(item_id) or {}
+        except Exception as exc:
+            if on_line:
+                on_line(f"[job {job_id}] White screen handling error: {exc}")
+            break
     
     # Phase 4 - Check for White Screen Detection
     # Strategy: on white screen, ALWAYS put item back to "pending" and quarantine the profile.
@@ -552,6 +661,8 @@ def process_single_item(
     # If not white screen, mark success for profile if it actually exited cleanly or got data
     # (We can be conservative and just mark available)
     adsp_profile_pool_manager.mark_profile_success(profile_id)
+    if slot_id:
+        adsp_profile_recovery_manager.mark_template_success(slot_id)
     
     output_paths = discover_item_outputs(source_id, started_at, mode, job_dir)
     diagnostic = read_diagnostic(output_paths.get("diagnostic_output_path"))
@@ -665,6 +776,9 @@ def process_single_item(
         "page_kind": page_kind,
         "architecture": architecture,
         "confidence_score": item_after.get("confidence_score"),
+        "profile_id_used": profile_id,
+        "profile_slot_id": slot_id,
+        "worker_id": worker_id,
         "output_paths": output_paths,
         "error_type": error_type,
         "error_message": error_message,
@@ -673,7 +787,6 @@ def process_single_item(
     }
     write_json_file(summaries_dir / f"item_{int(item['index_number']):05d}_summary.json", item_summary)
     
-    import config
     if config.CHEWY_GLOBAL_DEDUP_ENABLED and source_id:
         reg_status = "extracted_failed"
         if item_after.get("status") == "done":
@@ -725,6 +838,10 @@ def write_job_reports(job_id: str) -> dict[str, Any]:
             "page_kind",
             "architecture",
             "confidence_score",
+            "profile_slot_id",
+            "profile_id_used",
+            "worker_id",
+            "white_screen_count",
             "grouped_output_path",
             "error_type",
             "error_message",
@@ -742,6 +859,10 @@ def write_job_reports(job_id: str) -> dict[str, Any]:
                     "page_kind": item.get("page_kind"),
                     "architecture": item.get("architecture"),
                     "confidence_score": item.get("confidence_score"),
+                    "profile_slot_id": item.get("profile_slot_id"),
+                    "profile_id_used": item.get("profile_id_used"),
+                    "worker_id": item.get("worker_id"),
+                    "white_screen_count": item.get("white_screen_count"),
                     "grouped_output_path": item.get("grouped_output_path"),
                     "error_type": item.get("error_type"),
                     "error_message": item.get("error_message"),
@@ -766,7 +887,15 @@ def process_job(
     if not job:
         raise ValueError(f"Job not found: {job_id}")
 
+    orphaned = job_store.mark_orphan_running_items(job_id)
+    if orphaned and on_line:
+        on_line(f"[job {job_id}] Reset {orphaned} orphan running item(s) to pending.")
     job_store.mark_stale_running_items(job_id, stale_minutes=stale_minutes)
+    if config.ADSP_PROFILE_RECOVERY_ENABLED:
+        adsp_profile_recovery_manager.sync_profile_templates_to_db()
+        released_slots = adsp_profile_recovery_manager.release_stale_template_slots()
+        if released_slots and on_line:
+            on_line(f"[job {job_id}] Released {released_slots} stale CW slot(s).")
     if config.ADSP_PROFILE_POOL_ENABLED:
         released = adsp_profile_pool_manager.release_stale_in_use_profiles()
         if released and on_line:
@@ -892,6 +1021,7 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ["start", "resume"]:
         cmd = sub.add_parser(name, help=f"{name.title()} a job")
         cmd.add_argument("--job-id", required=True)
+        cmd.add_argument("--workers", type=int, default=1, help="Controlled CW worker count. Use 1 for sequential mode.")
         cmd.add_argument("--retry-failed", action="store_true")
         cmd.add_argument("--reprocess-completed", action="store_true")
         cmd.add_argument("--reprocess-existing", action="store_true")
@@ -945,31 +1075,59 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "start":
-        summary = process_job(
-            args.job_id,
-            retry_failed=args.retry_failed,
-            resume_paused=False,
-            reprocess_completed=args.reprocess_completed,
-            reprocess_existing=args.reprocess_existing,
-            force_retry=args.force_retry,
-            stale_minutes=args.stale_minutes,
-            max_items=args.max_items,
-            on_line=print,
-        )
+        if args.workers and args.workers > 1:
+            import parallel_resumable_runner
+            summary = parallel_resumable_runner.process_job_parallel(
+                args.job_id,
+                worker_count=args.workers,
+                retry_failed=args.retry_failed,
+                resume_paused=False,
+                reprocess_existing=args.reprocess_existing,
+                force_retry=args.force_retry,
+                stale_minutes=args.stale_minutes,
+                max_items=args.max_items,
+                on_line=print,
+            )
+        else:
+            summary = process_job(
+                args.job_id,
+                retry_failed=args.retry_failed,
+                resume_paused=False,
+                reprocess_completed=args.reprocess_completed,
+                reprocess_existing=args.reprocess_existing,
+                force_retry=args.force_retry,
+                stale_minutes=args.stale_minutes,
+                max_items=args.max_items,
+                on_line=print,
+            )
         print(json.dumps(summary, indent=2))
         return 0
 
     if args.command == "resume":
-        summary = resume_job(
-            args.job_id,
-            retry_failed=args.retry_failed,
-            reprocess_completed=args.reprocess_completed,
-            reprocess_existing=args.reprocess_existing,
-            force_retry=args.force_retry,
-            stale_minutes=args.stale_minutes,
-            max_items=args.max_items,
-            on_line=print,
-        )
+        if args.workers and args.workers > 1:
+            import parallel_resumable_runner
+            summary = parallel_resumable_runner.process_job_parallel(
+                args.job_id,
+                worker_count=args.workers,
+                retry_failed=True if not args.retry_failed else args.retry_failed,
+                resume_paused=True,
+                reprocess_existing=args.reprocess_existing,
+                force_retry=args.force_retry,
+                stale_minutes=args.stale_minutes,
+                max_items=args.max_items,
+                on_line=print,
+            )
+        else:
+            summary = resume_job(
+                args.job_id,
+                retry_failed=True if not args.retry_failed else args.retry_failed,
+                reprocess_completed=args.reprocess_completed,
+                reprocess_existing=args.reprocess_existing,
+                force_retry=args.force_retry,
+                stale_minutes=args.stale_minutes,
+                max_items=args.max_items,
+                on_line=print,
+            )
         print(json.dumps(summary, indent=2))
         return 0
 

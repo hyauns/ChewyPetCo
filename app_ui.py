@@ -580,6 +580,12 @@ def render_selected_job_item(job_id: str, items: list[dict[str, Any]]) -> None:
                 st.json(json.loads(selected["metadata_json"]), expanded=False)
             except json.JSONDecodeError:
                 st.code(selected["metadata_json"], language="json")
+    if selected.get("profile_attempts_json"):
+        with st.expander("Profile attempt history"):
+            try:
+                st.json(json.loads(selected["profile_attempts_json"]), expanded=False)
+            except json.JSONDecodeError:
+                st.code(selected["profile_attempts_json"], language="json")
 
 
 def tab_category_discovery() -> None:
@@ -860,6 +866,15 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
     force_retry = st.checkbox("Force retry beyond max attempts", value=False, key=f"job-force-retry-{job_id}")
     reprocess_completed = st.checkbox("Reprocess completed items", value=False, key=f"job-reprocess-completed-{job_id}")
     reprocess_existing = st.checkbox("Ignore existing output check", value=False, key=f"job-reprocess-existing-{job_id}")
+    parallel_worker_count = st.number_input(
+        "Controlled CW workers",
+        min_value=1,
+        max_value=3,
+        value=1,
+        step=1,
+        key=f"job-parallel-workers-{job_id}",
+        help="Use 2-3 only when CW profile templates and proxies are configured.",
+    )
 
     controls = st.columns(5)
     log_box = st.empty()
@@ -915,6 +930,23 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
                 st.info("No current item to skip.")
             st.rerun()
 
+    if parallel_worker_count > 1:
+        if st.button("Start / Resume Parallel Workers", key=f"job-parallel-start-{job_id}"):
+            import parallel_resumable_runner
+            callback, live_lines = make_live_log_callback(log_box)
+            with st.spinner("Processing with controlled CW workers..."):
+                result = parallel_resumable_runner.process_job_parallel(
+                    job_id,
+                    worker_count=int(parallel_worker_count),
+                    retry_failed=True,
+                    resume_paused=resume_paused,
+                    reprocess_existing=reprocess_existing,
+                    force_retry=force_retry,
+                    on_line=callback,
+                )
+            log_box.code("\n".join(live_lines[-300:]), language="text")
+            st.json(result, expanded=False)
+
     st.subheader("Job Exporter")
     with st.expander("Consolidate & Export Job", expanded=False):
         export_name = st.text_input("Custom Export Name (Optional)", key=f"export-name-{job_id}")
@@ -961,6 +993,10 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
             "confidence score": item["confidence_score"],
             "page_kind": item["page_kind"],
             "architecture": item["architecture"],
+            "profile slot": item.get("profile_slot_id"),
+            "profile id": item.get("profile_id_used"),
+            "worker": item.get("worker_id"),
+            "white screens": item.get("white_screen_count"),
             "output path": item["grouped_output_path"],
             "error type": item["error_type"],
             "error message": item["error_message"],
@@ -1114,14 +1150,81 @@ def tab_run_history() -> None:
 
 
 def tab_adsp_pool() -> None:
-    st.header("AdsPower Profile Pool")
+    st.header("AdsPower Pool / Profile Recovery")
     st.warning("This tool does not bypass captcha or anti-bot systems. Profile rotation is limited to user-configured profiles and controlled retries. If all profiles are blocked, job will pause for manual action.")
     
     import adsp_profile_pool_manager
+    import adsp_profile_recovery_manager
     import config
     
     if not config.ADSP_PROFILE_POOL_ENABLED:
         st.info("Profile Pool is disabled in config. To enable it, set ADSP_PROFILE_POOL_ENABLED=true")
+
+    st.subheader("Profile Templates")
+    st.caption("Fixed slots only: CW_1, CW_2, CW_3. Proxy credentials are masked.")
+    tcol1, tcol2 = st.columns([2, 1])
+    with tcol1:
+        if st.button("Sync Templates From Config", key="btn_sync_templates"):
+            adsp_profile_recovery_manager.sync_profile_templates_to_db()
+            st.rerun()
+    with tcol2:
+        st.metric("Configured workers", getattr(config, "ADSP_WORKER_COUNT", 3))
+
+    templates = adsp_profile_recovery_manager.get_profile_template_status()
+    template_rows = [
+        {
+            "slot_id": row.get("slot_id"),
+            "profile_id": row.get("adspower_profile_id"),
+            "masked_proxy": row.get("masked_proxy"),
+            "status": row.get("status"),
+            "last_used_at": row.get("last_used_at"),
+            "last_white_screen_at": row.get("last_white_screen_at"),
+            "total_success": row.get("total_success"),
+            "total_white_screen": row.get("total_white_screen"),
+            "total_rebuilds": row.get("total_rebuilds"),
+            "success_rate": row.get("success_rate"),
+            "notes": row.get("notes"),
+        }
+        for row in templates
+    ]
+    st.dataframe(template_rows, use_container_width=True)
+
+    st.subheader("Template Manual Override")
+    if templates:
+        selected_slot = st.selectbox("Select Slot", [row["slot_id"] for row in templates], key="selected-template-slot")
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            if st.button("Force Rebuild Slot", key="btn_force_rebuild_slot"):
+                result = adsp_profile_recovery_manager.request_rebuild(selected_slot)
+                st.json(result, expanded=False)
+                st.rerun()
+        with m2:
+            if st.button("Release Slot", key="btn_release_slot"):
+                adsp_profile_recovery_manager.release_template(selected_slot)
+                st.rerun()
+        with m3:
+            if st.button("Disable Slot", key="btn_disable_slot"):
+                adsp_profile_recovery_manager.disable_template(selected_slot)
+                st.rerun()
+        with m4:
+            if st.button("Test Start Profile", key="btn_test_start_slot"):
+                st.json(adsp_profile_recovery_manager.test_start_profile(selected_slot), expanded=False)
+
+    st.subheader("Parallel Worker Settings")
+    worker_rows = adsp_profile_recovery_manager.get_worker_slot_status(getattr(config, "ADSP_WORKER_COUNT", 3))
+    st.dataframe(
+        [
+            {
+                "worker": f"worker_{idx}",
+                "slot_id": row.get("slot_id"),
+                "profile_id": row.get("adspower_profile_id"),
+                "status": row.get("status"),
+                "notes": row.get("notes"),
+            }
+            for idx, row in enumerate(worker_rows, start=1)
+        ],
+        use_container_width=True,
+    )
     
     col1, col2 = st.columns([3, 1])
     with col1:

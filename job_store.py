@@ -533,6 +533,46 @@ def mark_stale_running_items(job_id: str, stale_minutes: int = 30) -> int:
     return len(rows)
 
 
+def mark_orphan_running_items(job_id: str) -> int:
+    """Reset running items when the parent job is no longer running."""
+    job = get_job(job_id)
+    if not job or job.get("status") == "running":
+        return 0
+    init_db()
+    warning = "Previous run stopped while this item was running."
+    now = utc_now()
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, warnings_json, metadata_json
+            FROM scrape_job_items
+            WHERE job_id = ? AND status = 'running'
+            """,
+            (job_id,),
+        ).fetchall()
+        for row in rows:
+            warnings = json.loads(row["warnings_json"] or "[]")
+            if warning not in warnings:
+                warnings.append(warning)
+            metadata = json.loads(row["metadata_json"] or "{}")
+            metadata["orphan_running_reset_at"] = now
+            conn.execute(
+                """
+                UPDATE scrape_job_items
+                SET status = 'pending',
+                    error_type = 'unknown_error',
+                    error_message = ?,
+                    warnings_json = ?,
+                    metadata_json = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (warning, normalize_json(warnings), normalize_json(metadata), now, int(row["id"])),
+            )
+    update_job_counts(job_id)
+    return len(rows)
+
+
 def get_next_item(
     job_id: str,
     *,

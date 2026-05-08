@@ -69,9 +69,9 @@ ADSP_PROFILE_RECOVERY_ENABLED = os.environ.get("ADSP_PROFILE_RECOVERY_ENABLED", 
 ADSP_TEMPLATE_PREFIX = os.environ.get("ADSP_TEMPLATE_PREFIX", "CW")
 ADSP_WORKER_COUNT = int(os.environ.get("ADSP_WORKER_COUNT", "3"))
 
-ADSP_CW_1_PROXY = os.environ.get("ADSP_CW_1_PROXY", "")
-ADSP_CW_2_PROXY = os.environ.get("ADSP_CW_2_PROXY", "")
-ADSP_CW_3_PROXY = os.environ.get("ADSP_CW_3_PROXY", "")
+ADSP_CW_1_PROXY = os.environ.get("ADSP_CW_1_PROXY", "51.77.190.247:9595:pcSpLDMEO7-resfix-us-nnid-0ddf719492a53fbee7e2:PC_1eisIH1PFIgEaXOij")
+ADSP_CW_2_PROXY = os.environ.get("ADSP_CW_2_PROXY", "mia7-5g.proxydns.tech:5306:uwka0deo:p3484050")
+ADSP_CW_3_PROXY = os.environ.get("ADSP_CW_3_PROXY", "mobile.owlproxy.com:1086:6209259-737b9b6e:7e346086-US-y10qsTfn-90m")
 
 ADSP_CW_1_NAME = os.environ.get("ADSP_CW_1_NAME", "CW_1")
 ADSP_CW_2_NAME = os.environ.get("ADSP_CW_2_NAME", "CW_2")
