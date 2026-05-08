@@ -2,3 +2,5 @@ httpx
 playwright
 rich
 streamlit
+scrapling
+requests
