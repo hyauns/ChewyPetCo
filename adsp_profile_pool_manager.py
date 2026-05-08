@@ -1,5 +1,7 @@
 import argparse
+import asyncio
 import json
+import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -313,65 +315,167 @@ def record_white_screen_event(
         )
         conn.commit()
 
-async def detect_white_screen_block(page, url: str) -> dict:
-    if not config.ADSP_WHITE_SCREEN_DETECTION_ENABLED:
-        return {"is_white_screen": False, "confidence": 0.0}
-        
-    try:
-        html = await page.content()
-    except Exception:
-        html = ""
-        
-    try:
-        title = await page.title()
-    except Exception:
-        title = ""
-        
-    try:
-        body_text = await page.evaluate("document.body.innerText") or ""
-    except Exception:
-        body_text = ""
-        
+def _score_white_screen_snapshot(html: str, title: str, body_text: str) -> dict:
     signals = []
     confidence = 0.0
-    
+
     body_len = len(body_text.strip())
     has_next_data = "__NEXT_DATA__" in html
     has_product_content = "chewy.com" in html.lower() and ("Product Details" in html or "data-testid=" in html or "price" in html.lower() or "Price" in html)
-    
+
     if body_len < 200:
         signals.append("extremely_short_body_text")
         confidence += 0.5
-        
+
     if not has_next_data and "apollo" not in html.lower() and "redux" not in html.lower():
         signals.append("missing_next_data")
         confidence += 0.2
-        
+
     if title == "Access Denied" or title == "":
         signals.append("generic_or_empty_title")
         confidence += 0.3
-        
+
     if not has_product_content:
         signals.append("missing_product_content")
         confidence += 0.3
-        
+
     if "Pardon Our Interruption" in html or "PerimeterX" in html or "Datadome" in html:
         signals.append("known_block_page")
         confidence += 0.8
-        
+
     confidence = min(1.0, confidence)
-    is_white_screen = confidence >= 0.7
-    
     return {
-        "is_white_screen": is_white_screen,
+        "is_white_screen": confidence >= 0.7,
         "confidence": confidence,
         "signals": signals,
         "body_text_length": body_len,
         "title": title,
         "has_next_data": has_next_data,
         "has_product_content": has_product_content,
+    }
+
+
+async def _read_page_snapshot(page) -> dict:
+    try:
+        await page.wait_for_load_state("domcontentloaded", timeout=5000)
+    except Exception:
+        pass
+    try:
+        html = await page.content()
+    except Exception:
+        html = ""
+    try:
+        title = await page.title()
+    except Exception:
+        title = ""
+    try:
+        body_text = await page.evaluate("document.body.innerText") or ""
+    except Exception:
+        body_text = ""
+    result = _score_white_screen_snapshot(html, title, body_text)
+    result["html_length"] = len(html or "")
+    return result
+
+
+async def detect_white_screen_block(page, url: str) -> dict:
+    if not config.ADSP_WHITE_SCREEN_DETECTION_ENABLED:
+        return {"is_white_screen": False, "confidence": 0.0}
+
+    min_wait = max(0, int(getattr(config, "ADSP_WHITE_SCREEN_MIN_WAIT_SECONDS", 30)))
+    max_wait = max(min_wait, int(getattr(config, "ADSP_WHITE_SCREEN_MAX_WAIT_SECONDS", 90)))
+    poll_seconds = max(1, int(getattr(config, "ADSP_WHITE_SCREEN_POLL_SECONDS", 5)))
+    required_empty_checks = max(1, int(getattr(config, "ADSP_WHITE_SCREEN_REQUIRED_EMPTY_CHECKS", 3)))
+
+    started = time.monotonic()
+    checks: list[dict] = []
+    consecutive_empty = 0
+    last_result: dict = {
+        "is_white_screen": False,
+        "confidence": 0.0,
+        "signals": [],
+        "body_text_length": 0,
+        "title": "",
+        "has_next_data": False,
+        "has_product_content": False,
+    }
+
+    while True:
+        result = await _read_page_snapshot(page)
+        elapsed = round(time.monotonic() - started, 2)
+        result["elapsed_seconds"] = elapsed
+        checks.append(
+            {
+                "elapsed_seconds": elapsed,
+                "confidence": result.get("confidence"),
+                "signals": result.get("signals"),
+                "body_text_length": result.get("body_text_length"),
+                "html_length": result.get("html_length"),
+                "title": result.get("title"),
+                "has_next_data": result.get("has_next_data"),
+                "has_product_content": result.get("has_product_content"),
+            }
+        )
+        last_result = result
+
+        known_block = "known_block_page" in (result.get("signals") or [])
+        access_denied = str(result.get("title") or "").strip().lower() == "access denied"
+        meaningful_dom = (
+            not known_block
+            and not access_denied
+            and (
+                result.get("has_next_data")
+                or result.get("has_product_content")
+                or int(result.get("body_text_length") or 0) >= 500
+            )
+        )
+        # Any meaningful Chewy/product DOM means this is a slow load, not a white screen.
+        if meaningful_dom:
+            result.update(
+                {
+                    "is_white_screen": False,
+                    "confidence": 0.0,
+                    "signals": ["meaningful_dom_detected"],
+                    "checks": checks,
+                    "waited_seconds": elapsed,
+                    "screenshot_path": None,
+                    "html_snapshot_path": None,
+                }
+            )
+            return result
+
+        if result.get("is_white_screen"):
+            consecutive_empty += 1
+        else:
+            consecutive_empty = 0
+
+        if elapsed >= min_wait and consecutive_empty >= required_empty_checks:
+            result["is_white_screen"] = True
+            result["checks"] = checks
+            result["waited_seconds"] = elapsed
+            result["required_empty_checks"] = required_empty_checks
+            result["min_wait_seconds"] = min_wait
+            result["max_wait_seconds"] = max_wait
+            result["screenshot_path"] = None
+            result["html_snapshot_path"] = None
+            return result
+
+        if elapsed >= max_wait:
+            last_result["is_white_screen"] = bool(last_result.get("is_white_screen") and consecutive_empty >= required_empty_checks)
+            last_result["checks"] = checks
+            last_result["waited_seconds"] = elapsed
+            last_result["required_empty_checks"] = required_empty_checks
+            last_result["min_wait_seconds"] = min_wait
+            last_result["max_wait_seconds"] = max_wait
+            last_result["screenshot_path"] = None
+            last_result["html_snapshot_path"] = None
+            return last_result
+
+        await asyncio.sleep(poll_seconds)
+
+    return {
+        **last_result,
         "screenshot_path": None,
-        "html_snapshot_path": None
+        "html_snapshot_path": None,
     }
 
 def main():

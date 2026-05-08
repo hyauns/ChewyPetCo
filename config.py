@@ -84,6 +84,10 @@ ADSP_WHITE_SCREEN_RETRY_DELAY_SECONDS = int(os.environ.get("ADSP_WHITE_SCREEN_RE
 ADSP_WHITE_SCREEN_DETECTION_ENABLED = os.environ.get("ADSP_WHITE_SCREEN_DETECTION_ENABLED", "true").lower() == "true"
 ADSP_SAVE_WHITE_SCREEN_SCREENSHOT = os.environ.get("ADSP_SAVE_WHITE_SCREEN_SCREENSHOT", "true").lower() == "true"
 ADSP_SAVE_WHITE_SCREEN_HTML = os.environ.get("ADSP_SAVE_WHITE_SCREEN_HTML", "true").lower() == "true"
+ADSP_WHITE_SCREEN_MIN_WAIT_SECONDS = int(os.environ.get("ADSP_WHITE_SCREEN_MIN_WAIT_SECONDS", "30"))
+ADSP_WHITE_SCREEN_MAX_WAIT_SECONDS = int(os.environ.get("ADSP_WHITE_SCREEN_MAX_WAIT_SECONDS", "90"))
+ADSP_WHITE_SCREEN_POLL_SECONDS = int(os.environ.get("ADSP_WHITE_SCREEN_POLL_SECONDS", "5"))
+ADSP_WHITE_SCREEN_REQUIRED_EMPTY_CHECKS = int(os.environ.get("ADSP_WHITE_SCREEN_REQUIRED_EMPTY_CHECKS", "3"))
 
 # ---------------------------------------------------------------------------
 # Phase 6 - AdsPower Profile Template Recovery & Controlled Workers

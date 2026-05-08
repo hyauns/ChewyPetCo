@@ -288,6 +288,10 @@ async def main():
                 
             # Phase 4 - White Screen Detection
             from adsp_profile_pool_manager import detect_white_screen_block
+            console.print(
+                f"[cyan]Checking for white screen conservatively "
+                f"(up to {getattr(config, 'ADSP_WHITE_SCREEN_MAX_WAIT_SECONDS', 90)}s for slow proxy load)...[/]"
+            )
             detection_result = await detect_white_screen_block(page, test_url)
             if detection_result["is_white_screen"]:
 
