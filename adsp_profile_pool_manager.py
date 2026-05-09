@@ -209,21 +209,72 @@ def mark_profile_in_use(profile_id: str) -> None:
 def mark_profile_success(profile_id: str) -> None:
     if not config.ADSP_PROFILE_POOL_ENABLED:
         return
+    job_store.init_db()
     now = utc_now()
     with job_store.connect() as conn:
         conn.execute(
             """
             UPDATE adsp_profile_pool
-            SET status = 'available', total_success = total_success + 1, updated_at = ?
+            SET status = 'available',
+                total_success = total_success + 1,
+                consecutive_proxy_failures = 0,
+                updated_at = ?
             WHERE profile_id = ? AND status = 'in_use'
             """,
             (now, profile_id)
         )
         conn.commit()
 
+def record_proxy_failure(profile_id: str, reason: str) -> int:
+    """Record a proxy-level navigation failure and return consecutive count."""
+    if not config.ADSP_PROFILE_POOL_ENABLED:
+        return 0
+    job_store.init_db()
+    now = utc_now()
+    with job_store.connect() as conn:
+        conn.execute(
+            """
+            UPDATE adsp_profile_pool
+            SET status = 'available',
+                total_proxy_failures = total_proxy_failures + 1,
+                consecutive_proxy_failures = consecutive_proxy_failures + 1,
+                last_proxy_failure_at = ?,
+                notes = ?,
+                updated_at = ?
+            WHERE profile_id = ?
+            """,
+            (now, reason, now, profile_id),
+        )
+        row = conn.execute(
+            "SELECT consecutive_proxy_failures FROM adsp_profile_pool WHERE profile_id = ?",
+            (profile_id,),
+        ).fetchone()
+        conn.commit()
+    return int(row["consecutive_proxy_failures"] or 0) if row else 0
+
+def disable_profile(profile_id: str, reason: str) -> None:
+    if not config.ADSP_PROFILE_POOL_ENABLED:
+        return
+    job_store.init_db()
+    now = utc_now()
+    with job_store.connect() as conn:
+        conn.execute(
+            """
+            UPDATE adsp_profile_pool
+            SET status = 'disabled',
+                quarantine_until = NULL,
+                notes = ?,
+                updated_at = ?
+            WHERE profile_id = ?
+            """,
+            (reason, now, profile_id),
+        )
+        conn.commit()
+
 def quarantine_profile(profile_id: str, reason: str, minutes: int = None) -> None:
     if not config.ADSP_PROFILE_POOL_ENABLED:
         return
+    job_store.init_db()
         
     if minutes is None:
         minutes = config.ADSP_PROFILE_QUARANTINE_MINUTES
@@ -248,12 +299,16 @@ def quarantine_profile(profile_id: str, reason: str, minutes: int = None) -> Non
         conn.commit()
 
 def release_profile(profile_id: str) -> None:
+    job_store.init_db()
     now = utc_now()
     with job_store.connect() as conn:
         conn.execute(
             """
             UPDATE adsp_profile_pool
-            SET status = 'available', quarantine_until = NULL, notes = 'Manually released', updated_at = ?
+            SET status = 'available',
+                quarantine_until = NULL,
+                notes = 'Manually released',
+                updated_at = ?
             WHERE profile_id = ?
             """,
             (now, profile_id)

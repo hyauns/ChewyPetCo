@@ -153,6 +153,7 @@ def process_job_parallel(
     force_retry: bool = False,
     stale_minutes: int = 30,
     max_items: int | None = None,
+    requeue_fallback_done: bool = False,
     on_line: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     job = job_store.get_job(job_id)
@@ -160,6 +161,9 @@ def process_job_parallel(
         raise ValueError(f"Job not found: {job_id}")
     if not config.ADSP_PROFILE_RECOVERY_ENABLED:
         raise RuntimeError("ADSP_PROFILE_RECOVERY_ENABLED must be true for parallel CW workers.")
+
+    if requeue_fallback_done:
+        single_runner.requeue_fallback_done_items_for_resume(job_id, on_line=on_line)
 
     orphaned = job_store.mark_orphan_running_items(job_id)
     if orphaned and on_line:

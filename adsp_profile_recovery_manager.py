@@ -24,6 +24,7 @@ import job_store
 
 
 MAX_TEMPLATE_SLOTS = 3
+SUPPORTED_PROXY_TYPES = {"http", "https", "socks5"}
 VALID_TEMPLATE_STATUSES = {"available", "in_use", "rebuilding", "disabled", "rebuild_failed"}
 
 
@@ -52,17 +53,18 @@ def _mask_user(value: str | None) -> str:
 
 
 def validate_proxy_template(proxy_url: str) -> dict[str, str]:
-    """Parse and validate a configured SOCKS5 proxy URL."""
+    """Parse and validate a configured AdsPower proxy URL."""
     if not proxy_url:
         raise ValueError("Missing proxy URL.")
-    if proxy_url.lower().startswith("socks5://") and "@" not in proxy_url:
-        compact = proxy_url.split("://", 1)[1]
-        if compact.count(":") >= 3:
-            host, port, username, password = compact.split(":", 3)
+    if "://" in proxy_url:
+        scheme, rest = proxy_url.split("://", 1)
+        proxy_type = scheme.lower()
+        if proxy_type in SUPPORTED_PROXY_TYPES and "@" not in rest and rest.count(":") >= 3:
+            host, port, username, password = rest.split(":", 3)
             if not host or not port:
                 raise ValueError("Proxy host or port is missing.")
             return {
-                "proxy_type": "socks5",
+                "proxy_type": proxy_type,
                 "proxy_host": host,
                 "proxy_port": port,
                 "proxy_username": username,
@@ -80,14 +82,15 @@ def validate_proxy_template(proxy_url: str) -> dict[str, str]:
             "proxy_password": password,
         }
     parsed = urlparse(proxy_url)
-    if parsed.scheme.lower() != "socks5":
-        raise ValueError("Only socks5:// proxies are supported for CW slots.")
+    proxy_type = parsed.scheme.lower()
+    if proxy_type not in SUPPORTED_PROXY_TYPES:
+        raise ValueError("Only http://, https://, and socks5:// proxies are supported for CW slots.")
     if not parsed.hostname:
         raise ValueError("Proxy host is missing.")
     if not parsed.port:
         raise ValueError("Proxy port is missing.")
     return {
-        "proxy_type": "socks5",
+        "proxy_type": proxy_type,
         "proxy_host": parsed.hostname,
         "proxy_port": str(parsed.port),
         "proxy_username": unquote(parsed.username or ""),
@@ -99,11 +102,11 @@ def mask_proxy_url(proxy_url: str) -> str:
     if not proxy_url:
         return "(not configured)"
     try:
-        if proxy_url.lower().startswith("socks5://") and "@" not in proxy_url:
-            compact = proxy_url.split("://", 1)[1]
-            if compact.count(":") >= 3:
+        if "://" in proxy_url:
+            scheme, compact = proxy_url.split("://", 1)
+            if scheme.lower() in SUPPORTED_PROXY_TYPES and "@" not in compact and compact.count(":") >= 3:
                 host, port, username, _password = compact.split(":", 3)
-                return f"socks5://{_mask_user(username)}:***@{host}:{port}"
+                return f"{scheme.lower()}://{_mask_user(username)}:***@{host}:{port}"
         if "://" not in proxy_url and proxy_url.count(":") >= 3:
             host, port, username, _password = proxy_url.split(":", 3)
             return f"socks5://{_mask_user(username)}:***@{host}:{port}"
@@ -197,7 +200,11 @@ def sync_profile_templates_to_db() -> None:
                 existing_notes = existing["notes"] or ""
                 if existing_status in {"in_use", "rebuilding"}:
                     status = existing_status
-                elif existing_status == "disabled" and existing_notes == "Manually disabled":
+                elif existing_status == "disabled" and (
+                    existing_notes == "Manually disabled"
+                    or "switched AdsPower profile" in existing_notes
+                    or "Proxy failed" in existing_notes
+                ):
                     status = "disabled"
                     notes = existing_notes
                 elif existing_status == "rebuild_failed" and template["status"] == "available":
@@ -551,9 +558,22 @@ def _create_adspower_profile(template: dict[str, Any]) -> str:
             "proxy_user": template.get("proxy_username") or "",
             "proxy_password": template.get("proxy_password") or "",
         },
-        # Minimal AdsPower fingerprint config required by the profile API.
-        # This does not implement stealth or captcha solving logic.
-        "fingerprint_config": {"automatic_timezone": "1"},
+        # Keep generated profiles on desktop UA systems. AdsPower can randomize
+        # Android/iOS UAs, but those profiles white-screen Chewy in this flow.
+        "fingerprint_config": {
+            "automatic_timezone": "1",
+            "random_ua": {
+                "ua_browser": ["chrome"],
+                "ua_system_version": [
+                    "Windows 10",
+                    "Windows 11",
+                    "Mac OS X 12",
+                    "Mac OS X 13",
+                    "Linux",
+                ],
+            },
+            "browser_kernel_config": {"version": "ua_auto", "type": "chrome"},
+        },
     }
     data = _post_adspower("/api/v1/user/create", payload, timeout=90)
     profile_id = (
@@ -564,6 +584,82 @@ def _create_adspower_profile(template: dict[str, Any]) -> str:
     if not profile_id:
         raise RuntimeError(f"AdsPower create returned no profile id: {data}")
     return str(profile_id)
+
+
+def switch_profile_to_local(
+    profile_id: str,
+    *,
+    slot_id: str | None = None,
+    reason: str = "proxy_connection_failed",
+) -> dict[str, Any]:
+    """Switch an AdsPower profile to Local/No Proxy mode and disable its slot."""
+    if not profile_id:
+        return {"success": False, "profile_id": profile_id, "slot_id": slot_id, "message": "Missing profile id."}
+
+    try:
+        adspower.stop_profile(profile_id)
+    except Exception:
+        pass
+
+    try:
+        _post_adspower(
+            "/api/v1/user/update",
+            {"user_id": profile_id, "user_proxy_config": {"proxy_soft": "no_proxy"}},
+            timeout=60,
+        )
+    except Exception as exc:
+        message = str(exc)
+        if slot_id:
+            now = utc_now()
+            with job_store.connect() as conn:
+                conn.execute(
+                    """
+                    UPDATE adsp_profile_templates
+                    SET status = 'disabled',
+                        notes = ?,
+                        updated_at = ?
+                    WHERE slot_id = ?
+                    """,
+                    (f"Proxy failed; AdsPower Local/no_proxy switch failed for {profile_id}: {message}", now, slot_id),
+                )
+                conn.commit()
+            record_profile_rebuild_event(
+                slot_id,
+                "proxy_local_switch_failed",
+                old_profile_id=profile_id,
+                message=message,
+                metadata={"reason": reason},
+            )
+        return {"success": False, "profile_id": profile_id, "slot_id": slot_id, "message": message}
+
+    now = utc_now()
+    if slot_id:
+        with job_store.connect() as conn:
+            conn.execute(
+                """
+                UPDATE adsp_profile_templates
+                SET status = 'disabled',
+                    notes = ?,
+                    updated_at = ?
+                WHERE slot_id = ?
+                """,
+                (f"Proxy failed; switched AdsPower profile {profile_id} to Local. {reason}", now, slot_id),
+            )
+            conn.commit()
+        record_profile_rebuild_event(
+            slot_id,
+            "proxy_switched_to_local",
+            old_profile_id=profile_id,
+            message=f"AdsPower profile {profile_id} switched to Local/no_proxy after proxy failures.",
+            metadata={"reason": reason},
+        )
+
+    return {
+        "success": True,
+        "profile_id": profile_id,
+        "slot_id": slot_id,
+        "message": "AdsPower profile switched to Local/no_proxy.",
+    }
 
 
 def auto_rebuild_profile(

@@ -45,6 +45,8 @@ TRANSIENT_ERROR_TYPES = {
     "network_error",
     "browser_error",
     "adspower_error",
+    "proxy_connection_retry",
+    "proxy_connection_failed",
     "output_missing",
 }
 
@@ -56,6 +58,17 @@ HARD_ERROR_TYPES = {
     "validation_failed",
     "dependency_error",
 }
+
+PROXY_CONNECTION_FAILURE_TOKENS = [
+    "net::err_socks_connection_failed",
+    "net::err_proxy_connection_failed",
+    "net::err_tunnel_connection_failed",
+    "net::err_no_supported_proxies",
+    "net::err_proxy_auth_unsupported",
+    "net::err_proxy_certificate_invalid",
+    "socks connection failed",
+    "proxy connection failed",
+]
 
 
 def now_iso() -> str:
@@ -198,6 +211,69 @@ def existing_json_output_ok(source_id: str | None, threshold: int) -> tuple[bool
     }
 
 
+def _metadata_dict(item: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return json.loads(item.get("metadata_json") or "{}")
+    except (TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _profile_attempts(item: dict[str, Any]) -> list[dict[str, Any]]:
+    try:
+        attempts = json.loads(item.get("profile_attempts_json") or "[]")
+        return attempts if isinstance(attempts, list) else []
+    except (TypeError, json.JSONDecodeError):
+        return []
+
+
+def item_force_reprocess_existing(item: dict[str, Any]) -> bool:
+    return bool(_metadata_dict(item).get("force_reprocess_existing_once"))
+
+
+def item_used_html_fallback(item: dict[str, Any]) -> bool:
+    metadata = _metadata_dict(item)
+    if metadata.get("fallback_used") is True:
+        return True
+    if str(metadata.get("fallback_used")).lower() in {"true", "yes", "1"}:
+        return True
+    return bool(metadata.get("old_scraper_json_path") and not item.get("grouped_output_path"))
+
+
+def requeue_fallback_done_items_for_resume(
+    job_id: str,
+    *,
+    on_line: Callable[[str], None] | None = None,
+) -> int:
+    """Requeue completed items that only succeeded through the HTML fallback."""
+    items = job_store.get_job_items(job_id, status="done")
+    now = job_store.utc_now()
+    count = 0
+    for item in items:
+        if not item_used_html_fallback(item):
+            continue
+        metadata = _metadata_dict(item)
+        metadata["force_reprocess_existing_once"] = True
+        metadata["fallback_resume_requeued_at"] = now
+        job_store.update_item_status(
+            int(item["id"]),
+            "pending",
+            error_type="fallback_resume_reprocess",
+            error_message="Requeued on resume because previous run used HTML fallback.",
+            metadata_json=json.dumps(metadata, ensure_ascii=False),
+        )
+        count += 1
+    if count:
+        job_store.update_job_counts(job_id)
+        if on_line:
+            on_line(f"[job {job_id}] Requeued {count} fallback HTML item(s) for full re-scrape.")
+    return count
+
+
+def detect_proxy_connection_failure(log_text: str) -> bool:
+    lower = strip_ansi(log_text).lower()
+    return any(token in lower for token in PROXY_CONNECTION_FAILURE_TOKENS)
+
+
 def latest_matching_file(folder: Path, pattern: str, started_at: float) -> Path | None:
     if not folder.exists():
         return None
@@ -306,6 +382,8 @@ def classify_failure(
         )
     if "adspower" in lower and any(token in lower for token in ["failed", "refused", "connection", "get_ws_endpoint"]):
         return "adspower_error", "AdsPower/browser connection failed.", True
+    if detect_proxy_connection_failure(clean):
+        return "proxy_connection_failed", "AdsPower profile proxy connection failed.", True
     if "timeout" in lower or "net::" in lower or "network" in lower:
         return "network_error", "Network timeout or page load failure.", True
     if "playwright" in lower or "browser" in lower or "target closed" in lower or "connection closed" in lower:
@@ -421,7 +499,8 @@ def process_single_item(
         job_store.update_job_counts(job_id)
         return job_store.get_item(item_id) or {}
 
-    if mode != MODE_OLD and not reprocess_existing:
+    force_existing_for_item = item_force_reprocess_existing(item)
+    if mode != MODE_OLD and not reprocess_existing and not force_existing_for_item:
         exists_ok, existing = existing_json_output_ok(source_id, threshold)
         if exists_ok:
             metadata = {"reused_existing_output": True}
@@ -570,6 +649,102 @@ def process_single_item(
             if on_line:
                 on_line(f"[job {job_id}] White screen handling error: {exc}")
             break
+
+    if detect_proxy_connection_failure(log_text):
+        threshold_failures = max(1, int(getattr(config, "ADSP_PROXY_FAILURES_BEFORE_LOCAL", 3)))
+        reason = f"Proxy navigation failed for item {item['index_number']}: {url}"
+        attempts_json = _profile_attempts(item)
+        prior_item_failures = 0
+        for attempt_entry in reversed(attempts_json):
+            if (
+                attempt_entry.get("profile_id") == profile_id
+                and attempt_entry.get("result") == "proxy_connection_failed"
+            ):
+                prior_item_failures += 1
+                continue
+            break
+        consecutive = adsp_profile_pool_manager.record_proxy_failure(profile_id, reason)
+        if consecutive <= 0:
+            consecutive = prior_item_failures + 1
+
+        attempts_json.append(
+            {
+                "attempt": attempts,
+                "profile_id": profile_id,
+                "slot_id": slot_id,
+                "result": "proxy_connection_failed",
+                "consecutive_proxy_failures": consecutive,
+                "timestamp": job_store.utc_now(),
+            }
+        )
+
+        metadata = _metadata_dict(item)
+        metadata.update(
+            {
+                "proxy_connection_failed": True,
+                "proxy_failure_profile_id": profile_id,
+                "proxy_failure_slot_id": slot_id,
+                "proxy_failure_count": consecutive,
+                "exit_code": exit_code,
+            }
+        )
+
+        if consecutive >= threshold_failures:
+            local_result = adsp_profile_recovery_manager.switch_profile_to_local(
+                profile_id,
+                slot_id=slot_id,
+                reason=f"{reason}; consecutive_failures={consecutive}",
+            )
+            local_switch_ok = bool(local_result.get("success"))
+            adsp_profile_pool_manager.disable_profile(
+                profile_id,
+                (
+                    f"Proxy failed {consecutive} time(s); switched to Local/no_proxy in AdsPower."
+                    if local_switch_ok
+                    else f"Proxy failed {consecutive} time(s); AdsPower Local/no_proxy switch failed: {local_result.get('message')}"
+                ),
+            )
+            error_type = "proxy_connection_failed"
+            if local_switch_ok:
+                error_message = (
+                    f"Proxy failed {consecutive}/{threshold_failures} time(s) for profile {profile_id}; "
+                    "switched profile to Local/no_proxy and rotating to another profile."
+                )
+            else:
+                error_message = (
+                    f"Proxy failed {consecutive}/{threshold_failures} time(s) for profile {profile_id}; "
+                    f"Local/no_proxy switch failed ({local_result.get('message')}); profile disabled locally and rotating."
+                )
+            metadata["adspower_local_switch"] = local_result
+            if on_line:
+                on_line(f"[job {job_id}] {error_message}")
+        else:
+            adsp_profile_pool_manager.release_profile(profile_id)
+            if slot_id:
+                adsp_profile_recovery_manager.mark_template_available(
+                    slot_id,
+                    f"Proxy failed {consecutive}/{threshold_failures}; retry allowed",
+                )
+            error_type = "proxy_connection_retry"
+            error_message = (
+                f"Proxy failed {consecutive}/{threshold_failures} time(s) for profile {profile_id}; queued for retry."
+            )
+            if on_line:
+                on_line(f"[job {job_id}] {error_message}")
+
+        job_store.update_item_status(
+            item_id,
+            "pending",
+            finished_at=job_store.utc_now(),
+            duration_seconds=duration,
+            run_log_path=str(log_path.resolve()),
+            error_type=error_type,
+            error_message=error_message,
+            profile_attempts_json=json.dumps(attempts_json, ensure_ascii=False),
+            metadata_json=json.dumps(metadata, ensure_ascii=False),
+        )
+        job_store.update_job_counts(job_id)
+        return job_store.get_item(item_id) or {}
 
     # If not white screen, mark success for profile
     adsp_profile_pool_manager.mark_profile_success(profile_id)
@@ -812,6 +987,21 @@ def process_item_with_rotation(
         )
 
         # Success or non-white-screen outcome → done with this item
+        if result.get("error_type") == "proxy_connection_failed":
+            next_profile = adsp_profile_pool_manager.get_next_available_profile(job_id, item_id)
+            if next_profile:
+                adsp_profile_pool_manager.release_profile(next_profile)
+                if on_line:
+                    on_line(
+                        f"[job {job_id}] Retrying same item {result.get('index_number', '?')} "
+                        "with the next AdsPower profile after proxy failure..."
+                    )
+                continue
+            msg = "No AdsPower profiles remain available after proxy failure."
+            job_store.update_item_status(item_id, "paused", error_type="all_profiles_exhausted", error_message=msg)
+            job_store.set_job_status(job_id, "paused", last_error=msg)
+            return job_store.get_item(item_id) or {}
+
         if result.get("error_type") != "white_screen_block":
             return result
 
@@ -904,11 +1094,15 @@ def process_job(
     force_retry: bool = False,
     stale_minutes: int = 30,
     max_items: int | None = None,
+    requeue_fallback_done: bool = False,
     on_line: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     job = job_store.get_job(job_id)
     if not job:
         raise ValueError(f"Job not found: {job_id}")
+
+    if requeue_fallback_done:
+        requeue_fallback_done_items_for_resume(job_id, on_line=on_line)
 
     orphaned = job_store.mark_orphan_running_items(job_id)
     if orphaned and on_line:
@@ -1000,7 +1194,7 @@ def process_job(
 
 
 def resume_job(job_id: str, *, resume_paused: bool = True, **kwargs: Any) -> dict[str, Any]:
-    return process_job(job_id, resume_paused=resume_paused, **kwargs)
+    return process_job(job_id, resume_paused=resume_paused, requeue_fallback_done=True, **kwargs)
 
 
 def pause_job(job_id: str) -> None:
@@ -1160,6 +1354,7 @@ def main(argv: list[str] | None = None) -> int:
                 force_retry=args.force_retry,
                 stale_minutes=args.stale_minutes,
                 max_items=args.max_items,
+                requeue_fallback_done=True,
                 on_line=print,
             )
         else:

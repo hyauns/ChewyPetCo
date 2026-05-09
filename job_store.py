@@ -275,6 +275,16 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
             except sqlite3.OperationalError:
                 pass
 
+        for ddl in [
+            "ALTER TABLE adsp_profile_pool ADD COLUMN total_proxy_failures INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE adsp_profile_pool ADD COLUMN consecutive_proxy_failures INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE adsp_profile_pool ADD COLUMN last_proxy_failure_at TEXT",
+        ]:
+            try:
+                conn.execute(ddl)
+            except sqlite3.OperationalError:
+                pass
+
 
 def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return dict(row) if row is not None else None

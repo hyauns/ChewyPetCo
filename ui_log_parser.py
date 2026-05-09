@@ -124,6 +124,22 @@ def summarize_error(
             "details": last_exception_line(clean),
         }
 
+    if any(
+        phrase in lower
+        for phrase in [
+            "net::err_socks_connection_failed",
+            "net::err_proxy_connection_failed",
+            "net::err_tunnel_connection_failed",
+            "proxy connection failed",
+            "socks connection failed",
+        ]
+    ):
+        return {
+            "reason": "The AdsPower profile proxy could not connect.",
+            "action": "The resumable runner will rotate profiles after the configured proxy-failure threshold.",
+            "details": last_exception_line(clean),
+        }
+
     if "permissionerror" in lower or "access is denied" in lower or "permission denied" in lower:
         return {
             "reason": "Cannot write output files. Check folder permissions.",

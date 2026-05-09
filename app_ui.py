@@ -942,6 +942,7 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
                     resume_paused=resume_paused,
                     reprocess_existing=reprocess_existing,
                     force_retry=force_retry,
+                    requeue_fallback_done=True,
                     on_line=callback,
                 )
             log_box.code("\n".join(live_lines[-300:]), language="text")
