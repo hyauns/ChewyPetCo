@@ -897,14 +897,30 @@ def split_product_by_flavor(normalized_product: dict) -> dict:
             groups[flavor] = []
         groups[flavor].append(v)
         
+    # Detect if this is a single product with no size/flavor variants
+    is_single_product = len(groups) == 1 and "Default" in groups
+    if is_single_product:
+        has_size_or_flavor_opts = False
+        for v in variants:
+            opts = v.get("option_values", {})
+            for k in opts:
+                if any(x in k.lower() for x in ["size", "weight", "count", "pack", "flavor"]):
+                    has_size_or_flavor_opts = True
+                    break
+            if has_size_or_flavor_opts:
+                break
+        is_single_product = not has_size_or_flavor_opts
+
     products_out = []
     
     for flavor, flavor_variants in groups.items():
         base_title = flavor_variants[0].get("title") or normalized_product.get("title", "")
         clean_title = base_title
         
-        suffix_pattern = r"(?:,\s*|\s+)(?:\d+(?:\.\d+)?(?:-| )?(?:lb|oz|kg|g)\s*(?:bag|can|pouch|tray|bottle|box|carton)s?|\d+\s*(?:cans?|count|pack|pouches?)|\b(?:case|pack)\s+of\s+\d+).*?$"
-        clean_title = re.sub(suffix_pattern, "", clean_title, flags=re.IGNORECASE)
+        # Only strip size suffixes from title when product has multiple size/flavor variants
+        if not is_single_product:
+            suffix_pattern = r"(?:,\s*|\s+)(?:\d+(?:\.\d+)?(?:-| )?(?:lb|oz|kg|g)\s*(?:bag|can|pouch|tray|bottle|box|carton)s?|\d+\s*(?:cans?|count|pack|pouches?)|\b(?:case|pack)\s+of\s+\d+).*?$"
+            clean_title = re.sub(suffix_pattern, "", clean_title, flags=re.IGNORECASE)
         
         slug_flavor = re.sub(r'[^a-z0-9]+', '-', str(flavor).lower()).strip('-')
         handle_slug = f"{normalized_product.get('slug', 'product')}"
