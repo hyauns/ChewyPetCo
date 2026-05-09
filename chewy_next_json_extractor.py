@@ -339,6 +339,28 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             "variant_url": f"https://www.chewy.com/{slug}/dp/{v_id}"
         })
         
+    if not normalized_variants:
+        price = None
+        if product_node and isinstance(product_node.get("price"), dict):
+            price = product_node["price"].get("salePrice") or product_node["price"].get("price")
+        if not price and main_item and isinstance(main_item.get("price"), dict):
+            price = main_item["price"].get("salePrice") or main_item["price"].get("price")
+            
+        normalized_variants.append({
+            "source_variant_id": base_product_id,
+            "sku": base_product_id,
+            "identifiers": build_variant_identifiers(None, base_product_id, base_product_id, None),
+            "title": title,
+            "option_values": {},
+            "price": price,
+            "compare_at_price": None,
+            "autoship_price": None,
+            "availability": None,
+            "in_stock": True,
+            "images": images,
+            "variant_url": source_url
+        })
+        
     return {
         "source": "chewy",
         "source_url": source_url,

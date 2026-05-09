@@ -197,37 +197,43 @@ def process_job_parallel(
         on_line(f"[job {job_id}] Starting controlled parallel run with {len(runnable_slots)} worker(s).")
 
     worker_results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=len(runnable_slots)) as executor:
-        futures = []
-        for index, slot in enumerate(runnable_slots, start=1):
-            futures.append(
-                executor.submit(
-                    _worker_loop,
-                    job_id=job_id,
-                    worker_id=f"worker_{index}",
-                    slot_id=slot["slot_id"],
-                    retry_failed=retry_failed,
-                    resume_paused=resume_paused,
-                    reprocess_completed=reprocess_completed,
-                    reprocess_existing=reprocess_existing,
-                    force_retry=force_retry,
-                    max_items=max_items,
-                    processed_counter=processed_counter,
-                    counter_lock=counter_lock,
-                    log_lock=log_lock,
-                    on_line=on_line,
+    try:
+        with ThreadPoolExecutor(max_workers=len(runnable_slots)) as executor:
+            futures = []
+            for index, slot in enumerate(runnable_slots, start=1):
+                futures.append(
+                    executor.submit(
+                        _worker_loop,
+                        job_id=job_id,
+                        worker_id=f"worker_{index}",
+                        slot_id=slot["slot_id"],
+                        retry_failed=retry_failed,
+                        resume_paused=resume_paused,
+                        reprocess_completed=reprocess_completed,
+                        reprocess_existing=reprocess_existing,
+                        force_retry=force_retry,
+                        max_items=max_items,
+                        processed_counter=processed_counter,
+                        counter_lock=counter_lock,
+                        log_lock=log_lock,
+                        on_line=on_line,
+                    )
                 )
-            )
-        for future in as_completed(futures):
-            worker_results.append(future.result())
+            for future in as_completed(futures):
+                worker_results.append(future.result())
 
-    counts = job_store.update_job_counts(job_id)
-    current_job = job_store.get_job(job_id)
-    if current_job and current_job["status"] == "running":
-        if counts["pending_count"] == 0 and counts["failed_count"] == 0:
-            job_store.set_job_status(job_id, "completed")
-        else:
-            job_store.set_job_status(job_id, "paused", last_error="Parallel workers stopped with unfinished items.")
+        counts = job_store.update_job_counts(job_id)
+        current_job = job_store.get_job(job_id)
+        if current_job and current_job["status"] == "running":
+            if counts["pending_count"] == 0 and counts["failed_count"] == 0:
+                job_store.set_job_status(job_id, "completed")
+            else:
+                job_store.set_job_status(job_id, "paused", last_error="Parallel workers stopped with unfinished items.")
+                
+    except KeyboardInterrupt:
+        if on_line:
+            on_line("\n[bold red]⚠️ Tiến trình bị hủy bởi người dùng (Ctrl+C). Đang dọn dẹp và dừng các Worker một cách an toàn...[/bold red]")
+        job_store.set_job_status(job_id, "paused", last_error="Dừng đột ngột bởi người dùng (KeyboardInterrupt)")
 
     summary = single_runner.write_job_reports(job_id)
     summary["worker_results"] = worker_results

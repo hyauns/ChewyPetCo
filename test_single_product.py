@@ -268,7 +268,19 @@ async def main():
         from playwright.async_api import async_playwright
 
         async with async_playwright() as p:
-            browser = await p.chromium.connect_over_cdp(ws_url)
+            browser = None
+            for attempt in range(3):
+                try:
+                    browser = await p.chromium.connect_over_cdp(ws_url, timeout=15000)
+                    break
+                except Exception as e:
+                    console.print(f"[yellow]CDP Connection failed (attempt {attempt+1}/3): {e}[/yellow]")
+                    await asyncio.sleep(2)
+            
+            if not browser:
+                console.print(f"[red]Playwright Error: Failed to connect to CDP at {ws_url} after 3 attempts.[/red]")
+                sys.exit(1)
+
             context = browser.contexts[0]
             page = context.pages[0] if context.pages else await context.new_page()
 
@@ -385,11 +397,18 @@ async def main():
                             console.print(f"    Group {i} ({p.get('flavor')}): {len(p.get('variants', []))} variants")
                             
                         # Missing field check
+                        # Relax strict variant rules for single products, but require price, images, description
                         required_pass = len(val.get("missing_required_fields", [])) == 0
+                        if not normalized.get("title") or not normalized.get("description") or not normalized.get("images"):
+                            required_pass = False
+                            
+                        has_valid_price = any(v.get("price") for v in normalized.get("variants", []))
+                        if not has_valid_price:
+                            required_pass = False
+
                         has_grouped = len(grouped.get("products", [])) > 0
                         no_mixed_flavors = True
                         for i, p in enumerate(grouped.get('products', [])):
-                            if not p.get('variants'): required_pass = False
                             for v in p.get('variants', []):
                                 if v.get('option1_name') == 'Flavor' or v.get('option_values', {}).get('flavor'):
                                     no_mixed_flavors = False
