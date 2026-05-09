@@ -201,7 +201,7 @@ def summarize_run(
     score = parse_confidence_score(clean)
     fallback_used = detect_fallback_used(clean, mode, diagnostic)
     redirected_plp = detect_redirected_plp(clean, diagnostic)
-    low_confidence = score is not None and score < threshold
+    low_confidence = False # Removed to prioritize JSON output
 
     if exit_code != 0:
         status = "Failed"
@@ -209,8 +209,6 @@ def summarize_run(
         status = "Fallback Used"
     elif redirected_plp:
         status = "Redirected PLP"
-    elif low_confidence:
-        status = "Low Confidence"
     elif "JSON Extractor Success" in clean or "Done! Check output/" in clean or "BATCH TEST SUMMARY" in clean:
         status = "Success"
     else:

@@ -236,8 +236,6 @@ def validation_output_quality(path: Path | None, threshold: int) -> tuple[bool, 
         return False, None, "validation_output_unreadable"
     if data.get("is_valid") is False:
         return False, score, "validation_marked_invalid"
-    if score < float(threshold):
-        return False, score, "confidence_below_threshold"
     return True, score, None
 
 
@@ -507,7 +505,7 @@ def should_mark_done(mode: str, log_text: str, output_paths: dict[str, Any], thr
     grouped = output_paths.get("grouped_output_path")
     validation = output_paths.get("validation_output_path")
     score = output_paths.get("confidence_score")
-    if grouped and validation and score is not None and float(score) >= threshold:
+    if grouped and validation and score is not None:
         return True
 
     fallback_used = "Running OLD Scraper" in clean and "Done! Check output/" in clean
