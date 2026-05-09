@@ -236,11 +236,27 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             item_nodes.append(v)
         if v.get("__typename") == "Breadcrumb":
             breadcrumbs.append(v.get("name"))
+        # Collect product-level images from Apollo media/image nodes
+        if v.get("__typename") in ("MediaImage", "Image", "MediaAsset"):
+            img_url = v.get("url") or v.get("src") or v.get("originalUrl")
+            if img_url and img_url not in images:
+                images.append(img_url)
             
     if product_node:
         title = product_node.get("name", "")
         desc = product_node.get("description", "")
         brand = product_node.get("manufacturerName", "")
+        
+        # Extract product-level images from product_node
+        prod_images = product_node.get("images", []) or product_node.get("media", [])
+        if isinstance(prod_images, list):
+            for img in prod_images:
+                if isinstance(img, dict):
+                    url = img.get("url") or img.get("src") or img.get("originalUrl")
+                    if url and url not in images:
+                        images.append(url)
+                elif isinstance(img, str) and img not in images:
+                    images.append(img)
         
     import base64
     base64_id = base64.b64encode(f"Item:{base_product_id}".encode()).decode()
@@ -361,6 +377,13 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             "variant_url": source_url
         })
         
+    # Fallback: if no product-level images found, collect from all variant images
+    if not images:
+        for nv in normalized_variants:
+            for img in nv.get("images", []):
+                if img and img not in images:
+                    images.append(img)
+
     return {
         "source": "chewy",
         "source_url": source_url,
