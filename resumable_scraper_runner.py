@@ -1393,7 +1393,7 @@ def process_job(
 
 
 def resume_job(job_id: str, *, resume_paused: bool = True, **kwargs: Any) -> dict[str, Any]:
-    return process_job(job_id, resume_paused=resume_paused, requeue_fallback_done=True, **kwargs)
+    return process_job(job_id, resume_paused=resume_paused, requeue_fallback_done=False, **kwargs)
 
 
 def pause_job(job_id: str) -> None:
