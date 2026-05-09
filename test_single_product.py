@@ -421,7 +421,8 @@ async def main():
                         if not normalized.get("storefront_display"):
                             content_pass = False
                             
-                        if score >= threshold and required_pass and has_grouped and no_mixed_flavors and content_pass:
+                        # Removed score >= threshold requirement as requested by user to prioritize JSON
+                        if required_pass and has_grouped and no_mixed_flavors and content_pass:
                             console.print(f"[bold green]JSON Extractor Success! Score: {score}[/]")
                             run_old_scraper = False
                             
