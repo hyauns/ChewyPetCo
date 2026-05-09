@@ -507,7 +507,52 @@ async def main():
                 console.print("Extracting product data...")
                 product = await extract_product_detail(page)
 
-                # Save JSON
+                # Save fallback output per product ID into grouped_products
+                fallback_id = source_id or product.get("product_id") or product.get("sku") or "unknown"
+                
+                # Normalize fallback data into grouped_products format
+                fallback_grouped = {
+                    "source": "chewy",
+                    "source_product_id": fallback_id,
+                    "source_url": test_url,
+                    "architecture": "fallback_html",
+                    "grouping_strategy": "fallback_single_product",
+                    "products": [{
+                        "source_group_id": fallback_id,
+                        "title": product.get("title", ""),
+                        "flavor": None,
+                        "brand": product.get("brand", ""),
+                        "handle_slug": product.get("slug", ""),
+                        "category_path": product.get("breadcrumbs", "").split(" > ") if product.get("breadcrumbs") else [],
+                        "description": product.get("description", ""),
+                        "ingredients": product.get("ingredients", ""),
+                        "guaranteed_analysis": "",
+                        "feeding_instructions": "",
+                        "specifications": product.get("specs", {}),
+                        "images": product.get("images", []),
+                        "variants": [{
+                            "source_variant_id": fallback_id,
+                            "sku": product.get("sku", fallback_id),
+                            "title": product.get("title", ""),
+                            "option1_name": "Size",
+                            "option1_value": "Default Title",
+                            "price": product.get("price"),
+                            "compare_at_price": product.get("original_price"),
+                            "in_stock": True,
+                            "images": product.get("images", []),
+                            "variant_url": test_url,
+                        }],
+                    }]
+                }
+
+                out_dir_grouped = Path("output/grouped_products")
+                out_dir_grouped.mkdir(parents=True, exist_ok=True)
+                grouped_path = out_dir_grouped / f"chewy_grouped_by_flavor_{fallback_id}.json"
+                with open(grouped_path, "w", encoding="utf-8") as f:
+                    json.dump(fallback_grouped, f, indent=2, ensure_ascii=False)
+                console.print(f"[green]Grouped JSON saved: {grouped_path}[/]")
+
+                # Also save raw fallback JSON for debugging
                 json_path = out_dir / "test_chewy_product.json"
                 with open(json_path, "w", encoding="utf-8") as f:
                     json.dump(product, f, indent=2, ensure_ascii=False)
