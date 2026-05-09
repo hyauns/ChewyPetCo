@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import sqlite3
 import subprocess
 import time
 from pathlib import Path
@@ -181,6 +182,83 @@ def make_live_log_callback(container: st.delta_generator.DeltaGenerator):
             last_update = now
 
     return on_line, lines
+
+
+def is_db_malformed_error(exc: BaseException) -> bool:
+    message = str(exc).lower()
+    return "database disk image is malformed" in message or "malformed" in message
+
+
+def render_database_error(context: str, exc: BaseException) -> None:
+    st.error(f"SQLite DB error while {context}: {exc}")
+    if is_db_malformed_error(exc):
+        st.warning(
+            "scraper_jobs.db appears corrupted. Stop every running scraper/UI process, "
+            "back up the DB, then repair or restore it before continuing."
+        )
+        if os.name == "nt":
+            repair_commands = [
+                "copy scraper_jobs.db scraper_jobs.db.bak",
+                "sqlite3 scraper_jobs.db \"PRAGMA integrity_check;\"",
+                "sqlite3 scraper_jobs.db \".recover\" > recovered.sql",
+                "ren scraper_jobs.db scraper_jobs.db.corrupt",
+                "sqlite3 scraper_jobs.db < recovered.sql",
+                "python -c \"import job_store; job_store.init_db(); print('db_migration_ok')\"",
+            ]
+        else:
+            repair_commands = [
+                "cp scraper_jobs.db scraper_jobs.db.bak",
+                "sqlite3 scraper_jobs.db \"PRAGMA integrity_check;\"",
+                "sqlite3 scraper_jobs.db \".recover\" > recovered.sql",
+                "mv scraper_jobs.db scraper_jobs.db.corrupt",
+                "sqlite3 scraper_jobs.db < recovered.sql",
+                "python3 -c \"import job_store; job_store.init_db(); print('db_migration_ok')\"",
+            ]
+        st.code(
+            "\n".join(repair_commands),
+            language="powershell" if os.name == "nt" else "bash",
+        )
+
+
+def safe_db_call(context: str, func, *args: Any, default: Any = None, **kwargs: Any) -> Any:
+    try:
+        return func(*args, **kwargs)
+    except sqlite3.DatabaseError as exc:
+        render_database_error(context, exc)
+        return default
+
+
+def render_tab_safely(label: str, func, *args: Any, **kwargs: Any) -> None:
+    try:
+        func(*args, **kwargs)
+    except sqlite3.DatabaseError as exc:
+        render_database_error(f"rendering {label}", exc)
+
+
+def render_realtime_refresh_controls(jobs: list[dict[str, Any]]) -> tuple[bool, float]:
+    running_jobs = [job for job in jobs if job.get("status") == "running"]
+    cols = st.columns([1, 1, 3])
+    enabled = cols[0].checkbox("Auto refresh", value=True, key="job-auto-refresh-enabled")
+    interval = cols[1].number_input(
+        "Refresh seconds",
+        min_value=1.0,
+        max_value=30.0,
+        value=3.0,
+        step=1.0,
+        key="job-auto-refresh-seconds",
+    )
+    if running_jobs:
+        cols[2].info(f"{len(running_jobs)} job(s) currently running. UI will refresh automatically.")
+    elif enabled:
+        cols[2].caption("Auto refresh is on, so CLI-started jobs will appear without pressing F5.")
+    return enabled, float(interval)
+
+
+def maybe_autorefresh(enabled: bool, interval_seconds: float) -> None:
+    if not enabled:
+        return
+    time.sleep(max(1.0, float(interval_seconds)))
+    st.rerun()
 
 
 def render_run_summary(summary: dict[str, Any], *, prefix: str) -> None:
@@ -518,8 +596,12 @@ def tab_batch(default_mode: str, default_threshold: int, default_save_grouped: b
 
 
 def render_job_progress(job_id: str) -> dict[str, Any]:
-    job_store.update_job_counts(job_id)
-    summary = job_runner.status(job_id)
+    try:
+        job_store.update_job_counts(job_id)
+        summary = job_runner.status(job_id)
+    except sqlite3.DatabaseError as exc:
+        render_database_error("loading job progress", exc)
+        return {}
     cols = st.columns(6)
     cols[0].metric("Status", summary.get("status"))
     cols[1].metric("Completed", f"{summary.get('completed_count')} / {summary.get('total_urls')}")
@@ -586,6 +668,60 @@ def render_selected_job_item(job_id: str, items: list[dict[str, Any]]) -> None:
                 st.json(json.loads(selected["profile_attempts_json"]), expanded=False)
             except json.JSONDecodeError:
                 st.code(selected["profile_attempts_json"], language="json")
+
+
+def _metadata_flag(item: dict[str, Any], key: str) -> Any:
+    try:
+        metadata = json.loads(item.get("metadata_json") or "{}")
+    except json.JSONDecodeError:
+        return None
+    return metadata.get(key)
+
+
+def render_live_job_report(job_id: str, items: list[dict[str, Any]]) -> None:
+    st.subheader("Live Run Report")
+    if not items:
+        st.info("No items found for this job.")
+        return
+
+    running_items = [item for item in items if item.get("status") == "running"]
+    recent_items = sorted(
+        items,
+        key=lambda item: (item.get("updated_at") or "", int(item.get("index_number") or 0)),
+        reverse=True,
+    )[:50]
+    rows = [
+        {
+            "updated": item.get("updated_at"),
+            "index": item.get("index_number"),
+            "status": item.get("status"),
+            "attempts": item.get("attempts"),
+            "worker": item.get("worker_id"),
+            "slot": item.get("profile_slot_id"),
+            "profile": item.get("profile_id_used"),
+            "confidence": item.get("confidence_score"),
+            "fallback": _metadata_flag(item, "fallback_used"),
+            "duration_s": item.get("duration_seconds"),
+            "error": item.get("error_type"),
+            "message": item.get("error_message"),
+            "url": item.get("input_url"),
+        }
+        for item in recent_items
+    ]
+    st.dataframe(rows, width="stretch", hide_index=True)
+
+    if running_items:
+        with st.expander("Running item log tails", expanded=True):
+            for item in running_items[:5]:
+                st.caption(
+                    f"#{item.get('index_number')} {item.get('worker_id') or ''} "
+                    f"{item.get('profile_slot_id') or ''} {item.get('input_url')}"
+                )
+                log_path = item.get("run_log_path")
+                if log_path and Path(log_path).exists():
+                    st.code(read_text_file(log_path, limit_chars=12000), language="text")
+                else:
+                    st.caption("No run log written yet.")
 
 
 def tab_category_discovery() -> None:
@@ -811,12 +947,17 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
                 st.session_state["selected_job_id"] = job_id
                 st.success(f"Created job {job_id} with {len(urls)} URLs.")
 
-    jobs = job_store.list_jobs()
+    jobs = safe_db_call("loading resumable jobs", job_store.list_jobs, default=None)
+    if jobs is None:
+        return
     if not jobs:
         st.info("No resumable jobs found yet.")
         return
 
     st.subheader("Job History")
+    auto_refresh_enabled, refresh_interval = render_realtime_refresh_controls(jobs)
+    st.session_state["resumable_auto_refresh_enabled"] = auto_refresh_enabled
+    st.session_state["resumable_auto_refresh_interval"] = refresh_interval
     job_rows = [
         {
             "job_id": job["job_id"],
@@ -856,10 +997,14 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
 
     st.subheader("Job Controls")
     summary = render_job_progress(job_id)
-    current_items = job_store.get_job_items(job_id, limit=1)
-    current_item = next((item for item in job_store.get_job_items(job_id) if item["status"] in {"running", "paused", "pending"}), None)
+    if not summary:
+        return
+    all_items = safe_db_call("loading job items", job_store.get_job_items, job_id, default=[])
+    current_item = next((item for item in all_items if item["status"] in {"running", "paused", "pending"}), None)
     if current_item:
         st.caption(f"Current/next: #{current_item['index_number']} {current_item['input_url']}")
+
+    render_live_job_report(job_id, all_items)
 
     retry_failed = st.checkbox("Include failed items when starting/resuming", value=True, key=f"job-retry-failed-{job_id}")
     resume_paused = st.checkbox("Include paused items after pending/failed items", value=True, key=f"job-resume-paused-{job_id}")
@@ -969,7 +1114,7 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
                 else:
                     st.error("Export failed. See logs.")
                     
-    job = job_store.get_job(job_id)
+    job = safe_db_call("loading selected job", job_store.get_job, job_id, default=None)
     if job:
         job_dir = Path(job["output_dir"])
         with st.expander("Job files"):
@@ -984,7 +1129,13 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
         ["all", "pending", "running", "done", "failed", "skipped", "paused"],
         key=f"job-item-filter-{job_id}",
     )
-    items = job_store.get_job_items(job_id, status=None if status_filter == "all" else status_filter)
+    items = safe_db_call(
+        "loading filtered job items",
+        job_store.get_job_items,
+        job_id,
+        status=None if status_filter == "all" else status_filter,
+        default=[],
+    )
     item_rows = [
         {
             "index": item["index_number"],
@@ -1380,31 +1531,36 @@ def main() -> None:
         ]
     )
     with tabs[0]:
-        tab_single(default_mode, default_threshold, default_save_grouped)
+        render_tab_safely("Single Product", tab_single, default_mode, default_threshold, default_save_grouped)
     with tabs[1]:
-        tab_batch(default_mode, default_threshold, default_save_grouped)
+        render_tab_safely("Batch Test", tab_batch, default_mode, default_threshold, default_save_grouped)
         with st.expander("Latest known batch report"):
             render_batch_report(latest_batch_report(), prefix="batch-latest-report")
     with tabs[2]:
-        tab_category_discovery()
+        render_tab_safely("Category Discovery", tab_category_discovery)
     with tabs[3]:
-        tab_resumable_jobs(default_mode, default_threshold, default_save_grouped)
+        render_tab_safely("Resumable Jobs", tab_resumable_jobs, default_mode, default_threshold, default_save_grouped)
     with tabs[4]:
-        tab_output_browser()
+        render_tab_safely("Output Browser", tab_output_browser)
     with tabs[5]:
-        tab_grouped_preview()
+        render_tab_safely("Grouped Output Preview", tab_grouped_preview)
     with tabs[6]:
-        tab_validation(default_threshold)
+        render_tab_safely("Validation", tab_validation, default_threshold)
     with tabs[7]:
-        tab_diagnostics()
+        render_tab_safely("Diagnostics", tab_diagnostics)
     with tabs[8]:
-        tab_adsp_pool()
+        render_tab_safely("AdsPower Pool", tab_adsp_pool)
     with tabs[9]:
-        tab_registry_browser()
+        render_tab_safely("Registry Browser", tab_registry_browser)
     with tabs[10]:
-        tab_exports()
+        render_tab_safely("Exports", tab_exports)
     with tabs[11]:
-        tab_run_history()
+        render_tab_safely("Run History", tab_run_history)
+
+    maybe_autorefresh(
+        bool(st.session_state.get("resumable_auto_refresh_enabled", False)),
+        float(st.session_state.get("resumable_auto_refresh_interval", 3.0)),
+    )
 
 
 if __name__ == "__main__":

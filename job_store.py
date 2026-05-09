@@ -833,7 +833,10 @@ def get_job_summary(job_id: str) -> dict[str, Any]:
     }
 
 
-init_db()
+try:
+    init_db()
+except sqlite3.DatabaseError as exc:
+    print(f"[job_store] init_db failed: {exc}")
 
 
 def make_category_job_id() -> str:

@@ -87,7 +87,14 @@ async def read_page_content_with_retry(page, attempts: int = 5) -> str:
 
 async def fetch_initial_html(url: str, page) -> str:
     console.print(f"Fetching initial HTML for: {url}")
-    await page.goto(url, timeout=config.PAGE_LOAD_TIMEOUT, wait_until="domcontentloaded")
+    try:
+        await page.goto(url, timeout=config.PAGE_LOAD_TIMEOUT, wait_until="domcontentloaded")
+    except Exception as exc:
+        if "Timeout" in str(exc):
+            console.print(f"[red]Page load timeout ({config.PAGE_LOAD_TIMEOUT}ms). Proxy có thể bị chậm hoặc kết nối bị treo.[/red]")
+        else:
+            console.print(f"[red]Lỗi khi tải trang: {str(exc)}[/red]")
+        raise
     await asyncio.sleep(4)
     return await read_page_content_with_retry(page)
 
