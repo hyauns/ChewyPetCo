@@ -92,8 +92,8 @@ def create_pdp_job_from_discovery(category_job_id: str, pdp_mode: str = "json_ex
             
         if config.CHEWY_GLOBAL_DEDUP_ENABLED and pid and not config.CHEWY_REPROCESS_EXISTING:
             with job_store.connect() as conn:
-                reg_row = conn.execute("SELECT extraction_status FROM chewy_product_registry WHERE product_id = ?", (pid,)).fetchone()
-            if reg_row and reg_row[0] == "extracted_success":
+                reg_row = conn.execute("SELECT * FROM chewy_product_registry WHERE product_id = ?", (pid,)).fetchone()
+            if job_store.registry_success_has_usable_output(reg_row, config.CHEWY_JSON_CONFIDENCE_THRESHOLD):
                 skipped_count += 1
                 continue
                 

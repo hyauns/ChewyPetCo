@@ -411,6 +411,60 @@ def get_item(item_id: int) -> dict[str, Any] | None:
     return row_to_dict(row)
 
 
+def _existing_path(path_value: Any) -> Path | None:
+    if not path_value:
+        return None
+    try:
+        path = Path(str(path_value))
+    except (TypeError, ValueError):
+        return None
+    return path if path.exists() else None
+
+
+def registry_success_has_usable_output(registry_item: dict[str, Any] | sqlite3.Row | None, threshold: int) -> bool:
+    """Return True only when a registry success still points to usable local JSON output."""
+    if not registry_item:
+        return False
+    item = row_to_dict(registry_item) if isinstance(registry_item, sqlite3.Row) else registry_item
+    if item.get("extraction_status") != "extracted_success":
+        return False
+
+    product_id = str(item.get("product_id") or "").strip()
+    grouped_path = _existing_path(item.get("grouped_output_path"))
+    if not grouped_path and product_id:
+        grouped_path = _existing_path(OUTPUT_DIR / "grouped_products" / f"chewy_grouped_by_flavor_{product_id}.json")
+    if not grouped_path:
+        return False
+
+    try:
+        data = json.loads(grouped_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    products = data.get("products")
+    if not isinstance(products, list) or not products:
+        return False
+    for product in products:
+        if not isinstance(product, dict) or not product.get("title"):
+            return False
+        variants = product.get("variants")
+        if not isinstance(variants, list) or not variants:
+            return False
+
+    validation_path = _existing_path(item.get("validation_output_path"))
+    if not validation_path and product_id:
+        validation_path = _existing_path(OUTPUT_DIR / "validation" / f"chewy_validation_{product_id}.json")
+    if not validation_path:
+        return False
+    try:
+        validation = json.loads(validation_path.read_text(encoding="utf-8"))
+        if validation.get("is_valid") is False:
+            return False
+        score = float(validation.get("confidence_score"))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return False
+    return score is not None and score >= float(threshold)
+
+
 def update_job(job_id: str, **fields: Any) -> None:
     if not fields:
         return

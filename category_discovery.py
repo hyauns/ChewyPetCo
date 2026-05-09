@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import re
-from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urljoin, urlparse
 
@@ -187,13 +186,18 @@ async def discover_category_products(
                         reg_res = job_store.check_and_update_product_registry(product_id, card["url"], category_job_id)
                         registry_item = reg_res["registry_item"]
                         
-                        # Only skip if it's already extracted, output exists, and we don't force reprocess
-                        if registry_item["extraction_status"] == "extracted_success" and config.CHEWY_SKIP_ALREADY_EXTRACTED and not config.CHEWY_REPROCESS_EXISTING:
-                            grouped_path = registry_item.get("grouped_output_path")
+                        # Only skip if the registry success still has usable local output.
+                        if (
+                            config.CHEWY_SKIP_ALREADY_EXTRACTED
+                            and not config.CHEWY_REPROCESS_EXISTING
+                            and job_store.registry_success_has_usable_output(
+                                registry_item,
+                                config.CHEWY_JSON_CONFIDENCE_THRESHOLD,
+                            )
+                        ):
                             conf_score = registry_item.get("confidence_score", 0)
-                            if grouped_path and Path(grouped_path).exists() and conf_score >= config.CHEWY_JSON_CONFIDENCE_THRESHOLD:
-                                filter_res["status"] = "duplicate_existing_success"
-                                filter_res["reason"] = f"Product already extracted successfully (Score: {conf_score})"
+                            filter_res["status"] = "duplicate_existing_success"
+                            filter_res["reason"] = f"Product already extracted successfully (Score: {conf_score})"
                     
                     try:
                         job_store.add_category_item(

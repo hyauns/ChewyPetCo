@@ -43,6 +43,7 @@ def _worker_loop(
     slot_id: str,
     retry_failed: bool,
     resume_paused: bool,
+    reprocess_completed: bool,
     reprocess_existing: bool,
     force_retry: bool,
     max_items: int | None,
@@ -104,6 +105,7 @@ def _worker_loop(
             job_id,
             retry_failed=retry_failed,
             include_paused=resume_paused,
+            reprocess_completed=reprocess_completed,
             force_retry=force_retry,
             worker_id=worker_id,
             profile_slot_id=slot_id,
@@ -153,6 +155,7 @@ def process_job_parallel(
     worker_count: int | None = None,
     retry_failed: bool = True,
     resume_paused: bool = False,
+    reprocess_completed: bool = False,
     reprocess_existing: bool = False,
     force_retry: bool = False,
     stale_minutes: int = 30,
@@ -205,6 +208,7 @@ def process_job_parallel(
                     slot_id=slot["slot_id"],
                     retry_failed=retry_failed,
                     resume_paused=resume_paused,
+                    reprocess_completed=reprocess_completed,
                     reprocess_existing=reprocess_existing,
                     force_retry=force_retry,
                     max_items=max_items,
@@ -220,7 +224,7 @@ def process_job_parallel(
     counts = job_store.update_job_counts(job_id)
     current_job = job_store.get_job(job_id)
     if current_job and current_job["status"] == "running":
-        if counts["pending_count"] == 0:
+        if counts["pending_count"] == 0 and counts["failed_count"] == 0:
             job_store.set_job_status(job_id, "completed")
         else:
             job_store.set_job_status(job_id, "paused", last_error="Parallel workers stopped with unfinished items.")

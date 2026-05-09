@@ -205,17 +205,55 @@ def validation_confidence(path: Path | None) -> float | None:
         return None
 
 
+def grouped_output_quality(path: Path | None) -> tuple[bool, str | None]:
+    if not path or not path.exists():
+        return False, "grouped_output_missing"
+    try:
+        data = read_json_file(path)
+    except (OSError, json.JSONDecodeError):
+        return False, "grouped_output_unreadable"
+    products = data.get("products")
+    if not isinstance(products, list) or not products:
+        return False, "grouped_products_empty"
+    for idx, product in enumerate(products, start=1):
+        if not isinstance(product, dict):
+            return False, f"group_{idx}_invalid"
+        if not product.get("title"):
+            return False, f"group_{idx}_missing_title"
+        variants = product.get("variants")
+        if not isinstance(variants, list) or not variants:
+            return False, f"group_{idx}_missing_variants"
+    return True, None
+
+
+def validation_output_quality(path: Path | None, threshold: int) -> tuple[bool, float | None, str | None]:
+    if not path or not path.exists():
+        return False, None, "validation_output_missing"
+    try:
+        data = read_json_file(path)
+        score = float(data.get("confidence_score"))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False, None, "validation_output_unreadable"
+    if data.get("is_valid") is False:
+        return False, score, "validation_marked_invalid"
+    if score < float(threshold):
+        return False, score, "confidence_below_threshold"
+    return True, score, None
+
+
 def existing_json_output_ok(source_id: str | None, threshold: int) -> tuple[bool, dict[str, Any]]:
     paths = expected_output_paths(source_id)
     grouped = paths["grouped"]
     validation = paths["validation"]
-    score = validation_confidence(validation)
-    ok = bool(grouped and grouped.exists() and validation and validation.exists() and score is not None and score >= threshold)
+    grouped_ok, grouped_reason = grouped_output_quality(grouped)
+    validation_ok, score, validation_reason = validation_output_quality(validation, threshold)
+    ok = bool(grouped_ok and validation_ok)
     return ok, {
         "grouped_output_path": str(grouped.resolve()) if grouped and grouped.exists() else None,
         "normalized_output_path": str(paths["normalized"].resolve()) if paths["normalized"] and paths["normalized"].exists() else None,
         "validation_output_path": str(validation.resolve()) if validation and validation.exists() else None,
         "confidence_score": score,
+        "output_quality_reason": validation_reason or grouped_reason,
     }
 
 
@@ -252,28 +290,75 @@ def requeue_fallback_done_items_for_resume(
     *,
     on_line: Callable[[str], None] | None = None,
 ) -> int:
-    """Requeue completed items that only succeeded through the HTML fallback."""
+    """Requeue completed items that are not backed by complete JSON extractor output."""
+    job = job_store.get_job(job_id)
+    threshold = int(job["confidence_threshold"]) if job else int(config.CHEWY_JSON_CONFIDENCE_THRESHOLD)
     items = job_store.get_job_items(job_id, status="done")
     now = job_store.utc_now()
     count = 0
+    reused = 0
     for item in items:
-        if not item_used_html_fallback(item):
+        source_id = item.get("source_product_id") or source_id_from_url(item.get("input_url", ""))
+        should_requeue = item_used_html_fallback(item)
+        exists_ok, existing = existing_json_output_ok(source_id, threshold)
+        reason = "html_fallback_used" if should_requeue else existing.get("output_quality_reason")
+        if not should_requeue and exists_ok:
+            updates: dict[str, Any] = {}
+            if source_id and item.get("source_product_id") != source_id:
+                updates["source_product_id"] = source_id
+            if source_id and item.get("detected_product_id") != source_id:
+                updates["detected_product_id"] = source_id
+            if item.get("page_kind") != "pdp":
+                updates["page_kind"] = "pdp"
+            for key in ("grouped_output_path", "normalized_output_path", "validation_output_path", "confidence_score"):
+                if existing.get(key) != item.get(key):
+                    updates[key] = existing.get(key)
+            if updates:
+                metadata = _metadata_dict(item)
+                metadata["resume_output_audit"] = {
+                    "checked_at": now,
+                    "result": "valid_existing_json_output",
+                }
+                updates["metadata_json"] = json.dumps(metadata, ensure_ascii=False)
+                job_store.update_item_status(int(item["id"]), "done", **updates)
+                reused += 1
+            if config.CHEWY_GLOBAL_DEDUP_ENABLED and source_id:
+                job_store.check_and_update_product_registry(source_id, item.get("final_url") or item.get("input_url") or "", job_id)
+                job_store.update_registry_extraction_status(
+                    source_id,
+                    "extracted_success",
+                    job_id,
+                    grouped_output_path=existing.get("grouped_output_path"),
+                    normalized_output_path=existing.get("normalized_output_path"),
+                    validation_output_path=existing.get("validation_output_path"),
+                    confidence_score=existing.get("confidence_score"),
+                )
             continue
+
         metadata = _metadata_dict(item)
         metadata["force_reprocess_existing_once"] = True
         metadata["fallback_resume_requeued_at"] = now
+        metadata["resume_requeue_reason"] = reason or "json_output_incomplete"
         job_store.update_item_status(
             int(item["id"]),
             "pending",
-            error_type="fallback_resume_reprocess",
-            error_message="Requeued on resume because previous run used HTML fallback.",
+            source_product_id=source_id,
+            grouped_output_path=None,
+            normalized_output_path=None,
+            validation_output_path=None,
+            confidence_score=None,
+            error_type="resume_reprocess",
+            error_message=f"Requeued on resume because existing output is not usable: {reason or 'json_output_incomplete'}.",
             metadata_json=json.dumps(metadata, ensure_ascii=False),
         )
         count += 1
-    if count:
+    if count or reused:
         job_store.update_job_counts(job_id)
+    if count:
         if on_line:
-            on_line(f"[job {job_id}] Requeued {count} fallback HTML item(s) for full re-scrape.")
+            on_line(f"[job {job_id}] Requeued {count} completed item(s) for full JSON re-scrape.")
+    if reused and on_line:
+        on_line(f"[job {job_id}] Refreshed output paths for {reused} completed item(s) with valid JSON output.")
     return count
 
 
@@ -561,6 +646,17 @@ def process_single_item(
                 },
             )
             job_store.update_job_counts(job_id)
+            if config.CHEWY_GLOBAL_DEDUP_ENABLED and source_id:
+                job_store.check_and_update_product_registry(source_id, url, job_id)
+                job_store.update_registry_extraction_status(
+                    source_id,
+                    "extracted_success",
+                    job_id,
+                    grouped_output_path=existing.get("grouped_output_path"),
+                    normalized_output_path=existing.get("normalized_output_path"),
+                    validation_output_path=existing.get("validation_output_path"),
+                    confidence_score=existing.get("confidence_score"),
+                )
             return job_store.get_item(item_id) or {}
 
     log_name = f"item_{int(item['index_number']):05d}_{source_id or 'unknown'}.log"
@@ -1278,7 +1374,7 @@ def process_job(
     counts = job_store.update_job_counts(job_id)
     current_job = job_store.get_job(job_id)
     if current_job and current_job["status"] == "running":
-        if counts["pending_count"] == 0:
+        if counts["pending_count"] == 0 and counts["failed_count"] == 0:
             job_store.set_job_status(job_id, "completed")
         else:
             job_store.set_job_status(job_id, "paused", last_error="Run stopped with unfinished items.")
