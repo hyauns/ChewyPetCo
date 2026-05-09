@@ -147,10 +147,10 @@ def summarize_error(
             "details": last_exception_line(clean),
         }
 
-    if "confidence score below threshold" in diag_text or "validation failed" in diag_text:
+    if "critical fields missing" in diag_text:
         return {
-            "reason": "Extraction completed but confidence is below threshold or validation failed.",
-            "action": "Review validation before using output.",
+            "reason": "Extraction completed but critical fields (title/images/description/price) are missing.",
+            "action": "Review product page structure; fallback scraper will be used.",
             "details": diag_error or None,
         }
 

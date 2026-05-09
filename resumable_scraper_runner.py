@@ -466,12 +466,8 @@ def classify_failure(
         return "redirected_plp", "URL redirected to a PLP/category page, not a PDP.", False
     if "unavailable_product" in diag_lower or "unavailable product" in lower:
         return "unavailable_product", diag_error or "Product appears unavailable.", False
-    if "validation failed" in diag_lower:
-        if output_paths.get("confidence_score") is not None and float(output_paths["confidence_score"]) < threshold:
-            return "low_confidence", "Extraction confidence is below threshold.", False
-        return "validation_failed", diag_error or "Validation failed.", False
-    if output_paths.get("confidence_score") is not None and float(output_paths["confidence_score"]) < threshold:
-        return "low_confidence", "Extraction confidence is below threshold.", False
+    if "critical fields missing" in diag_lower:
+        return "validation_failed", diag_error or "Critical fields missing (title/images/description/price).", False
     if "greenlet" in lower and ("dll load failed" in lower or "no module named" in lower or "importerror" in lower):
         return (
             "dependency_error",

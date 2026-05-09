@@ -396,17 +396,16 @@ async def main():
                         for i, p in enumerate(grouped.get('products', [])):
                             console.print(f"    Group {i} ({p.get('flavor')}): {len(p.get('variants', []))} variants")
                             
-                        # Missing field check
-                        # Relax strict variant rules for single products, but require price, images, description
-                        required_pass = len(val.get("missing_required_fields", [])) == 0
-                        if not normalized.get("title") or not normalized.get("description") or not normalized.get("images"):
-                            required_pass = False
-                            
-                        has_valid_price = any(v.get("price") for v in normalized.get("variants", []))
-                        if not has_valid_price:
-                            required_pass = False
-
+                        # --- Fallback decision ---
+                        # Only fallback when critical data is genuinely missing:
+                        # title, images, description, price.
+                        # Score and validate_normalized_product warnings are informational only.
+                        has_title = bool(normalized.get("title"))
+                        has_images = bool(normalized.get("images"))
+                        has_description = bool(normalized.get("description"))
+                        has_price = any(v.get("price") for v in normalized.get("variants", []))
                         has_grouped = len(grouped.get("products", [])) > 0
+
                         no_mixed_flavors = True
                         for i, p in enumerate(grouped.get('products', [])):
                             for v in p.get('variants', []):
@@ -414,15 +413,10 @@ async def main():
                                     no_mixed_flavors = False
                                     if "warnings" not in val: val["warnings"] = []
                                     val["warnings"].append(f"Group {i} variant incorrectly retains Flavor option.")
-                        
-                        content_pass = True
-                        if not normalized.get("content_sections"):
-                            content_pass = False
-                        if not normalized.get("storefront_display"):
-                            content_pass = False
-                            
-                        # Removed score >= threshold requirement as requested by user to prioritize JSON
-                        if required_pass and has_grouped and no_mixed_flavors and content_pass:
+
+                        critical_pass = has_title and has_images and has_description and has_price and has_grouped and no_mixed_flavors
+
+                        if critical_pass:
                             console.print(f"[bold green]JSON Extractor Success! Score: {score}[/]")
                             run_old_scraper = False
                             
@@ -446,25 +440,30 @@ async def main():
                                     json.dump(val, f, indent=2, ensure_ascii=False)
                                 console.print(f"  Outputs saved.")
                         else:
-                            console.print(f"[bold red]JSON Extractor Validation Failed. Score: {score}[/]")
-                            console.print(f"  Required pass: {required_pass}")
-                            console.print(f"  Grouped pass: {has_grouped}")
+                            console.print(f"[bold red]JSON Extractor Missing Critical Fields. Score: {score}[/]")
+                            console.print(f"  Has Title: {has_title}")
+                            console.print(f"  Has Images: {has_images}")
+                            console.print(f"  Has Description: {has_description}")
+                            console.print(f"  Has Price: {has_price}")
+                            console.print(f"  Has Grouped: {has_grouped}")
                             console.print(f"  Mixed flavors: {not no_mixed_flavors}")
-                            console.print(f"  Content pass: {content_pass}")
                             if val.get('warnings'):
                                 console.print(f"  Warnings: {val['warnings']}")
                             
                             # Diagnostic output
                             diag = {
                                 "input_url": test_url,
-                                "error": "Validation failed",
+                                "error": "Critical fields missing",
                                 "detected_architecture": arch,
                                 "confidence_score": score,
-                                "missing_required_fields": val.get("missing_required_fields", []),
-                                "missing_preferred_fields": val.get("missing_preferred_fields", []),
+                                "has_title": has_title,
+                                "has_images": has_images,
+                                "has_description": has_description,
+                                "has_price": has_price,
+                                "has_grouped": has_grouped,
                                 "warnings": val.get("warnings", []),
                                 "fallback_used": fallback_to_old,
-                                "fallback_reason": "Confidence score below threshold or missing required fields/groups"
+                                "fallback_reason": "Missing title, images, description, or price"
                             }
                             
                             diag_dir = Path("output/json_extractor_failures")
