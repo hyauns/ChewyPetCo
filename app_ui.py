@@ -1028,15 +1028,27 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
         if st.button("Start", key=f"job-start-{job_id}"):
             callback, live_lines = make_live_log_callback(log_box)
             with st.spinner("Processing resumable job..."):
-                result = job_runner.process_job(
-                    job_id,
-                    retry_failed=retry_failed,
-                    resume_paused=False,
-                    reprocess_completed=reprocess_completed,
-                    reprocess_existing=reprocess_existing,
-                    force_retry=force_retry,
-                    on_line=callback,
-                )
+                if int(parallel_worker_count) > 1:
+                    import parallel_resumable_runner
+                    result = parallel_resumable_runner.process_job_parallel(
+                        job_id,
+                        worker_count=int(parallel_worker_count),
+                        retry_failed=retry_failed,
+                        resume_paused=False,
+                        reprocess_existing=reprocess_existing,
+                        force_retry=force_retry,
+                        on_line=callback,
+                    )
+                else:
+                    result = job_runner.process_job(
+                        job_id,
+                        retry_failed=retry_failed,
+                        resume_paused=False,
+                        reprocess_completed=reprocess_completed,
+                        reprocess_existing=reprocess_existing,
+                        force_retry=force_retry,
+                        on_line=callback,
+                    )
             log_box.code("\n".join(live_lines[-300:]), language="text")
             st.json(result, expanded=False)
     with controls[1]:
@@ -1048,15 +1060,28 @@ def tab_resumable_jobs(default_mode: str, default_threshold: int, default_save_g
         if st.button("Resume", key=f"job-resume-{job_id}"):
             callback, live_lines = make_live_log_callback(log_box)
             with st.spinner("Resuming job..."):
-                result = job_runner.resume_job(
-                    job_id,
-                    retry_failed=True,
-                    resume_paused=resume_paused,
-                    reprocess_completed=reprocess_completed,
-                    reprocess_existing=reprocess_existing,
-                    force_retry=force_retry,
-                    on_line=callback,
-                )
+                if int(parallel_worker_count) > 1:
+                    import parallel_resumable_runner
+                    result = parallel_resumable_runner.process_job_parallel(
+                        job_id,
+                        worker_count=int(parallel_worker_count),
+                        retry_failed=True,
+                        resume_paused=resume_paused,
+                        reprocess_existing=reprocess_existing,
+                        force_retry=force_retry,
+                        requeue_fallback_done=True,
+                        on_line=callback,
+                    )
+                else:
+                    result = job_runner.resume_job(
+                        job_id,
+                        retry_failed=True,
+                        resume_paused=resume_paused,
+                        reprocess_completed=reprocess_completed,
+                        reprocess_existing=reprocess_existing,
+                        force_retry=force_retry,
+                        on_line=callback,
+                    )
             log_box.code("\n".join(live_lines[-300:]), language="text")
             st.json(result, expanded=False)
     with controls[3]:

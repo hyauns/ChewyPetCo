@@ -45,6 +45,7 @@ TRANSIENT_ERROR_TYPES = {
     "network_error",
     "browser_error",
     "adspower_error",
+    "adspower_profile_missing",
     "proxy_connection_retry",
     "proxy_connection_failed",
     "output_missing",
@@ -68,6 +69,13 @@ PROXY_CONNECTION_FAILURE_TOKENS = [
     "net::err_proxy_certificate_invalid",
     "socks connection failed",
     "proxy connection failed",
+]
+
+ADSPOWER_PROFILE_MISSING_TOKENS = [
+    "profile does not exist",
+    "profile not found",
+    "user does not exist",
+    "user_id does not exist",
 ]
 
 
@@ -274,6 +282,13 @@ def detect_proxy_connection_failure(log_text: str) -> bool:
     return any(token in lower for token in PROXY_CONNECTION_FAILURE_TOKENS)
 
 
+def detect_adspower_profile_missing(log_text: str) -> bool:
+    lower = strip_ansi(log_text).lower()
+    return "adspower start failed" in lower and any(
+        token in lower for token in ADSPOWER_PROFILE_MISSING_TOKENS
+    )
+
+
 def latest_matching_file(folder: Path, pattern: str, started_at: float) -> Path | None:
     if not folder.exists():
         return None
@@ -380,6 +395,8 @@ def classify_failure(
             "Playwright/greenlet dependency is broken for the active Python environment. Reinstall dependencies or run with the supported project Python before resuming.",
             False,
         )
+    if detect_adspower_profile_missing(clean):
+        return "adspower_profile_missing", "AdsPower profile ID does not exist.", True
     if "adspower" in lower and any(token in lower for token in ["failed", "refused", "connection", "get_ws_endpoint"]):
         return "adspower_error", "AdsPower/browser connection failed.", True
     if detect_proxy_connection_failure(clean):
@@ -649,6 +666,83 @@ def process_single_item(
             if on_line:
                 on_line(f"[job {job_id}] White screen handling error: {exc}")
             break
+
+    if detect_adspower_profile_missing(log_text):
+        attempts_json = _profile_attempts(item)
+        attempts_json.append(
+            {
+                "attempt": attempts,
+                "profile_id": profile_id,
+                "slot_id": slot_id,
+                "result": "adspower_profile_missing",
+                "timestamp": job_store.utc_now(),
+            }
+        )
+
+        metadata = _metadata_dict(item)
+        metadata.update(
+            {
+                "adspower_profile_missing": True,
+                "missing_profile_id": profile_id,
+                "missing_profile_slot_id": slot_id,
+                "exit_code": exit_code,
+            }
+        )
+
+        error_type = "adspower_profile_missing"
+        if slot_id and getattr(config, "ADSP_PROFILE_RECOVERY_ENABLED", True):
+            rebuild_result = adsp_profile_recovery_manager.auto_rebuild_profile(
+                slot_id,
+                reason=f"missing_adspower_profile old_profile_id={profile_id}",
+                delay_seconds=0,
+            )
+            metadata["adspower_missing_profile_rebuild"] = rebuild_result
+            if rebuild_result.get("success"):
+                adsp_profile_pool_manager.disable_profile(
+                    profile_id,
+                    f"AdsPower profile does not exist; slot {slot_id} rebuilt as {rebuild_result.get('new_profile_id')}.",
+                )
+                error_message = (
+                    f"AdsPower profile {profile_id} does not exist. Rebuilt slot {slot_id} "
+                    f"as profile {rebuild_result.get('new_profile_id')} and queued item for retry."
+                )
+                if on_line:
+                    on_line(f"[job {job_id}] {error_message}")
+            else:
+                adsp_profile_pool_manager.disable_profile(
+                    profile_id,
+                    f"AdsPower profile does not exist and slot rebuild failed: {rebuild_result.get('message')}",
+                )
+                error_message = (
+                    f"AdsPower profile {profile_id} does not exist and slot {slot_id} rebuild failed: "
+                    f"{rebuild_result.get('message')}"
+                )
+                if on_line:
+                    on_line(f"[job {job_id}] {error_message}")
+        else:
+            adsp_profile_pool_manager.disable_profile(
+                profile_id,
+                "AdsPower profile does not exist.",
+            )
+            error_message = (
+                f"AdsPower profile {profile_id} does not exist. Disabled it locally and queued item for retry."
+            )
+            if on_line:
+                on_line(f"[job {job_id}] {error_message}")
+
+        job_store.update_item_status(
+            item_id,
+            "pending",
+            finished_at=job_store.utc_now(),
+            duration_seconds=duration,
+            run_log_path=str(log_path.resolve()),
+            error_type=error_type,
+            error_message=error_message,
+            profile_attempts_json=json.dumps(attempts_json, ensure_ascii=False),
+            metadata_json=json.dumps(metadata, ensure_ascii=False),
+        )
+        job_store.update_job_counts(job_id)
+        return job_store.get_item(item_id) or {}
 
     if detect_proxy_connection_failure(log_text):
         threshold_failures = max(1, int(getattr(config, "ADSP_PROXY_FAILURES_BEFORE_LOCAL", 3)))
@@ -985,6 +1079,21 @@ def process_item_with_rotation(
             force_retry=force_retry,
             on_line=on_line,
         )
+
+        if result.get("error_type") == "adspower_profile_missing":
+            next_profile = adsp_profile_pool_manager.get_next_available_profile(job_id, item_id)
+            if next_profile:
+                adsp_profile_pool_manager.release_profile(next_profile)
+                if on_line:
+                    on_line(
+                        f"[job {job_id}] Retrying same item {result.get('index_number', '?')} "
+                        "with a valid AdsPower profile..."
+                    )
+                continue
+            msg = "No AdsPower profiles remain available after missing profile error."
+            job_store.update_item_status(item_id, "paused", error_type="all_profiles_exhausted", error_message=msg)
+            job_store.set_job_status(job_id, "paused", last_error=msg)
+            return job_store.get_item(item_id) or {}
 
         # Success or non-white-screen outcome → done with this item
         if result.get("error_type") == "proxy_connection_failed":
