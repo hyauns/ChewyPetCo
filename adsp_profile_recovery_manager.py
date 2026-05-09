@@ -486,7 +486,52 @@ def release_template(slot_id: str) -> None:
     mark_template_available(slot_id, "Manually released")
 
 
-def request_rebuild(slot_id: str) -> dict[str, Any]:
+def detach_profile_mapping(slot_id: str, *, notes: str = "Detached stale AdsPower profile mapping") -> dict[str, Any]:
+    sync_profile_templates_to_db()
+    row = get_template(slot_id)
+    if not row:
+        return {"success": False, "slot_id": slot_id, "message": "Unknown slot."}
+    old_profile_id = row.get("adspower_profile_id")
+    now = utc_now()
+    with job_store.connect() as conn:
+        conn.execute(
+            """
+            UPDATE adsp_profile_templates
+            SET adspower_profile_id = NULL,
+                status = 'available',
+                notes = ?,
+                updated_at = ?
+            WHERE slot_id = ?
+            """,
+            (notes, now, slot_id),
+        )
+        if old_profile_id:
+            conn.execute(
+                """
+                UPDATE adsp_profile_pool
+                SET status = 'disabled',
+                    notes = ?,
+                    updated_at = ?
+                WHERE profile_id = ?
+                """,
+                (notes, now, old_profile_id),
+            )
+        conn.commit()
+    record_profile_rebuild_event(
+        slot_id,
+        "profile_mapping_detached",
+        old_profile_id=old_profile_id,
+        message=notes,
+    )
+    return {
+        "success": True,
+        "slot_id": slot_id,
+        "old_profile_id": old_profile_id,
+        "message": notes,
+    }
+
+
+def request_rebuild(slot_id: str, *, delete_old_profile: bool = True) -> dict[str, Any]:
     sync_profile_templates_to_db()
     row = get_template(slot_id)
     if not row:
@@ -505,7 +550,7 @@ def request_rebuild(slot_id: str) -> dict[str, Any]:
             conn.commit()
         record_profile_rebuild_event(slot_id, "manual_rebuild_requested", old_profile_id=row["adspower_profile_id"])
         return {"success": True, "slot_id": slot_id, "message": "Rebuild requested after current item finishes."}
-    return auto_rebuild_profile(slot_id, manual=True, delay_seconds=0)
+    return auto_rebuild_profile(slot_id, manual=True, delay_seconds=0, delete_old_profile=delete_old_profile)
 
 
 def consume_rebuild_request(slot_id: str) -> bool:
@@ -668,6 +713,7 @@ def auto_rebuild_profile(
     reason: str = "white_screen_block",
     manual: bool = False,
     delay_seconds: int | None = None,
+    delete_old_profile: bool = True,
 ) -> dict[str, Any]:
     if not getattr(config, "ADSP_PROFILE_RECOVERY_ENABLED", True):
         return {"success": False, "slot_id": slot_id, "message": "Profile recovery is disabled."}
@@ -716,7 +762,7 @@ def auto_rebuild_profile(
 
     delete_warning = None
     try:
-        if old_profile_id:
+        if old_profile_id and delete_old_profile:
             try:
                 _delete_adspower_profile(str(old_profile_id))
             except Exception as exc:
@@ -724,6 +770,8 @@ def auto_rebuild_profile(
                 lower_warning = delete_warning.lower()
                 if "not found" not in lower_warning and "not exist" not in lower_warning and "does not exist" not in lower_warning:
                     raise RuntimeError(f"Could not delete old AdsPower profile {old_profile_id}: {delete_warning}")
+        elif old_profile_id and not delete_old_profile:
+            delete_warning = f"Skipped deleting old AdsPower profile {old_profile_id}"
 
         new_profile_id = _create_adspower_profile(template)
         now = utc_now()
@@ -874,6 +922,15 @@ def main() -> int:
 
     rebuild = sub.add_parser("rebuild", help="Force rebuild one fixed profile slot")
     rebuild.add_argument("--slot", required=True)
+    rebuild.add_argument(
+        "--skip-delete-old",
+        action="store_true",
+        help="Create/map a new AdsPower profile without deleting the old mapped profile id.",
+    )
+
+    detach = sub.add_parser("detach", help="Detach a stale AdsPower profile id from one slot without calling AdsPower delete")
+    detach.add_argument("--slot", required=True)
+    detach.add_argument("--rebuild", action="store_true", help="Create a new profile immediately after detaching")
 
     release = sub.add_parser("release", help="Release a slot back to available")
     release.add_argument("--slot", required=True)
@@ -897,7 +954,19 @@ def main() -> int:
         print(json.dumps(get_rebuild_events(), indent=2))
         return 0
     if args.command == "rebuild":
-        print(json.dumps(request_rebuild(args.slot), indent=2))
+        print(json.dumps(request_rebuild(args.slot, delete_old_profile=not args.skip_delete_old), indent=2))
+        return 0
+    if args.command == "detach":
+        result = detach_profile_mapping(args.slot)
+        if args.rebuild and result.get("success"):
+            result["rebuild_result"] = auto_rebuild_profile(
+                args.slot,
+                reason="detached_stale_profile_mapping",
+                manual=True,
+                delay_seconds=0,
+                delete_old_profile=False,
+            )
+        print(json.dumps(result, indent=2))
         return 0
     if args.command == "release":
         release_template(args.slot)
