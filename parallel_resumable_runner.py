@@ -82,8 +82,12 @@ def _worker_loop(
                 break
             continue
         if slot["status"] == "rebuilding":
-            _safe_on_line(log_lock, on_line, f"[{worker_id}] Waiting for slot {slot_id} rebuild")
-            time.sleep(5)
+            reason = slot.get("notes") or "slot_marked_rebuilding"
+            _safe_on_line(log_lock, on_line, f"[{worker_id}] Rebuilding slot {slot_id}: {reason}")
+            result = recovery.auto_rebuild_profile(slot_id, reason=reason, delay_seconds=0)
+            _safe_on_line(log_lock, on_line, f"[{worker_id}] Rebuild result: {json.dumps(result, ensure_ascii=False)}")
+            if not result.get("success"):
+                break
             continue
 
         profile_id = _get_slot_profile(slot_id)
