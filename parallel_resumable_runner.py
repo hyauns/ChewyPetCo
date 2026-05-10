@@ -195,6 +195,21 @@ def process_job_parallel(
     released = recovery.release_stale_template_slots()
     if released and on_line:
         on_line(f"[job {job_id}] Released {released} stale CW slot(s).")
+
+    # Reset slots stuck in rebuild_failed / stale in_use so workers can retry.
+    with job_store.connect() as conn:
+        reset = conn.execute(
+            """
+            UPDATE adsp_profile_templates
+            SET status = 'available',
+                notes = 'Reset for new parallel run'
+            WHERE status IN ('rebuild_failed', 'in_use')
+            """
+        )
+        conn.commit()
+        if reset.rowcount and on_line:
+            on_line(f"[job {job_id}] Reset {reset.rowcount} stuck slot(s) (rebuild_failed/in_use) to available.")
+
     job_store.set_job_status(job_id, "running")
 
     worker_count = worker_count or config.ADSP_WORKER_COUNT
