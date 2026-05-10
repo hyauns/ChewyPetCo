@@ -1,8 +1,5 @@
-"""
-AdsPower Local API client.
-Manages browser profile lifecycle: start, stop, status check.
-"""
-
+import os
+import threading
 import time
 
 import httpx
@@ -16,10 +13,32 @@ _TRANSIENT_MSG_TOKENS = [
     "too many request",
     "browser is starting",
     "failed to start",
+    "being used",
 ]
 
 _MAX_START_RETRIES = 5
 _RETRY_BASE_DELAY = 10  # seconds
+
+_API_LOCK = threading.Lock()
+_LAST_API_CALL = 0.0
+_API_MIN_INTERVAL = float(os.environ.get("ADSP_API_INTERVAL_SECONDS", "1.5"))
+
+
+def safe_api_request(method: str, path: str, **kwargs) -> httpx.Response:
+    global _LAST_API_CALL
+    with _API_LOCK:
+        elapsed = time.monotonic() - _LAST_API_CALL
+        if elapsed < _API_MIN_INTERVAL:
+            time.sleep(_API_MIN_INTERVAL - elapsed)
+        
+        try:
+            if method.upper() == "GET":
+                resp = httpx.get(_api_url(path), **kwargs)
+            else:
+                resp = httpx.post(_api_url(path), **kwargs)
+            return resp
+        finally:
+            _LAST_API_CALL = time.monotonic()
 
 
 def _api_url(path: str) -> str:
@@ -34,7 +53,7 @@ def _is_transient_error(msg: str) -> bool:
 def check_connection() -> bool:
     """Check if AdsPower desktop app is running and API is accessible."""
     try:
-        resp = httpx.get(_api_url("/status"), timeout=5)
+        resp = safe_api_request("GET", "/status", timeout=5)
         return resp.status_code == 200
     except httpx.ConnectError:
         return False
@@ -57,11 +76,7 @@ def start_profile(profile_id: str | None = None) -> dict:
     last_msg = ""
     for attempt in range(_MAX_START_RETRIES):
         try:
-            resp = httpx.get(
-                _api_url("/api/v1/browser/start"),
-                params={"user_id": pid},
-                timeout=30,
-            )
+            resp = safe_api_request("GET", "/api/v1/browser/start", params={"user_id": pid}, timeout=30)
             data = resp.json()
         except (httpx.ConnectError, httpx.ReadTimeout) as exc:
             last_msg = str(exc)
@@ -91,15 +106,28 @@ def start_profile(profile_id: str | None = None) -> dict:
 def stop_profile(profile_id: str | None = None) -> bool:
     """Stop a running AdsPower browser profile."""
     pid = profile_id or config.ADSPOWER_PROFILE_ID
-    try:
-        resp = httpx.get(
-            _api_url("/api/v1/browser/stop"),
-            params={"user_id": pid},
-            timeout=10,
-        )
-        return resp.json().get("code") == 0
-    except Exception:
-        return False
+    
+    last_msg = ""
+    for attempt in range(3):
+        try:
+            resp = safe_api_request("GET", "/api/v1/browser/stop", params={"user_id": pid}, timeout=15)
+            data = resp.json()
+            if data.get("code") == 0:
+                return True
+                
+            last_msg = data.get("msg", str(data))
+            if _is_transient_error(last_msg):
+                time.sleep(2)
+                continue
+            # Non-transient error
+            break
+        except Exception as exc:
+            last_msg = str(exc)
+            time.sleep(2)
+            continue
+            
+    print(f"[adspower] Failed to stop profile {pid}: {last_msg}")
+    return False
 
 
 def get_ws_endpoint(profile_data: dict) -> str:

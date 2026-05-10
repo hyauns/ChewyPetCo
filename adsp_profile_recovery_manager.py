@@ -29,8 +29,6 @@ MAX_TEMPLATE_SLOTS = 3
 SUPPORTED_PROXY_TYPES = {"http", "https", "socks5"}
 VALID_TEMPLATE_STATUSES = {"available", "in_use", "rebuilding", "disabled", "rebuild_failed"}
 RUNTIME_LOCAL_FALLBACK_MARKER = "runtime_local_fallback"
-_ADSPOWER_MUTATION_LOCK = threading.Lock()
-_LAST_ADSPOWER_MUTATION_AT = 0.0
 _ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS = float(os.environ.get("ADSP_API_MUTATION_INTERVAL_SECONDS", "2.5"))
 _ADSPOWER_MUTATION_MAX_RETRIES = int(os.environ.get("ADSP_API_MUTATION_MAX_RETRIES", "5"))
 _ADSPOWER_TRANSIENT_TOKENS = (
@@ -623,7 +621,7 @@ def _is_transient_adspower_error(message: str) -> bool:
 
 def _post_adspower_once(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
     try:
-        response = httpx.post(_api_url(path), json=payload, timeout=timeout)
+        response = adspower.safe_api_request("POST", path, json=payload, timeout=timeout)
     except Exception as exc:
         raise RuntimeError(f"AdsPower API request failed for {path}: {exc}") from exc
     try:
@@ -641,30 +639,17 @@ def _post_adspower_once(path: str, payload: dict[str, Any], timeout: float = 60)
 
 def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
     """POST to AdsPower with serialized mutation calls and rate-limit backoff."""
-    global _LAST_ADSPOWER_MUTATION_AT
-    mutation_path = path.startswith("/api/v1/user/")
-    lock = _ADSPOWER_MUTATION_LOCK if mutation_path else threading.Lock()
-    with lock:
-        attempts = _ADSPOWER_MUTATION_MAX_RETRIES if mutation_path else 1
-        last_error = ""
-        for attempt in range(1, attempts + 1):
-            if mutation_path:
-                elapsed = time.monotonic() - _LAST_ADSPOWER_MUTATION_AT
-                if elapsed < _ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS:
-                    time.sleep(_ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS - elapsed)
-            try:
-                data = _post_adspower_once(path, payload, timeout=timeout)
-                if mutation_path:
-                    _LAST_ADSPOWER_MUTATION_AT = time.monotonic()
-                return data
-            except RuntimeError as exc:
-                last_error = str(exc)
-                if mutation_path:
-                    _LAST_ADSPOWER_MUTATION_AT = time.monotonic()
-                if attempt >= attempts or not _is_transient_adspower_error(last_error):
-                    raise
-                time.sleep(min(20.0, _ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS * attempt))
-        raise RuntimeError(last_error or f"AdsPower API request failed for {path}")
+    attempts = _ADSPOWER_MUTATION_MAX_RETRIES if path.startswith("/api/v1/user/") else 1
+    last_error = ""
+    for attempt in range(1, attempts + 1):
+        try:
+            return _post_adspower_once(path, payload, timeout=timeout)
+        except RuntimeError as exc:
+            last_error = str(exc)
+            if attempt >= attempts or not _is_transient_adspower_error(last_error):
+                raise
+            time.sleep(min(20.0, _ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS * attempt))
+    raise RuntimeError(last_error or f"AdsPower API request failed for {path}")
 
 
 def _delete_adspower_profile(profile_id: str) -> str | None:
