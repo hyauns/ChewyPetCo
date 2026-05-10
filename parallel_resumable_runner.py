@@ -177,6 +177,12 @@ def process_job_parallel(
         on_line(f"[job {job_id}] Reset {orphaned} orphan running item(s) to pending.")
     job_store.mark_stale_running_items(job_id, stale_minutes=stale_minutes)
     recovery.sync_profile_templates_to_db()
+    restored = recovery.restore_runtime_local_slots_from_env(delay_seconds=0)
+    if restored.get("restored_count") and on_line:
+        on_line(
+            f"[job {job_id}] Restored {restored['restored_count']} runtime Local/no_proxy slot(s) "
+            "back to configured .env proxy profiles."
+        )
     released = recovery.release_stale_template_slots()
     if released and on_line:
         on_line(f"[job {job_id}] Released {released} stale CW slot(s).")

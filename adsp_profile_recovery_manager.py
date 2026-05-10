@@ -1,8 +1,9 @@
 """Controlled AdsPower profile template recovery for Chewy scraper jobs.
 
 This module manages fixed user-configured slots such as CW_1, CW_2, CW_3.
-It does not create unlimited profiles, does not change proxy assignments, and
-does not implement captcha solving or anti-bot bypass logic.
+It does not create unlimited profiles and does not implement captcha solving or
+anti-bot bypass logic. Runtime Local/no_proxy fallback is bounded to the fixed
+worker slots and is reset back to configured proxies on the next Start/Resume.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import job_store
 MAX_TEMPLATE_SLOTS = 3
 SUPPORTED_PROXY_TYPES = {"http", "https", "socks5"}
 VALID_TEMPLATE_STATUSES = {"available", "in_use", "rebuilding", "disabled", "rebuild_failed"}
+RUNTIME_LOCAL_FALLBACK_MARKER = "runtime_local_fallback"
 
 
 def utc_now() -> str:
@@ -182,6 +184,20 @@ def _sanitize_message(message: str, template: dict[str, Any] | None = None) -> s
     return clean
 
 
+def _is_runtime_local_note(notes: str | None) -> bool:
+    return RUNTIME_LOCAL_FALLBACK_MARKER in str(notes or "")
+
+
+def _runtime_local_note(message: str) -> str:
+    return f"{RUNTIME_LOCAL_FALLBACK_MARKER}: {message}"
+
+
+def _preserve_runtime_local_note(existing_notes: str | None, replacement: str) -> str:
+    if _is_runtime_local_note(existing_notes) and not _is_runtime_local_note(replacement):
+        return _runtime_local_note(f"active until next Start/Resume; {replacement}")
+    return replacement
+
+
 def sync_profile_templates_to_db() -> None:
     """Synchronize configured fixed slots into scraper_jobs.db."""
     job_store.init_db()
@@ -200,6 +216,8 @@ def sync_profile_templates_to_db() -> None:
                 existing_notes = existing["notes"] or ""
                 if existing_status in {"in_use", "rebuilding"}:
                     status = existing_status
+                    if _is_runtime_local_note(existing_notes):
+                        notes = existing_notes
                 elif existing_status == "disabled" and (
                     existing_notes == "Manually disabled"
                     or "switched AdsPower profile" in existing_notes
@@ -207,12 +225,17 @@ def sync_profile_templates_to_db() -> None:
                 ):
                     status = "disabled"
                     notes = existing_notes
+                elif _is_runtime_local_note(existing_notes):
+                    status = existing_status if existing_status in {"available", "in_use"} else status
+                    notes = existing_notes
                 elif existing_status == "rebuild_failed" and template["status"] == "available":
                     status = "rebuild_failed"
                     notes = existing_notes
 
             profile_id = template.get("adspower_profile_id")
-            if existing and not profile_id:
+            if existing and _is_runtime_local_note(existing["notes"] or ""):
+                profile_id = existing["adspower_profile_id"]
+            elif existing and not profile_id:
                 profile_id = existing["adspower_profile_id"]
 
             conn.execute(
@@ -333,9 +356,10 @@ def get_template(slot_id: str) -> dict[str, Any] | None:
     return job_store.row_to_dict(row)
 
 
-def map_slot_to_profile_id(slot_id: str, profile_id: str) -> None:
+def map_slot_to_profile_id(slot_id: str, profile_id: str, *, notes: str | None = None) -> None:
     template = _template_by_slot(slot_id)
     now = utc_now()
+    slot_notes = notes or f"Mapped to AdsPower profile {profile_id}"
     with job_store.connect() as conn:
         conn.execute(
             """
@@ -346,7 +370,7 @@ def map_slot_to_profile_id(slot_id: str, profile_id: str) -> None:
                 updated_at = ?
             WHERE slot_id = ?
             """,
-            (profile_id, f"Mapped to AdsPower profile {profile_id}", now, slot_id),
+            (profile_id, slot_notes, now, slot_id),
         )
         conn.execute(
             """
@@ -368,6 +392,11 @@ def mark_template_in_use(slot_id: str, worker_id: str | None = None) -> None:
     now = utc_now()
     notes = f"In use by {worker_id}" if worker_id else "In use"
     with job_store.connect() as conn:
+        existing = conn.execute(
+            "SELECT notes FROM adsp_profile_templates WHERE slot_id = ?",
+            (slot_id,),
+        ).fetchone()
+        notes = _preserve_runtime_local_note(existing["notes"] if existing else None, notes)
         conn.execute(
             """
             UPDATE adsp_profile_templates
@@ -382,19 +411,25 @@ def mark_template_in_use(slot_id: str, worker_id: str | None = None) -> None:
 def mark_template_success(slot_id: str) -> None:
     now = utc_now()
     with job_store.connect() as conn:
+        existing = conn.execute(
+            "SELECT notes FROM adsp_profile_templates WHERE slot_id = ?",
+            (slot_id,),
+        ).fetchone()
+        existing_notes = existing["notes"] if existing else None
+        notes = _preserve_runtime_local_note(
+            existing_notes,
+            existing_notes if existing_notes == "manual_rebuild_requested" else "Last item completed without a white screen block",
+        )
         conn.execute(
             """
             UPDATE adsp_profile_templates
             SET status = 'available',
                 total_success = total_success + 1,
-                notes = CASE
-                    WHEN notes = 'manual_rebuild_requested' THEN notes
-                    ELSE 'Last item completed without a white screen block'
-                END,
+                notes = ?,
                 updated_at = ?
             WHERE slot_id = ?
             """,
-            (now, slot_id),
+            (notes, now, slot_id),
         )
         conn.commit()
 
@@ -402,6 +437,11 @@ def mark_template_success(slot_id: str) -> None:
 def mark_template_available(slot_id: str, notes: str = "Available") -> None:
     now = utc_now()
     with job_store.connect() as conn:
+        existing = conn.execute(
+            "SELECT notes FROM adsp_profile_templates WHERE slot_id = ?",
+            (slot_id,),
+        ).fetchone()
+        notes = _preserve_runtime_local_note(existing["notes"] if existing else None, notes)
         conn.execute(
             """
             UPDATE adsp_profile_templates
@@ -434,11 +474,14 @@ def release_stale_template_slots() -> int:
                 """
                 UPDATE adsp_profile_templates
                 SET status = 'available',
-                    notes = 'Auto-released stale in_use slot',
+                    notes = CASE
+                        WHEN notes LIKE ? THEN notes
+                        ELSE 'Auto-released stale in_use slot'
+                    END,
                     updated_at = ?
                 WHERE slot_id = ?
                 """,
-                (now, row["slot_id"]),
+                (f"%{RUNTIME_LOCAL_FALLBACK_MARKER}%", now, row["slot_id"]),
             )
         conn.commit()
     return len(rows)
@@ -588,21 +631,26 @@ def _delete_adspower_profile(profile_id: str) -> None:
     _post_adspower("/api/v1/user/delete", {"user_ids": [profile_id]}, timeout=30)
 
 
-def _create_adspower_profile(template: dict[str, Any]) -> str:
-    payload = {
-        "name": template["display_name"],
-        "domain_name": "chewy.com",
-        "open_urls": ["https://www.chewy.com/"],
-        "group_id": str(getattr(config, "ADSP_PROFILE_GROUP_ID", "0")),
-        "remark": f"Controlled Chewy worker slot {template['slot_id']}",
-        "user_proxy_config": {
+def _create_adspower_profile(template: dict[str, Any], *, use_local_network: bool = False) -> str:
+    proxy_config = (
+        {"proxy_soft": "no_proxy"}
+        if use_local_network
+        else {
             "proxy_soft": "other",
             "proxy_type": template["proxy_type"],
             "proxy_host": template["proxy_host"],
             "proxy_port": template["proxy_port"],
             "proxy_user": template.get("proxy_username") or "",
             "proxy_password": template.get("proxy_password") or "",
-        },
+        }
+    )
+    payload = {
+        "name": f"{template['display_name']} Local" if use_local_network else template["display_name"],
+        "domain_name": "chewy.com",
+        "open_urls": ["https://www.chewy.com/"],
+        "group_id": str(getattr(config, "ADSP_PROFILE_GROUP_ID", "0")),
+        "remark": f"Controlled Chewy worker slot {template['slot_id']}",
+        "user_proxy_config": proxy_config,
         # Keep generated profiles on desktop UA systems. AdsPower can randomize
         # Android/iOS UAs, but those profiles white-screen Chewy in this flow.
         "fingerprint_config": {
@@ -714,6 +762,7 @@ def auto_rebuild_profile(
     manual: bool = False,
     delay_seconds: int | None = None,
     delete_old_profile: bool = True,
+    use_local_network: bool = False,
 ) -> dict[str, Any]:
     if not getattr(config, "ADSP_PROFILE_RECOVERY_ENABLED", True):
         return {"success": False, "slot_id": slot_id, "message": "Profile recovery is disabled."}
@@ -722,7 +771,11 @@ def auto_rebuild_profile(
     template = _template_by_slot(slot_id)
     row = get_template(slot_id)
     old_profile_id = row.get("adspower_profile_id") if row else template.get("adspower_profile_id")
-    event_type = "manual_rebuild_requested" if manual else "auto_rebuild_triggered"
+    event_type = (
+        "runtime_local_fallback_requested"
+        if use_local_network
+        else ("manual_rebuild_requested" if manual else "auto_rebuild_triggered")
+    )
     safe_reason = _sanitize_message(reason, template)
 
     if template["status"] == "disabled":
@@ -753,7 +806,11 @@ def auto_rebuild_profile(
         event_type,
         old_profile_id=old_profile_id,
         message=f"Triggering auto-rebuild for slot {slot_id}",
-        metadata={"masked_proxy": template["proxy_url_masked"], "reason": safe_reason},
+        metadata={
+            "masked_proxy": "Local/no_proxy" if use_local_network else template["proxy_url_masked"],
+            "reason": safe_reason,
+            "runtime_local_fallback": use_local_network,
+        },
     )
 
     delay = config.ADSP_REBUILD_DELAY_SECONDS if delay_seconds is None else delay_seconds
@@ -773,8 +830,13 @@ def auto_rebuild_profile(
         elif old_profile_id and not delete_old_profile:
             delete_warning = f"Skipped deleting old AdsPower profile {old_profile_id}"
 
-        new_profile_id = _create_adspower_profile(template)
+        new_profile_id = _create_adspower_profile(template, use_local_network=use_local_network)
         now = utc_now()
+        success_notes = (
+            _runtime_local_note(f"using Local/no_proxy until next Start/Resume; reason={safe_reason}")
+            if use_local_network
+            else f"Rebuild successful. Proxy: {template['proxy_url_masked']}"
+        )
         with job_store.connect() as conn:
             conn.execute(
                 """
@@ -790,20 +852,28 @@ def auto_rebuild_profile(
                 (
                     new_profile_id,
                     now,
-                    f"Rebuild successful. Proxy: {template['proxy_url_masked']}",
+                    success_notes,
                     now,
                     slot_id,
                 ),
             )
             conn.commit()
-        map_slot_to_profile_id(slot_id, new_profile_id)
+        map_slot_to_profile_id(slot_id, new_profile_id, notes=success_notes)
         record_profile_rebuild_event(
             slot_id,
-            "rebuild_success",
+            "runtime_local_fallback_success" if use_local_network else "rebuild_success",
             old_profile_id=old_profile_id,
             new_profile_id=new_profile_id,
-            message="AdsPower profile rebuilt successfully.",
-            metadata={"masked_proxy": template["proxy_url_masked"], "delete_warning": delete_warning},
+            message=(
+                "AdsPower runtime Local/no_proxy profile created successfully."
+                if use_local_network
+                else "AdsPower profile rebuilt successfully."
+            ),
+            metadata={
+                "masked_proxy": "Local/no_proxy" if use_local_network else template["proxy_url_masked"],
+                "delete_warning": delete_warning,
+                "runtime_local_fallback": use_local_network,
+            },
         )
         if getattr(config, "ADSP_AUTO_RESUME_AFTER_REBUILD", True):
             record_profile_rebuild_event(
@@ -818,7 +888,8 @@ def auto_rebuild_profile(
             "slot_id": slot_id,
             "old_profile_id": old_profile_id,
             "new_profile_id": new_profile_id,
-            "message": "Rebuild successful.",
+            "message": "Runtime Local/no_proxy profile created." if use_local_network else "Rebuild successful.",
+            "runtime_local_fallback": use_local_network,
         }
     except Exception as exc:
         message = _sanitize_message(str(exc), template)
@@ -837,10 +908,14 @@ def auto_rebuild_profile(
             conn.commit()
         record_profile_rebuild_event(
             slot_id,
-            "rebuild_failed",
+            "runtime_local_fallback_failed" if use_local_network else "rebuild_failed",
             old_profile_id=old_profile_id,
             message=message,
-            metadata={"masked_proxy": template["proxy_url_masked"], "reason": safe_reason},
+            metadata={
+                "masked_proxy": "Local/no_proxy" if use_local_network else template["proxy_url_masked"],
+                "reason": safe_reason,
+                "runtime_local_fallback": use_local_network,
+            },
         )
         return {"success": False, "slot_id": slot_id, "old_profile_id": old_profile_id, "message": message}
 
@@ -868,6 +943,37 @@ def rebuild_all_slots(*, reason: str = "all_profiles_white_screen") -> dict[str,
     if not new_profile_ids:
         all_ok = False
     return {"success": all_ok, "slots": results, "new_profile_ids": new_profile_ids}
+
+
+def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str, Any]:
+    """On a fresh Start/Resume, replace runtime Local/no_proxy profiles with configured proxy profiles."""
+    sync_profile_templates_to_db()
+    with job_store.connect() as conn:
+        rows = job_store.rows_to_dicts(
+            conn.execute(
+                """
+                SELECT slot_id
+                FROM adsp_profile_templates
+                WHERE notes LIKE ?
+                  AND status NOT IN ('in_use','rebuilding')
+                ORDER BY slot_id ASC
+                """,
+                (f"%{RUNTIME_LOCAL_FALLBACK_MARKER}%",),
+            ).fetchall()
+        )
+
+    results = []
+    all_ok = True
+    for row in rows:
+        result = auto_rebuild_profile(
+            row["slot_id"],
+            reason="resume_reload_proxy_from_env_after_runtime_local_fallback",
+            delay_seconds=delay_seconds,
+        )
+        results.append(result)
+        if not result.get("success"):
+            all_ok = False
+    return {"success": all_ok, "restored_count": len([r for r in results if r.get("success")]), "slots": results}
 
 
 def ensure_slot_profile(slot_id: str, *, delay_seconds: int = 0) -> dict[str, Any]:

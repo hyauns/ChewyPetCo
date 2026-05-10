@@ -874,32 +874,41 @@ def process_single_item(
         )
 
         if consecutive >= threshold_failures:
-            local_result = adsp_profile_recovery_manager.switch_profile_to_local(
-                profile_id,
-                slot_id=slot_id,
-                reason=f"{reason}; consecutive_failures={consecutive}",
-            )
+            if slot_id:
+                local_result = adsp_profile_recovery_manager.auto_rebuild_profile(
+                    slot_id,
+                    reason=f"{reason}; consecutive_failures={consecutive}",
+                    delay_seconds=0,
+                    use_local_network=True,
+                )
+            else:
+                local_result = adsp_profile_recovery_manager.switch_profile_to_local(
+                    profile_id,
+                    slot_id=slot_id,
+                    reason=f"{reason}; consecutive_failures={consecutive}",
+                )
             local_switch_ok = bool(local_result.get("success"))
             adsp_profile_pool_manager.disable_profile(
                 profile_id,
                 (
-                    f"Proxy failed {consecutive} time(s); switched to Local/no_proxy in AdsPower."
+                    f"Proxy failed {consecutive} time(s); replaced with runtime Local/no_proxy profile."
                     if local_switch_ok
-                    else f"Proxy failed {consecutive} time(s); AdsPower Local/no_proxy switch failed: {local_result.get('message')}"
+                    else f"Proxy failed {consecutive} time(s); runtime Local/no_proxy fallback failed: {local_result.get('message')}"
                 ),
             )
             error_type = "proxy_connection_failed"
             if local_switch_ok:
+                new_profile_id = local_result.get("new_profile_id") or local_result.get("profile_id")
                 error_message = (
                     f"Proxy failed {consecutive}/{threshold_failures} time(s) for profile {profile_id}; "
-                    "switched profile to Local/no_proxy and rotating to another profile."
+                    f"created runtime Local/no_proxy profile {new_profile_id} and queued the item for local retry."
                 )
             else:
                 error_message = (
                     f"Proxy failed {consecutive}/{threshold_failures} time(s) for profile {profile_id}; "
-                    f"Local/no_proxy switch failed ({local_result.get('message')}); profile disabled locally and rotating."
+                    f"runtime Local/no_proxy fallback failed ({local_result.get('message')}); profile disabled locally and rotating."
                 )
-            metadata["adspower_local_switch"] = local_result
+            metadata["adspower_runtime_local_fallback"] = local_result
             if on_line:
                 on_line(f"[job {job_id}] {error_message}")
         else:
@@ -1312,6 +1321,12 @@ def process_job(
         on_line(f"[job {job_id}] Reset {stale_reset} stale running item(s) to pending.")
     if config.ADSP_PROFILE_RECOVERY_ENABLED:
         adsp_profile_recovery_manager.sync_profile_templates_to_db()
+        restored = adsp_profile_recovery_manager.restore_runtime_local_slots_from_env(delay_seconds=0)
+        if restored.get("restored_count") and on_line:
+            on_line(
+                f"[job {job_id}] Restored {restored['restored_count']} runtime Local/no_proxy slot(s) "
+                "back to configured .env proxy profiles."
+            )
         released_slots = adsp_profile_recovery_manager.release_stale_template_slots()
         if released_slots and on_line:
             on_line(f"[job {job_id}] Released {released_slots} stale CW slot(s).")
