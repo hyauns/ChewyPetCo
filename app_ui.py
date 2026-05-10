@@ -800,7 +800,14 @@ def tab_category_discovery() -> None:
     import json
     job = next(j for j in jobs if j["category_job_id"] == jid)
     report_path = os.path.join(job["output_dir"], "category_validation_report.json")
+    filtered_urls_path = os.path.join(job["output_dir"], "filtered_urls.txt")
     report = None
+    if job.get("status") == "paused" and not os.path.exists(filtered_urls_path):
+        import category_discovery_validation
+        report = category_discovery_validation.validate_category_discovery(jid)
+        refreshed_job = job_store.get_category_job(jid)
+        if refreshed_job:
+            job = refreshed_job
     if os.path.exists(report_path):
         with open(report_path, "r", encoding="utf-8") as f:
             report = json.load(f)

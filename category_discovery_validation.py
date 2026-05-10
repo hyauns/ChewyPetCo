@@ -6,6 +6,25 @@ from typing import Any, Dict, List
 from pathlib import Path
 import job_store
 
+
+BLOCKING_PAUSE_ERRORS = {
+    "all_profiles_exhausted",
+    "white_screen_block",
+    "captcha_or_manual_intervention",
+}
+
+
+def _dedupe_preserve_order(urls: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for url in urls:
+        clean = str(url or "").strip()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        out.append(clean)
+    return out
+
 def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
     job = job_store.get_category_job(category_job_id)
     if not job:
@@ -72,6 +91,8 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
     import config
     
     csv_rows = []
+    discovered_urls = []
+    filtered_urls = []
 
     for item in items:
         url = item.get("product_url", "")
@@ -106,6 +127,7 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         if not img: missing_image_count += 1
         
         status_counts[status] += 1
+        discovered_urls.append(url)
         
         if pid in unique_urls or url in unique_urls:
             internal_duplicates_count += 1
@@ -140,6 +162,7 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
                 if len(sample_new_products) < 10: sample_new_products.append(url)
             
         if status in ("filtered_in", "discovered"):
+            filtered_urls.append(url)
             filtered_in_count += 1
             if item.get("card_price_min") is None:
                 ambiguous_price_kept_count += 1
@@ -217,10 +240,37 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         
     disc_path = os.path.join(out_dir, "discovered_urls.txt")
     filt_path = os.path.join(out_dir, "filtered_urls.txt")
+
+    discovered_urls = _dedupe_preserve_order(discovered_urls)
+    filtered_urls = _dedupe_preserve_order(filtered_urls)
+
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+        with open(disc_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(discovered_urls))
+        with open(filt_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(filtered_urls))
+
+    finalized_from_paused = False
+    previous_last_error = job.get("last_error")
+    if (
+        job.get("status") == "paused"
+        and total_items_in_db > 0
+        and valid_for_pdp_job_count > 0
+        and str(previous_last_error or "") not in BLOCKING_PAUSE_ERRORS
+    ):
+        job_store.update_category_job(
+            category_job_id,
+            status="completed",
+            last_error=f"Auto-finalized by validation. Previous pause reason: {previous_last_error or 'none'}",
+        )
+        job = job_store.get_category_job(category_job_id) or job
+        finalized_from_paused = True
     
     report = {
         "category_job_id": category_job_id,
         "category_url": job.get("category_url", ""),
+        "status": job.get("status", ""),
         "created_at": job.get("created_at", ""),
         "validated_at": job_store.utc_now(),
         "price_filter": {
@@ -255,20 +305,21 @@ def validate_category_discovery(category_job_id: str) -> Dict[str, Any]:
         "output_files": {
             "discovered_urls_exists": os.path.exists(disc_path),
             "filtered_urls_exists": os.path.exists(filt_path),
-            "discovered_urls_count": total_items_in_db,
-            "filtered_urls_count": filtered_in_count
+            "discovered_urls_count": len(discovered_urls),
+            "filtered_urls_count": len(filtered_urls)
         },
         "validation": {
             "validation_score": score,
             "validation_status": validation_status,
             "safe_to_create_pdp_job": safe_to_create,
+            "finalized_from_paused": finalized_from_paused,
+            "previous_last_error": previous_last_error,
             "warnings": warnings,
             "recommendations": recs
         }
     }
     
     if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
         with open(os.path.join(out_dir, "category_validation_report.json"), "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
             

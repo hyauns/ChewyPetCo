@@ -166,6 +166,10 @@ def process_job_parallel(
     job = job_store.get_job(job_id)
     if not job:
         raise ValueError(f"Job not found: {job_id}")
+    if hasattr(config, "reload_from_env_file"):
+        config.reload_from_env_file(override=True)
+        if on_line:
+            on_line(f"[job {job_id}] Reloaded .env runtime config.")
     if not config.ADSP_PROFILE_RECOVERY_ENABLED:
         raise RuntimeError("ADSP_PROFILE_RECOVERY_ENABLED must be true for parallel CW workers.")
 
@@ -176,6 +180,11 @@ def process_job_parallel(
     if orphaned and on_line:
         on_line(f"[job {job_id}] Reset {orphaned} orphan running item(s) to pending.")
     job_store.mark_stale_running_items(job_id, stale_minutes=stale_minutes)
+    rebuilt = recovery.rebuild_slots_with_env_proxy_changes(delay_seconds=0)
+    if rebuilt.get("rebuilt_count") and on_line:
+        on_line(
+            f"[job {job_id}] Rebuilt {rebuilt['rebuilt_count']} CW slot(s) because .env proxy config changed."
+        )
     recovery.sync_profile_templates_to_db()
     restored = recovery.restore_runtime_local_slots_from_env(delay_seconds=0)
     if restored.get("restored_count") and on_line:

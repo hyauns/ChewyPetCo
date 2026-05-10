@@ -785,6 +785,7 @@ def process_single_item(
                 slot_id,
                 reason=f"missing_adspower_profile old_profile_id={profile_id}",
                 delay_seconds=0,
+                delete_old_profile=False,
             )
             metadata["adspower_missing_profile_rebuild"] = rebuild_result
             if rebuild_result.get("success"):
@@ -1309,6 +1310,11 @@ def process_job(
     if not job:
         raise ValueError(f"Job not found: {job_id}")
 
+    if hasattr(config, "reload_from_env_file"):
+        config.reload_from_env_file(override=True)
+        if on_line:
+            on_line(f"[job {job_id}] Reloaded .env runtime config.")
+
     if requeue_fallback_done:
         requeue_fallback_done_items_for_resume(job_id, on_line=on_line)
 
@@ -1320,6 +1326,11 @@ def process_job(
     if stale_reset and on_line:
         on_line(f"[job {job_id}] Reset {stale_reset} stale running item(s) to pending.")
     if config.ADSP_PROFILE_RECOVERY_ENABLED:
+        rebuilt = adsp_profile_recovery_manager.rebuild_slots_with_env_proxy_changes(delay_seconds=0)
+        if rebuilt.get("rebuilt_count") and on_line:
+            on_line(
+                f"[job {job_id}] Rebuilt {rebuilt['rebuilt_count']} CW slot(s) because .env proxy config changed."
+            )
         adsp_profile_recovery_manager.sync_profile_templates_to_db()
         restored = adsp_profile_recovery_manager.restore_runtime_local_slots_from_env(delay_seconds=0)
         if restored.get("restored_count") and on_line:

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -28,6 +29,18 @@ MAX_TEMPLATE_SLOTS = 3
 SUPPORTED_PROXY_TYPES = {"http", "https", "socks5"}
 VALID_TEMPLATE_STATUSES = {"available", "in_use", "rebuilding", "disabled", "rebuild_failed"}
 RUNTIME_LOCAL_FALLBACK_MARKER = "runtime_local_fallback"
+_ADSPOWER_MUTATION_LOCK = threading.Lock()
+_LAST_ADSPOWER_MUTATION_AT = 0.0
+_ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS = float(os.environ.get("ADSP_API_MUTATION_INTERVAL_SECONDS", "2.5"))
+_ADSPOWER_MUTATION_MAX_RETRIES = int(os.environ.get("ADSP_API_MUTATION_MAX_RETRIES", "5"))
+_ADSPOWER_TRANSIENT_TOKENS = (
+    "too many request",
+    "please check",
+    "being used",
+    "cannot be deleted",
+    "browser is starting",
+    "please try again",
+)
 
 
 def utc_now() -> str:
@@ -603,7 +616,12 @@ def consume_rebuild_request(slot_id: str) -> bool:
     return True
 
 
-def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
+def _is_transient_adspower_error(message: str) -> bool:
+    lower = str(message).lower()
+    return any(token in lower for token in _ADSPOWER_TRANSIENT_TOKENS)
+
+
+def _post_adspower_once(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
     try:
         response = httpx.post(_api_url(path), json=payload, timeout=timeout)
     except Exception as exc:
@@ -621,14 +639,44 @@ def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> d
     return data
 
 
-def _delete_adspower_profile(profile_id: str) -> None:
+def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
+    """POST to AdsPower with serialized mutation calls and rate-limit backoff."""
+    global _LAST_ADSPOWER_MUTATION_AT
+    mutation_path = path.startswith("/api/v1/user/")
+    lock = _ADSPOWER_MUTATION_LOCK if mutation_path else threading.Lock()
+    with lock:
+        attempts = _ADSPOWER_MUTATION_MAX_RETRIES if mutation_path else 1
+        last_error = ""
+        for attempt in range(1, attempts + 1):
+            if mutation_path:
+                elapsed = time.monotonic() - _LAST_ADSPOWER_MUTATION_AT
+                if elapsed < _ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS:
+                    time.sleep(_ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS - elapsed)
+            try:
+                data = _post_adspower_once(path, payload, timeout=timeout)
+                if mutation_path:
+                    _LAST_ADSPOWER_MUTATION_AT = time.monotonic()
+                return data
+            except RuntimeError as exc:
+                last_error = str(exc)
+                if mutation_path:
+                    _LAST_ADSPOWER_MUTATION_AT = time.monotonic()
+                if attempt >= attempts or not _is_transient_adspower_error(last_error):
+                    raise
+                time.sleep(min(20.0, _ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS * attempt))
+        raise RuntimeError(last_error or f"AdsPower API request failed for {path}")
+
+
+def _delete_adspower_profile(profile_id: str) -> str | None:
     if not profile_id:
-        return
+        return None
     try:
         adspower.stop_profile(profile_id)
     except Exception:
         pass
+    time.sleep(2)
     _post_adspower("/api/v1/user/delete", {"user_ids": [profile_id]}, timeout=30)
+    return None
 
 
 def _create_adspower_profile(template: dict[str, Any], *, use_local_network: bool = False) -> str:
@@ -821,11 +869,18 @@ def auto_rebuild_profile(
     try:
         if old_profile_id and delete_old_profile:
             try:
-                _delete_adspower_profile(str(old_profile_id))
+                delete_warning = _delete_adspower_profile(str(old_profile_id))
             except Exception as exc:
                 delete_warning = _sanitize_message(str(exc), template)
                 lower_warning = delete_warning.lower()
-                if "not found" not in lower_warning and "not exist" not in lower_warning and "does not exist" not in lower_warning:
+                best_effort_delete_errors = (
+                    "not found",
+                    "not exist",
+                    "does not exist",
+                    "being used",
+                    "cannot be deleted",
+                )
+                if not any(token in lower_warning for token in best_effort_delete_errors):
                     raise RuntimeError(f"Could not delete old AdsPower profile {old_profile_id}: {delete_warning}")
         elif old_profile_id and not delete_old_profile:
             delete_warning = f"Skipped deleting old AdsPower profile {old_profile_id}"
@@ -943,6 +998,54 @@ def rebuild_all_slots(*, reason: str = "all_profiles_white_screen") -> dict[str,
     if not new_profile_ids:
         all_ok = False
     return {"success": all_ok, "slots": results, "new_profile_ids": new_profile_ids}
+
+
+def rebuild_slots_with_env_proxy_changes(*, delay_seconds: int = 0) -> dict[str, Any]:
+    """Rebuild mapped slots whose stored proxy no longer matches current .env config."""
+    job_store.init_db()
+    templates = {template["slot_id"]: template for template in load_profile_templates_from_config()}
+    with job_store.connect() as conn:
+        rows = job_store.rows_to_dicts(
+            conn.execute("SELECT * FROM adsp_profile_templates ORDER BY slot_id ASC").fetchall()
+        )
+
+    results = []
+    all_ok = True
+    for row in rows:
+        slot_id = row["slot_id"]
+        template = templates.get(slot_id)
+        if not template or template.get("status") != "available":
+            continue
+        if row.get("status") in {"in_use", "rebuilding"}:
+            continue
+        if not row.get("adspower_profile_id"):
+            continue
+
+        current_proxy = (
+            row.get("proxy_type") or "",
+            row.get("proxy_host") or "",
+            str(row.get("proxy_port") or ""),
+            row.get("proxy_username_masked") or "",
+        )
+        env_proxy = (
+            template.get("proxy_type") or "",
+            template.get("proxy_host") or "",
+            str(template.get("proxy_port") or ""),
+            _mask_user(template.get("proxy_username")),
+        )
+        if current_proxy == env_proxy:
+            continue
+
+        result = auto_rebuild_profile(
+            slot_id,
+            reason="proxy_config_changed_in_env",
+            delay_seconds=delay_seconds,
+        )
+        results.append(result)
+        if not result.get("success"):
+            all_ok = False
+
+    return {"success": all_ok, "rebuilt_count": len([r for r in results if r.get("success")]), "slots": results}
 
 
 def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str, Any]:

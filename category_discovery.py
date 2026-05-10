@@ -29,8 +29,14 @@ async def discover_category_products(
         logger.error(f"Category job not found: {category_job_id}")
         return
 
-    job_store.update_category_job(category_job_id, status="running")
+    if hasattr(config, "reload_from_env_file"):
+        config.reload_from_env_file(override=True)
+
+    job_store.update_category_job(category_job_id, status="running", last_error=None)
     current_page = job["current_page"] or 1
+    start_page = current_page
+    paused_by_blocker = False
+    failed = False
     
     # Extract base URL without page
     parsed = urlparse(category_url)
@@ -39,6 +45,7 @@ async def discover_category_products(
     if not profile_id:
         logger.error("No profiles available in pool.")
         job_store.update_category_job(category_job_id, status="paused", last_error="all_profiles_exhausted")
+        generate_category_report(category_job_id)
         return
         
     adsp_profile_pool_manager.mark_profile_in_use(profile_id)
@@ -78,8 +85,20 @@ async def discover_category_products(
                     # wait for products to load, either grid or main
                     await page.wait_for_timeout(3000)
                 except Exception as e:
-                    logger.error(f"Failed to load page {current_page}: {e}")
-                    job_store.update_category_job(category_job_id, status="paused", last_error=str(e))
+                    existing_items = job_store.get_category_items(category_job_id)
+                    if current_page > start_page and existing_items:
+                        logger.warning(
+                            f"Failed to load page {current_page} after collecting "
+                            f"{len(existing_items)} item(s). Treating previous pages as completed: {e}"
+                        )
+                        job_store.update_category_job(
+                            category_job_id,
+                            last_error=f"Stopped after completed pages because page {current_page} failed to load: {e}",
+                        )
+                    else:
+                        logger.error(f"Failed to load page {current_page}: {e}")
+                        paused_by_blocker = True
+                        job_store.update_category_job(category_job_id, status="paused", last_error=str(e))
                     break
                 
                 final_url = page.url
@@ -110,11 +129,10 @@ async def discover_category_products(
                     adsp_profile_pool_manager.record_white_screen_event(category_job_id, 0, final_url, profile_id, "profile_quarantined", detection_result)
                     
                     # Pause the job for manual intervention, do NOT increment page, so we retry this page later
+                    paused_by_blocker = True
                     job_store.update_category_job(category_job_id, status="paused", last_error="white_screen_block")
                     break
                     
-                adsp_profile_pool_manager.mark_profile_success(profile_id)
-                
                 # Check if it's a 404 or no products
                 content = await page.content()
                 if "we couldn't find any results" in content.lower() or "page not found" in content.lower():
@@ -249,15 +267,32 @@ async def discover_category_products(
                 current_page += 1
                 await asyncio.sleep(delay_seconds)
             # Done
-            if job_store.get_category_job(category_job_id)["status"] == "running":
+            if not paused_by_blocker and job_store.get_category_job(category_job_id)["status"] in {"running", "paused"}:
                 job_store.update_category_job(category_job_id, status="completed")
-                generate_category_report(category_job_id)
                 
         except Exception as e:
+            failed = True
             logger.exception("Error during category discovery")
             job_store.update_category_job(category_job_id, status="failed", last_error=str(e))
         finally:
-            await page.close()
+            try:
+                job_store.update_category_job_counts(category_job_id)
+                generate_category_report(category_job_id)
+            except Exception as report_exc:
+                logger.warning(f"Could not write category discovery output files: {report_exc}")
+            final_job = job_store.get_category_job(category_job_id) or {}
+            if final_job.get("status") == "completed":
+                adsp_profile_pool_manager.mark_profile_success(profile_id)
+            elif not paused_by_blocker and not failed:
+                adsp_profile_pool_manager.release_profile(profile_id)
+            try:
+                await page.close()
+            except Exception:
+                pass
+            try:
+                await browser.close()
+            except Exception:
+                pass
 
 async def extract_product_cards(page) -> List[Dict[str, Any]]:
     # Look for common product card selectors on Chewy.

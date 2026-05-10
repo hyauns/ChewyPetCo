@@ -23,6 +23,10 @@ def create_category_discovery_job(name: str, url: str, price_min: float | None =
     )
 
 async def run_category_discovery_job(category_job_id: str, max_pages: int | None = None):
+    import config
+    if hasattr(config, "reload_from_env_file"):
+        config.reload_from_env_file(override=True)
+
     job = job_store.get_category_job(category_job_id)
     if not job:
         print(f"Job not found: {category_job_id}")
@@ -40,6 +44,7 @@ async def run_category_discovery_job(category_job_id: str, max_pages: int | None
         mode=job["mode"],
         max_pages=actual_max_pages
     )
+    category_discovery.generate_category_report(category_job_id)
     import category_discovery_validation
     report = category_discovery_validation.validate_category_discovery(category_job_id)
     category_discovery_validation.print_validation_report(report)
@@ -52,6 +57,7 @@ def create_pdp_job_from_discovery(category_job_id: str, pdp_mode: str = "json_ex
         return None
         
     report_path = os.path.join(job["output_dir"], "category_validation_report.json")
+    filtered_urls_path = os.path.join(job["output_dir"], "filtered_urls.txt")
     if not os.path.exists(report_path):
         print("Validation report missing. Running validation now...")
         report = category_discovery_validation.validate_category_discovery(category_job_id)
@@ -59,12 +65,14 @@ def create_pdp_job_from_discovery(category_job_id: str, pdp_mode: str = "json_ex
         import json
         with open(report_path, "r", encoding="utf-8") as f:
             report = json.load(f)
+        if not os.path.exists(filtered_urls_path):
+            print("filtered_urls.txt missing. Regenerating validation outputs now...")
+            report = category_discovery_validation.validate_category_discovery(category_job_id)
             
     if not force and not report.get("validation", {}).get("safe_to_create_pdp_job", False):
         print("Validation score is too low. Use --force to create PDP job anyway.")
         return None
         
-    filtered_urls_path = os.path.join(job["output_dir"], "filtered_urls.txt")
     if not os.path.exists(filtered_urls_path):
         print(f"Cannot find filtered_urls.txt at {filtered_urls_path}")
         return None
