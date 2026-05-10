@@ -216,6 +216,10 @@ def process_job_parallel(
         with ThreadPoolExecutor(max_workers=len(runnable_slots)) as executor:
             futures = []
             for index, slot in enumerate(runnable_slots, start=1):
+                # Stagger worker launches to prevent AdsPower API rate-limit
+                # collisions during ensure_slot_profile (stop → delete → create).
+                if index > 1:
+                    time.sleep(5)
                 futures.append(
                     executor.submit(
                         _worker_loop,

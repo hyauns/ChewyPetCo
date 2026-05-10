@@ -655,11 +655,20 @@ def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> d
 def _delete_adspower_profile(profile_id: str) -> str | None:
     if not profile_id:
         return None
-    try:
-        adspower.stop_profile(profile_id)
-    except Exception:
-        pass
-    time.sleep(2)
+    # Ensure browser is fully stopped before deleting.
+    # Retry stop up to 3 times with increasing wait to avoid "being used" errors.
+    for stop_attempt in range(3):
+        try:
+            stopped = adspower.stop_profile(profile_id)
+            if stopped:
+                break
+        except Exception:
+            pass
+        time.sleep(3 * (stop_attempt + 1))
+    else:
+        # Final wait even if all stop attempts returned False
+        time.sleep(5)
+    time.sleep(3)
     _post_adspower("/api/v1/user/delete", {"user_ids": [profile_id]}, timeout=30)
     return None
 
