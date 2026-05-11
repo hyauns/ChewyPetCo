@@ -120,13 +120,15 @@ def mode_flags(mode: str, threshold: int, save_grouped_output: bool) -> dict[str
     }
 
 
-def build_env(mode: str, threshold: int, save_grouped_output: bool, profile_id: str | None = None) -> dict[str, str]:
+def build_env(mode: str, threshold: int, save_grouped_output: bool, profile_id: str | None = None, browser_ws_url: str | None = None) -> dict[str, str]:
     env = os.environ.copy()
     env.update(mode_flags(mode, threshold, save_grouped_output))
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     if profile_id:
         env["ADSPOWER_PROFILE_ID"] = profile_id
+    if browser_ws_url:
+        env["ADSP_BROWSER_WS_URL"] = browser_ws_url
     return env
 
 
@@ -535,6 +537,7 @@ def process_single_item(
     profile_id_override: str | None = None,
     profile_slot_id: str | None = None,
     worker_id: str | None = None,
+    browser_ws_url: str | None = None,
     on_line: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     job = job_store.get_job(job_id)
@@ -678,7 +681,7 @@ def process_single_item(
     started_at = time.time()
     started_iso = job_store.utc_now()
     command = [sys.executable, "-u", "test_single_product.py", url]
-    env = build_env(mode, threshold, bool(job["save_grouped_output"]), profile_id)
+    env = build_env(mode, threshold, bool(job["save_grouped_output"]), profile_id, browser_ws_url=browser_ws_url)
     lines: list[str] = []
 
     with open(log_path, "w", encoding="utf-8", errors="replace") as log_file:

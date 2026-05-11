@@ -259,10 +259,16 @@ async def main():
 
     console.print(f"[bold cyan]Testing single product scrape: {test_url}[/]")
 
-    # Start AdsPower
-    profile_data = adspower.start_profile(config.ADSPOWER_PROFILE_ID)
-    ws_url = adspower.get_ws_endpoint(profile_data)
-    console.print(f"[green]Connected to AdsPower[/]")
+    # If ADSP_BROWSER_WS_URL is set, reuse the pre-started browser (parallel mode).
+    # Otherwise start/stop AdsPower per item (standalone mode).
+    reuse_browser = os.environ.get("ADSP_BROWSER_WS_URL", "")
+    if reuse_browser:
+        ws_url = reuse_browser
+        console.print(f"[green]Connected to AdsPower (reusing browser)[/]")
+    else:
+        profile_data = adspower.start_profile(config.ADSPOWER_PROFILE_ID)
+        ws_url = adspower.get_ws_endpoint(profile_data)
+        console.print(f"[green]Connected to AdsPower[/]")
 
     try:
         from playwright.async_api import async_playwright
@@ -587,7 +593,8 @@ async def main():
                 console.print(f"{'='*60}")
 
     finally:
-        adspower.stop_profile(config.ADSPOWER_PROFILE_ID)
+        if not reuse_browser:
+            adspower.stop_profile(config.ADSPOWER_PROFILE_ID)
 
     console.print("[bold green]Done! Check output/ folder for JSON and CSV files.[/]")
 
