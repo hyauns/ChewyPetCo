@@ -37,23 +37,44 @@ def _get_slot_profile(slot_id: str) -> str | None:
     return str(profile_id) if profile_id else None
 
 
-def _start_worker_browser(profile_id: str, worker_id: str, log_lock: threading.Lock, on_line: Callable | None) -> str | None:
-    """Start AdsPower browser for a worker and return the WS URL."""
+def _start_worker_browser(profile_id: str, worker_id: str, slot_id: str, log_lock: threading.Lock, on_line: Callable | None) -> tuple[str | None, str]:
+    """Start AdsPower browser for a worker and return (ws_url, profile_id).
+    
+    If the profile does not exist, auto-rebuild the slot and retry once.
+    Returns (None, profile_id) on failure.
+    """
     try:
         profile_data = adspower.start_profile(profile_id)
         ws_url = adspower.get_ws_endpoint(profile_data)
         _safe_on_line(log_lock, on_line, f"[{worker_id}] Browser started (ws={ws_url[:60]}...)")
-        return ws_url
+        return ws_url, profile_id
     except Exception as exc:
-        _safe_on_line(log_lock, on_line, f"[{worker_id}] Failed to start browser: {exc}")
-        return None
+        error_msg = str(exc).lower()
+        if "does not exist" in error_msg or "not exist" in error_msg:
+            _safe_on_line(log_lock, on_line, f"[{worker_id}] Profile {profile_id} missing — rebuilding...")
+            rebuild = recovery.auto_rebuild_profile(slot_id, reason=f"profile_missing_{profile_id}", delay_seconds=0, delete_old_profile=False)
+            if rebuild.get("success"):
+                new_pid = rebuild.get("new_profile_id") or _get_slot_profile(slot_id)
+                if new_pid:
+                    try:
+                        profile_data = adspower.start_profile(new_pid)
+                        ws_url = adspower.get_ws_endpoint(profile_data)
+                        _safe_on_line(log_lock, on_line, f"[{worker_id}] Browser started with rebuilt profile {new_pid}")
+                        return ws_url, str(new_pid)
+                    except Exception as exc2:
+                        _safe_on_line(log_lock, on_line, f"[{worker_id}] Failed to start rebuilt profile {new_pid}: {exc2}")
+                        return None, str(new_pid)
+            else:
+                _safe_on_line(log_lock, on_line, f"[{worker_id}] Rebuild failed: {rebuild.get('message')}")
+        else:
+            _safe_on_line(log_lock, on_line, f"[{worker_id}] Failed to start browser: {exc}")
+        return None, profile_id
 
 
 def _stop_worker_browser(profile_id: str, worker_id: str, log_lock: threading.Lock, on_line: Callable | None) -> None:
     """Stop AdsPower browser for a worker."""
     try:
         adspower.stop_profile(profile_id)
-        _safe_on_line(log_lock, on_line, f"[{worker_id}] Browser stopped.")
     except Exception:
         pass
 
@@ -88,7 +109,7 @@ def _worker_loop(
         return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0, "status": "no_profile"}
 
     # Start browser ONCE for this worker.
-    browser_ws_url = _start_worker_browser(profile_id, worker_id, log_lock, on_line)
+    browser_ws_url, profile_id = _start_worker_browser(profile_id, worker_id, slot_id, log_lock, on_line)
     if not browser_ws_url:
         return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0, "status": "browser_start_failed"}
 
@@ -120,7 +141,7 @@ def _worker_loop(
                 if not profile_id:
                     browser_ws_url = None
                     break
-                browser_ws_url = _start_worker_browser(profile_id, worker_id, log_lock, on_line)
+                browser_ws_url, profile_id = _start_worker_browser(profile_id, worker_id, slot_id, log_lock, on_line)
                 if not browser_ws_url:
                     break
                 continue
@@ -137,10 +158,18 @@ def _worker_loop(
                 if not profile_id:
                     browser_ws_url = None
                     break
-                browser_ws_url = _start_worker_browser(profile_id, worker_id, log_lock, on_line)
+                browser_ws_url, profile_id = _start_worker_browser(profile_id, worker_id, slot_id, log_lock, on_line)
                 if not browser_ws_url:
                     break
                 continue
+
+            # If browser was stopped (e.g. after white screen), restart it.
+            if not browser_ws_url:
+                profile_id = _get_slot_profile(slot_id) or profile_id
+                browser_ws_url, profile_id = _start_worker_browser(profile_id, worker_id, slot_id, log_lock, on_line)
+                if not browser_ws_url:
+                    _safe_on_line(log_lock, on_line, f"[{worker_id}] Cannot restart browser — stopping worker.")
+                    break
 
             item = job_store.claim_next_item(
                 job_id,
@@ -177,18 +206,11 @@ def _worker_loop(
             if result.get("status") == "paused" and result.get("error_type") in {"white_screen_block", "all_profiles_exhausted"}:
                 _safe_on_line(log_lock, on_line, f"[{worker_id}] Item paused: {result.get('error_message')}")
                 if result.get("error_type") == "white_screen_block":
-                    # White screen: stop browser, rebuild profile, start fresh browser.
-                    _safe_on_line(log_lock, on_line, f"[{worker_id}] White screen detected — restarting browser...")
+                    # White screen: stop browser and let the loop's "rebuilding" check
+                    # handle the rebuild + restart with a fresh profile.
+                    _safe_on_line(log_lock, on_line, f"[{worker_id}] White screen — stopping browser, will rebuild on next iteration...")
                     _stop_worker_browser(profile_id, worker_id, log_lock, on_line)
                     browser_ws_url = None
-                    # Profile rebuild is handled by the slot status check at top of loop.
-                    # Just need to restart browser with the new/existing profile.
-                    new_profile_id = _get_slot_profile(slot_id)
-                    if new_profile_id:
-                        profile_id = new_profile_id
-                        browser_ws_url = _start_worker_browser(profile_id, worker_id, log_lock, on_line)
-                    if not browser_ws_url:
-                        break
                     continue
                 break
 

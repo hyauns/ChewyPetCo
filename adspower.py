@@ -116,6 +116,10 @@ def stop_profile(profile_id: str | None = None) -> bool:
                 return True
                 
             last_msg = data.get("msg", str(data))
+            # "not open" / "does not exist" = browser is already closed = success.
+            lower_msg = last_msg.lower()
+            if "not open" in lower_msg or "does not exist" in lower_msg or "not exist" in lower_msg:
+                return True
             if _is_transient_error(last_msg):
                 time.sleep(2)
                 continue
