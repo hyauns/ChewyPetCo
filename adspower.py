@@ -88,7 +88,19 @@ def start_profile(profile_id: str | None = None) -> dict:
             raise RuntimeError(f"AdsPower start failed after {_MAX_START_RETRIES} attempts: {last_msg}")
 
         if data.get("code") == 0:
-            return data["data"]
+            profile_data = data["data"]
+            # Validate that ws URL is present (browser may still be initializing)
+            ws = profile_data.get("ws", {})
+            ws_url = ws.get("puppeteer", ws.get("selenium", ""))
+            if ws_url:
+                return profile_data
+            # ws URL empty — browser not ready yet, retry
+            if attempt < _MAX_START_RETRIES - 1:
+                delay = _RETRY_BASE_DELAY * (attempt + 1)
+                print(f"[adspower] Browser started but ws URL empty (attempt {attempt + 1}). Retrying in {delay}s...")
+                time.sleep(delay)
+                continue
+            raise RuntimeError(f"AdsPower start returned empty ws URL after {_MAX_START_RETRIES} attempts: {profile_data}")
 
         last_msg = data.get("msg", str(data))
         if _is_transient_error(last_msg) and attempt < _MAX_START_RETRIES - 1:
