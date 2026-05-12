@@ -28,19 +28,72 @@ def make_job_id() -> str:
 
 
 def connect(db_path: str | Path = DB_PATH) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(db_path), timeout=30)
+    conn = sqlite3.connect(str(db_path), timeout=60)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     try:
         conn.execute("PRAGMA journal_mode = WAL")
     except sqlite3.OperationalError:
         pass  # WAL may already be set or DB is temporarily locked
+    conn.execute("PRAGMA busy_timeout = 60000")        # 60s wait on lock contention
+    conn.execute("PRAGMA synchronous = NORMAL")         # safe with WAL, faster than FULL
+    conn.execute("PRAGMA wal_autocheckpoint = 1000")    # auto-checkpoint every 1000 pages
     return conn
+
+
+def check_db_integrity(db_path: str | Path = DB_PATH) -> dict:
+    """Run PRAGMA integrity_check. Returns {"ok": bool, "errors": list[str]}."""
+    try:
+        c = sqlite3.connect(str(db_path), timeout=10)
+        rows = c.execute("PRAGMA integrity_check").fetchall()
+        c.close()
+        errors = [r[0] for r in rows if r[0] != "ok"]
+        return {"ok": len(errors) == 0, "errors": errors}
+    except Exception as exc:
+        return {"ok": False, "errors": [str(exc)]}
+
+
+def repair_db(db_path: str | Path = DB_PATH) -> bool:
+    """Recover a malformed DB by dump+rebuild. Old DB kept as .malformed."""
+    import shutil
+    db_str = str(db_path)
+    backup = db_str + ".malformed"
+    recovered = db_str + ".recovered"
+    try:
+        dump_conn = sqlite3.connect(db_str)
+        with open(recovered + ".sql", "w", encoding="utf-8") as f:
+            for line in dump_conn.iterdump():
+                f.write(line + "\n")
+        dump_conn.close()
+        rebuild_conn = sqlite3.connect(recovered)
+        with open(recovered + ".sql", "r", encoding="utf-8") as f:
+            rebuild_conn.executescript(f.read())
+        rebuild_conn.close()
+        shutil.move(db_str, backup)
+        shutil.move(recovered, db_str)
+        Path(recovered + ".sql").unlink(missing_ok=True)
+        print(f"[job_store] DB recovered. Backup: {backup}")
+        return True
+    except Exception as exc:
+        print(f"[job_store] DB repair failed: {exc}")
+        Path(recovered).unlink(missing_ok=True)
+        Path(recovered + ".sql").unlink(missing_ok=True)
+        return False
 
 
 def init_db(db_path: str | Path = DB_PATH) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     JOBS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    # Auto-repair if DB is malformed
+    if Path(db_path).exists():
+        integrity = check_db_integrity(db_path)
+        if not integrity["ok"]:
+            print(f"[job_store] DB integrity check failed: {integrity['errors'][:3]}")
+            print("[job_store] Attempting auto-repair...")
+            if repair_db(db_path):
+                print("[job_store] Auto-repair succeeded.")
+            else:
+                print("[job_store] Auto-repair failed. DB may need manual recovery.")
     with connect(db_path) as conn:
         conn.executescript(
             """
