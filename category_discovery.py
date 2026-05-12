@@ -37,19 +37,18 @@ async def discover_category_products(
     start_page = current_page
     paused_by_blocker = False
     failed = False
-    
+
     # Extract base URL without page
     parsed = urlparse(category_url)
-    
-    profile_id = adsp_profile_pool_manager.get_next_available_profile()
+
+    # Use ADSPOWER_PROFILE_ID directly from .env — simple, no pool rotation needed.
+    profile_id = config.ADSPOWER_PROFILE_ID
     if not profile_id:
-        logger.error("No profiles available in pool.")
-        job_store.update_category_job(category_job_id, status="paused", last_error="all_profiles_exhausted")
+        logger.error("ADSPOWER_PROFILE_ID not set in .env")
+        job_store.update_category_job(category_job_id, status="paused", last_error="ADSPOWER_PROFILE_ID not configured")
         generate_category_report(category_job_id)
         return
-        
-    adsp_profile_pool_manager.mark_profile_in_use(profile_id)
-    
+
     async with async_playwright() as p:
         try:
             profile_data = adspower.start_profile(profile_id)
@@ -64,25 +63,24 @@ async def discover_category_products(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
         page = await context.new_page()
-        
+
         try:
             previous_first_urls = []
             stale_attempts = 0
-            
+
             while True:
                 if max_pages and current_page > max_pages:
                     logger.info(f"Reached max pages limit ({max_pages}). Stopping discovery.")
                     break
-                    
+
                 page_url = category_url
                 if current_page > 1:
                     sep = "&" if "?" in category_url else "?"
                     page_url = f"{category_url}{sep}page={current_page}"
-                
+
                 logger.info(f"[{category_job_id}] Discovering page {current_page}: {page_url}")
                 try:
                     await page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
-                    # wait for products to load, either grid or main
                     await page.wait_for_timeout(3000)
                 except Exception as e:
                     existing_items = job_store.get_category_items(category_job_id)
@@ -100,63 +98,41 @@ async def discover_category_products(
                         paused_by_blocker = True
                         job_store.update_category_job(category_job_id, status="paused", last_error=str(e))
                     break
-                
+
                 final_url = page.url
-                
-                # Phase 4 - White Screen Detection
+
+                # White Screen Detection
                 detection_result = await adsp_profile_pool_manager.detect_white_screen_block(page, final_url)
                 if detection_result["is_white_screen"]:
                     logger.error(f"White screen detected on category page {current_page}")
-                    
-                    if config.ADSP_SAVE_WHITE_SCREEN_SCREENSHOT:
-                        try:
-                            import uuid, os
-                            os.makedirs("output/white_screen_events", exist_ok=True)
-                            screenshot_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.png"
-                            await page.screenshot(path=screenshot_path)
-                            detection_result["screenshot_path"] = screenshot_path
-                        except: pass
-                    if config.ADSP_SAVE_WHITE_SCREEN_HTML:
-                        try:
-                            import uuid
-                            html_path = f"output/white_screen_events/temp_{uuid.uuid4().hex}.html"
-                            with open(html_path, "w", encoding="utf-8") as f:
-                                f.write(await page.content())
-                            detection_result["html_snapshot_path"] = html_path
-                        except: pass
-                        
-                    adsp_profile_pool_manager.quarantine_profile(profile_id, f"White screen on {final_url}")
-                    adsp_profile_pool_manager.record_white_screen_event(category_job_id, 0, final_url, profile_id, "profile_quarantined", detection_result)
-                    
-                    # Pause the job for manual intervention, do NOT increment page, so we retry this page later
                     paused_by_blocker = True
                     job_store.update_category_job(category_job_id, status="paused", last_error="white_screen_block")
                     break
-                    
+
                 # Check if it's a 404 or no products
                 content = await page.content()
                 if "we couldn't find any results" in content.lower() or "page not found" in content.lower():
                     logger.info(f"No more products found on page {current_page}. Ending discovery.")
                     break
-                
+
                 # Extract product cards
                 cards_data = await extract_product_cards(page)
                 if not cards_data:
                     logger.info(f"No product cards extracted on page {current_page}. Ending discovery.")
                     break
-                    
+
                 # Calculate counts
                 raw_card_count = len(cards_data)
                 sponsored_cards = [c for c in cards_data if c.get("is_sponsored")]
                 organic_cards = [c for c in cards_data if not c.get("is_sponsored")]
                 organic_card_count = len(organic_cards)
                 sponsored_card_count = len(sponsored_cards)
-                
+
                 # Unique URLs
                 unique_urls_on_page = len(set(c["url"] for c in organic_cards))
-                
+
                 logger.info(f"Found {raw_card_count} raw cards, {organic_card_count} organic cards on page {current_page}")
-                
+
                 # Verification for stale page
                 current_first_urls = [c["url"] for c in organic_cards[:5]]
                 if current_page > 1 and current_first_urls == previous_first_urls:
@@ -168,7 +144,7 @@ async def discover_category_products(
                 else:
                     stale_attempts = 0
                 previous_first_urls = current_first_urls
-                
+
                 page_summary = {
                     "category_job_id": category_job_id,
                     "page_number": current_page,
@@ -183,7 +159,7 @@ async def discover_category_products(
                     "first_5_product_urls": current_first_urls,
                     "page_status": "ok" if stale_attempts == 0 else "stale_repeated_page"
                 }
-                
+
                 new_urls_added = 0
                 excluded_card_count = 0
                 for card in cards_data:
@@ -191,19 +167,19 @@ async def discover_category_products(
                     if config.CATEGORY_EXCLUDE_SPONSORED_PRODUCTS and card.get("is_sponsored"):
                         excluded_card_count += 1
                         continue
-                        
+
                     raw_price = card.get("price", "")
                     parsed_price = category_price_filter.parse_price_to_float(raw_price)
-                    
+
                     filter_res = category_price_filter.product_card_matches_price_filter(
                         parsed_price, price_min, price_max, mode
                     )
-                    
+
                     product_id = job_store.extract_chewy_product_id(card["url"])
                     if config.CHEWY_GLOBAL_DEDUP_ENABLED and product_id:
                         reg_res = job_store.check_and_update_product_registry(product_id, card["url"], category_job_id)
                         registry_item = reg_res["registry_item"]
-                        
+
                         # Only skip if the registry success still has usable local output.
                         if (
                             config.CHEWY_SKIP_ALREADY_EXTRACTED
@@ -216,7 +192,7 @@ async def discover_category_products(
                             conf_score = registry_item.get("confidence_score", 0)
                             filter_res["status"] = "duplicate_existing_success"
                             filter_res["reason"] = f"Product already extracted successfully (Score: {conf_score})"
-                    
+
                     try:
                         job_store.add_category_item(
                             category_job_id=category_job_id,
@@ -238,10 +214,10 @@ async def discover_category_products(
                     except Exception as ins_e:
                         # Ignore unique constraint errors within same page
                         pass
-                
+
                 page_summary["excluded_card_count"] = excluded_card_count
                 page_summary["new_urls_added_on_page"] = new_urls_added
-                
+
                 if config.CATEGORY_DISCOVERY_SAVE_PAGE_DEBUG:
                     import os, json
                     job = job_store.get_category_job(category_job_id)
@@ -251,25 +227,25 @@ async def discover_category_products(
                         os.makedirs(pages_dir, exist_ok=True)
                         with open(os.path.join(pages_dir, f"page_{current_page}_summary.json"), "w", encoding="utf-8") as f:
                             json.dump(page_summary, f, indent=2)
-                
+
                 job_store.update_category_job(
                     category_job_id,
                     current_page=current_page + 1,
                     total_pages_discovered=current_page
                 )
                 job_store.update_category_job_counts(category_job_id)
-                
+
                 # Pagination check
                 if organic_card_count < 10:
                     logger.info(f"Fewer than 10 organic cards on page {current_page}, assuming last page.")
                     break
-                    
+
                 current_page += 1
                 await asyncio.sleep(delay_seconds)
             # Done
             if not paused_by_blocker and job_store.get_category_job(category_job_id)["status"] in {"running", "paused"}:
                 job_store.update_category_job(category_job_id, status="completed")
-                
+
         except Exception as e:
             failed = True
             logger.exception("Error during category discovery")
@@ -280,11 +256,6 @@ async def discover_category_products(
                 generate_category_report(category_job_id)
             except Exception as report_exc:
                 logger.warning(f"Could not write category discovery output files: {report_exc}")
-            final_job = job_store.get_category_job(category_job_id) or {}
-            if final_job.get("status") == "completed":
-                adsp_profile_pool_manager.mark_profile_success(profile_id)
-            elif not paused_by_blocker and not failed:
-                adsp_profile_pool_manager.release_profile(profile_id)
             try:
                 await page.close()
             except Exception:
@@ -293,28 +264,29 @@ async def discover_category_products(
                 await browser.close()
             except Exception:
                 pass
+            adspower.stop_profile(profile_id)
 
 async def extract_product_cards(page) -> List[Dict[str, Any]]:
     # Look for common product card selectors on Chewy.
     # Usually they are inside something like div[data-testid="product-list"] -> article or a
-    
+
     # We can inject JS to find all links that look like products and grab their price text
     cards = await page.evaluate("""() => {
         const results = [];
         // Attempt to find product cards. Chewy often uses article or divs with class starting with 'ProductCard' or 'kib-product-card'
         const cardElements = document.querySelectorAll('article, .kib-product-card, div[data-testid="product-card"]');
-        
+
         if (cardElements.length > 0) {
             for (const el of cardElements) {
                 const link = el.querySelector('a');
                 if (!link) continue;
                 let url = link.href;
-                
-                // Exclude dynamic tracker URLs completely if they don't resolve to /dp/ immediately, 
+
+                // Exclude dynamic tracker URLs completely if they don't resolve to /dp/ immediately,
                 // but sometimes Chewy uses /api/event/p/sar/click.
                 // We'll mark them as sponsored.
                 let isSponsored = false;
-                
+
                 // Check for sponsored tracker URL
                 if (url.includes('/api/event/') || url.includes('adsOrigin=')) {
                     isSponsored = true;
@@ -323,30 +295,30 @@ async def extract_product_cards(page) -> List[Dict[str, Any]]:
                          // Some chewy cards have real urls in dataset
                     }
                 }
-                
+
                 // Check text labels for "Sponsored"
                 const textContent = el.innerText.toLowerCase();
                 if (textContent.includes('sponsored') || textContent.includes('ad ')) {
                     isSponsored = true;
                 }
-                
+
                 // Check aria-labels or data attributes
                 if (el.getAttribute('aria-label') && el.getAttribute('aria-label').toLowerCase().includes('sponsored')) {
                     isSponsored = true;
                 }
-                
+
                 // If it's not a /dp/ link and not a tracker, maybe skip
                 if (!url.includes('/dp/') && !isSponsored) continue;
-                
+
                 const titleEl = el.querySelector('h2, .kib-product-title, [data-testid="product-title"]');
                 const title = titleEl ? titleEl.innerText : '';
-                
+
                 const priceEl = el.querySelector('.kib-product-price, [data-testid="product-price"], .price');
                 const price = priceEl ? priceEl.innerText : '';
-                
+
                 const imgEl = el.querySelector('img');
                 const image = imgEl ? imgEl.src : '';
-                
+
                 results.push({url, title, price, image, is_sponsored: isSponsored});
             }
         } else {
@@ -357,7 +329,7 @@ async def extract_product_cards(page) -> List[Dict[str, Any]]:
                 const url = link.href;
                 if (seen.has(url)) continue;
                 seen.add(url);
-                
+
                 let isSponsored = url.includes('/api/event/') || url.includes('adsOrigin=');
                 const container = link.closest('div');
                 let price = '';
@@ -373,7 +345,7 @@ async def extract_product_cards(page) -> List[Dict[str, Any]]:
         }
         return results;
     }""")
-    
+
     # dedupe by url
     unique = {}
     for c in cards:
@@ -386,9 +358,9 @@ def generate_category_report(category_job_id: str):
     job = job_store.get_category_job(category_job_id)
     if not job:
         return
-        
+
     items = job_store.get_category_items(category_job_id)
-    
+
     report = {
         "category_job_id": job["category_job_id"],
         "category_url": job["category_url"],
@@ -409,10 +381,10 @@ def generate_category_report(category_job_id: str):
         },
         "items": []
     }
-    
+
     discovered_urls = []
     filtered_urls = []
-    
+
     for item in items:
         report["items"].append({
             "product_url": item["product_url"],
@@ -421,20 +393,20 @@ def generate_category_report(category_job_id: str):
             "status": item["status"],
             "filter_reason": item["filter_reason"]
         })
-        
+
         discovered_urls.append(item["product_url"])
         if item["status"] in ("discovered", "filtered_in"):
             filtered_urls.append(item["product_url"])
-            
+
     out_dir = job["output_dir"]
     import os
     os.makedirs(out_dir, exist_ok=True)
-    
+
     with open(os.path.join(out_dir, "category_discovery_report.json"), "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
-        
+
     with open(os.path.join(out_dir, "discovered_urls.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(discovered_urls))
-        
+
     with open(os.path.join(out_dir, "filtered_urls.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(filtered_urls))
