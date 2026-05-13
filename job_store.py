@@ -54,9 +54,30 @@ def check_db_integrity(db_path: str | Path = DB_PATH) -> dict:
 
 
 def repair_db(db_path: str | Path = DB_PATH) -> bool:
-    """Recover a malformed DB by dump+rebuild. Old DB kept as .malformed."""
-    import shutil
+    """Repair a corrupted DB.
+
+    Strategy:
+    1. Try REINDEX first (fixes index-only corruption, fast).
+    2. If that fails, dump all data and rebuild into a fresh file.
+    """
     db_str = str(db_path)
+
+    # --- Phase 1: Try REINDEX (handles "wrong # of entries in index") ---
+    try:
+        c = sqlite3.connect(db_str, timeout=30)
+        c.execute("REINDEX")
+        c.close()
+        # Verify after reindex
+        check = check_db_integrity(db_path)
+        if check["ok"]:
+            print("[job_store] REINDEX fixed the DB successfully.")
+            return True
+        print(f"[job_store] REINDEX ran but integrity still bad: {check['errors'][:3]}")
+    except Exception as exc:
+        print(f"[job_store] REINDEX failed: {exc}")
+
+    # --- Phase 2: Full dump + rebuild ---
+    import shutil
     backup = db_str + ".malformed"
     recovered = db_str + ".recovered"
     sql_dump = recovered + ".sql"
@@ -71,30 +92,30 @@ def repair_db(db_path: str | Path = DB_PATH) -> bool:
             pass
 
     try:
-        # Dump existing DB
         dump_conn = sqlite3.connect(db_str)
         with open(sql_dump, "w", encoding="utf-8") as f:
             for line in dump_conn.iterdump():
-                f.write(line + "\n")
+                # iterdump() emits "CREATE TABLE" — make them idempotent
+                fixed = line.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ")
+                fixed = fixed.replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ")
+                fixed = fixed.replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ")
+                f.write(fixed + "\n")
         dump_conn.close()
         dump_conn = None
 
-        # Rebuild into a fresh file
         rebuild_conn = sqlite3.connect(recovered)
         with open(sql_dump, "r", encoding="utf-8") as f:
             rebuild_conn.executescript(f.read())
         rebuild_conn.close()
         rebuild_conn = None
 
-        # Swap files
         shutil.move(db_str, backup)
         shutil.move(recovered, db_str)
         Path(sql_dump).unlink(missing_ok=True)
-        print(f"[job_store] DB recovered. Backup: {backup}")
+        print(f"[job_store] DB recovered via dump+rebuild. Backup: {backup}")
         return True
     except Exception as exc:
-        print(f"[job_store] DB repair failed: {exc}")
-        # Close any open connections before cleanup
+        print(f"[job_store] DB dump+rebuild failed: {exc}")
         for c in (dump_conn, rebuild_conn):
             if c:
                 try:
@@ -109,11 +130,15 @@ def repair_db(db_path: str | Path = DB_PATH) -> bool:
         return False
 
 
+_REPAIR_ATTEMPTED = False
+
 def init_db(db_path: str | Path = DB_PATH) -> None:
+    global _REPAIR_ATTEMPTED
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     JOBS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    # Auto-repair if DB is malformed
-    if Path(db_path).exists():
+    # Auto-repair if DB is malformed (only once per process to avoid loops)
+    if not _REPAIR_ATTEMPTED and Path(db_path).exists():
+        _REPAIR_ATTEMPTED = True
         integrity = check_db_integrity(db_path)
         if not integrity["ok"]:
             print(f"[job_store] DB integrity check failed: {integrity['errors'][:3]}")
