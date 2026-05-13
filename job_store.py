@@ -59,25 +59,53 @@ def repair_db(db_path: str | Path = DB_PATH) -> bool:
     db_str = str(db_path)
     backup = db_str + ".malformed"
     recovered = db_str + ".recovered"
+    sql_dump = recovered + ".sql"
+    dump_conn = None
+    rebuild_conn = None
+
+    # Clean up leftover files from a previous failed repair
+    for leftover in (recovered, sql_dump):
+        try:
+            Path(leftover).unlink(missing_ok=True)
+        except Exception:
+            pass
+
     try:
+        # Dump existing DB
         dump_conn = sqlite3.connect(db_str)
-        with open(recovered + ".sql", "w", encoding="utf-8") as f:
+        with open(sql_dump, "w", encoding="utf-8") as f:
             for line in dump_conn.iterdump():
                 f.write(line + "\n")
         dump_conn.close()
+        dump_conn = None
+
+        # Rebuild into a fresh file
         rebuild_conn = sqlite3.connect(recovered)
-        with open(recovered + ".sql", "r", encoding="utf-8") as f:
+        with open(sql_dump, "r", encoding="utf-8") as f:
             rebuild_conn.executescript(f.read())
         rebuild_conn.close()
+        rebuild_conn = None
+
+        # Swap files
         shutil.move(db_str, backup)
         shutil.move(recovered, db_str)
-        Path(recovered + ".sql").unlink(missing_ok=True)
+        Path(sql_dump).unlink(missing_ok=True)
         print(f"[job_store] DB recovered. Backup: {backup}")
         return True
     except Exception as exc:
         print(f"[job_store] DB repair failed: {exc}")
-        Path(recovered).unlink(missing_ok=True)
-        Path(recovered + ".sql").unlink(missing_ok=True)
+        # Close any open connections before cleanup
+        for c in (dump_conn, rebuild_conn):
+            if c:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+        for leftover in (recovered, sql_dump):
+            try:
+                Path(leftover).unlink(missing_ok=True)
+            except Exception:
+                pass
         return False
 
 
