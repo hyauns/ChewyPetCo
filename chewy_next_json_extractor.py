@@ -340,6 +340,27 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
         mpn = v.get("manufacturerPartNumber")
         idents = build_variant_identifiers(raw_gtin, v_id, v_id, mpn)
         
+        # Extract variant-specific description and ingredients if available
+        v_desc = ""
+        v_ingredients = ""
+        v_guaranteed = ""
+        v_info = v.get("infoGroups", [])
+        if isinstance(v_info, list):
+            for group in v_info:
+                if not isinstance(group, dict): continue
+                sections = group.get("sections", [])
+                for sec in sections:
+                    if not isinstance(sec, dict): continue
+                    usage = sec.get("usage", "")
+                    content_node = sec.get("content", {})
+                    content_str = content_node.get("content", "") if isinstance(content_node, dict) else ""
+                    if usage == "DESCRIPTION":
+                        v_desc = content_str
+                    elif usage == "INGREDIENTS":
+                        v_ingredients = content_str
+                    elif usage == "GUARANTEED_ANALYSIS":
+                        v_guaranteed = content_str
+
         normalized_variants.append({
             "source_variant_id": v_id,
             "sku": v_id,
@@ -348,6 +369,9 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             "option_values": option_values,
             "price": price,
             "compare_at_price": v.get("listPrice"),
+            "description": v_desc,
+            "ingredients": v_ingredients,
+            "guaranteed_analysis": v_guaranteed,
             "autoship_price": v.get("autoshipPrice"),
             "availability": v.get("availability"),
             "in_stock": in_stock,
@@ -509,6 +533,9 @@ def parse_redux_product(next_data: dict, source_url: str) -> dict:
                 mpn = v.get("manufacturerPartNumber")
                 idents = build_variant_identifiers(raw_gtin, v_id, v_id, mpn)
                 
+                v_desc = v.get("description", "")
+                v_ingredients = v.get("ingredients", "")
+                
                 variants_list.append({
                     "source_variant_id": v_id,
                     "sku": v_id,
@@ -517,6 +544,8 @@ def parse_redux_product(next_data: dict, source_url: str) -> dict:
                     "option_values": option_values,
                     "price": price,
                     "compare_at_price": v.get("listPrice"),
+                    "description": v_desc,
+                    "ingredients": v_ingredients,
                     "autoship_price": v.get("autoshipPrice"),
                     "availability": v.get("availability"),
                     "in_stock": in_stock,
