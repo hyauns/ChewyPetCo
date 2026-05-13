@@ -207,6 +207,34 @@ def build_variant_identifiers(gtin: str, source_sku: str, source_item_id: str, m
                 
     return idents
 
+def extract_variant_info_from_apollo(next_data: dict) -> dict:
+    """Extracts description, ingredients, guaranteed_analysis from a variant's API JSON response."""
+    result = {"description": "", "ingredients": "", "guaranteed_analysis": ""}
+    props = next_data.get("pageProps", {})
+    apollo_state = props.get("__APOLLO_STATE__", {})
+    
+    for k, v in apollo_state.items():
+        if k.startswith("Item:") and "infoGroups" in v:
+            v_info = v.get("infoGroups", [])
+            if isinstance(v_info, list):
+                for group in v_info:
+                    if not isinstance(group, dict): continue
+                    sections = group.get("sections", [])
+                    for sec in sections:
+                        if not isinstance(sec, dict): continue
+                        usage = sec.get("usage", "")
+                        content_node = sec.get("content", {})
+                        content_str = content_node.get("content", "") if isinstance(content_node, dict) else ""
+                        if usage == "DESCRIPTION":
+                            result["description"] = content_str
+                        elif usage == "INGREDIENTS":
+                            result["ingredients"] = content_str
+                        elif usage == "GUARANTEED_ANALYSIS":
+                            result["guaranteed_analysis"] = content_str
+            # Stop after finding the first Item: with infoGroups (since this is a variant-specific fetch)
+            break
+    return result
+
 def parse_apollo_product(next_data: dict, source_url: str) -> dict:
     props = next_data.get("props", {}).get("pageProps", {})
     apollo_state = props.get("__APOLLO_STATE__", {})

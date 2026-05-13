@@ -364,12 +364,12 @@ async def main():
                 html = await fetch_initial_html(test_url, page)
                 
                 next_data = extract_next_data_from_html(html)
+                build_id = detect_next_build_id(next_data, html)
                 
                 match = re.search(r"chewy\.com/(.*?)/dp/(\d+)", test_url)
                 source_id = match.group(2) if match else "unknown"
                 
                 if not next_data:
-                    build_id = detect_next_build_id(None, html)
                     if build_id:
                         next_url = build_next_data_url(test_url, build_id)
                         if next_url:
@@ -401,6 +401,36 @@ async def main():
                         
                         for i, p in enumerate(grouped.get('products', [])):
                             console.print(f"    Group {i} ({p.get('flavor')}): {len(p.get('variants', []))} variants")
+                            
+                        # API Enrichment for Variants missing ingredients/description
+                        console.print(f"[cyan]Enriching missing variant data via API...[/]")
+                        for g in grouped.get('products', []):
+                            for v in g.get('variants', []):
+                                if not v.get("ingredients") and not v.get("description"):
+                                    v_url = v.get("variant_url")
+                                    v_id = v.get("source_variant_id")
+                                    if v_url and v_id and build_id:
+                                        next_url = build_next_data_url(v_url, build_id)
+                                        if next_url:
+                                            var_data = await fetch_next_data_json(next_url, page, build_id, v_id)
+                                            if var_data:
+                                                from chewy_next_json_extractor import extract_variant_info_from_apollo
+                                                v_info = extract_variant_info_from_apollo(var_data)
+                                                if v_info.get("ingredients"):
+                                                    v["ingredients"] = v_info["ingredients"]
+                                                if v_info.get("description"):
+                                                    v["description"] = v_info["description"]
+                                                if v_info.get("guaranteed_analysis"):
+                                                    v["guaranteed_analysis"] = v_info["guaranteed_analysis"]
+                                                # Also update normalized
+                                                for norm_v in normalized.get("variants", []):
+                                                    if norm_v.get("source_variant_id") == v_id:
+                                                        if v_info.get("ingredients"): norm_v["ingredients"] = v_info["ingredients"]
+                                                        if v_info.get("description"): norm_v["description"] = v_info["description"]
+                                                        if v_info.get("guaranteed_analysis"): norm_v["guaranteed_analysis"] = v_info["guaranteed_analysis"]
+                                                        
+                        # Re-validate after enrichment
+                        val = validate_normalized_product(normalized, grouped)
                             
                         # --- Fallback decision ---
                         # Only fallback when critical data is genuinely missing:
