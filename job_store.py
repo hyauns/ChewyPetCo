@@ -421,6 +421,16 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
             except sqlite3.OperationalError:
                 pass
 
+        # Multi-worker enrich columns
+        for ddl in [
+            "ALTER TABLE chewy_enrichment_state ADD COLUMN worker_id TEXT",
+            "ALTER TABLE chewy_enrichment_state ADD COLUMN profile_slot_id TEXT",
+        ]:
+            try:
+                conn.execute(ddl)
+            except sqlite3.OperationalError:
+                pass
+
 
 def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return dict(row) if row is not None else None
@@ -1388,3 +1398,159 @@ def enrichment_state_summary() -> dict[str, int]:
     for r in rows:
         out[r["status"]] = r["n"]
     return out
+
+
+# ---------------------------------------------------------------------------
+# Multi-worker enrichment claim primitives
+# ---------------------------------------------------------------------------
+
+def seed_enrichment_state(product_ids: list, source_urls: dict | None = None) -> int:
+    """Insert pending rows for product_ids that do not yet have one.
+
+    Existing rows (status='ok'/'failed'/'in_progress') are untouched. This is the
+    queue-prep step before launching parallel workers — every pid the run wants
+    to process must have a row in the table so claim_next_enrichment_pid can find it.
+    Returns the number of rows actually inserted.
+    """
+    if not product_ids:
+        return 0
+    now = utc_now()
+    urls = source_urls or {}
+    inserted = 0
+    with connect() as conn:
+        for pid in product_ids:
+            cur = conn.execute(
+                """
+                INSERT INTO chewy_enrichment_state
+                    (product_id, source_url, status, attempt_count, created_at, updated_at)
+                VALUES (?, ?, 'pending', 0, ?, ?)
+                ON CONFLICT(product_id) DO NOTHING
+                """,
+                (str(pid), urls.get(str(pid)), now, now),
+            )
+            inserted += cur.rowcount
+        conn.commit()
+    return inserted
+
+
+def claim_next_enrichment_pid(*,
+                              worker_id: str,
+                              profile_slot_id: str | None = None,
+                              retry_failed: bool = True) -> dict | None:
+    """Atomically claim one unfinished enrichment pid.
+
+    Mirror of claim_next_item but for chewy_enrichment_state. Uses BEGIN IMMEDIATE
+    so two workers cannot grab the same pid. Returns the claimed row as a dict
+    (with worker_id / status='in_progress' already applied), or None when nothing
+    is available.
+    """
+    init_db()
+    now = utc_now()
+    statuses = ["'pending'"]
+    if retry_failed:
+        statuses.append("'failed'")
+    status_clause = ",".join(statuses)
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            f"""
+            SELECT product_id, source_url, attempt_count
+            FROM chewy_enrichment_state
+            WHERE status IN ({status_clause})
+            ORDER BY
+                CASE status WHEN 'pending' THEN 0 ELSE 1 END,
+                product_id ASC
+            LIMIT 1
+            """
+        ).fetchone()
+        if not row:
+            conn.commit()
+            return None
+        pid = row["product_id"]
+        next_attempt = (row["attempt_count"] or 0) + 1
+        conn.execute(
+            """
+            UPDATE chewy_enrichment_state
+            SET status = 'in_progress',
+                worker_id = ?,
+                profile_slot_id = ?,
+                last_started_at = ?,
+                attempt_count = ?,
+                updated_at = ?,
+                error_type = NULL,
+                error_message = NULL
+            WHERE product_id = ?
+            """,
+            (worker_id, profile_slot_id, now, next_attempt, now, pid),
+        )
+        conn.commit()
+    return {
+        "product_id": pid,
+        "source_url": row["source_url"],
+        "attempt_count": next_attempt,
+        "worker_id": worker_id,
+        "profile_slot_id": profile_slot_id,
+    }
+
+
+def release_enrichment_claim(product_id: str, *, reset_to: str = "pending") -> None:
+    """Release a claim, returning the pid to the queue.
+
+    Use when a worker hits a transient failure (white-screen, profile rebuild) and
+    wants another worker to retry. `reset_to` defaults to 'pending' so the row
+    becomes eligible for claim_next_enrichment_pid again. Pass 'failed' to mark
+    it skip-on-default while still tracking the error in error_type/message.
+    """
+    if reset_to not in {"pending", "failed"}:
+        raise ValueError(f"reset_to must be 'pending' or 'failed', got {reset_to!r}")
+    now = utc_now()
+    with connect() as conn:
+        conn.execute(
+            """
+            UPDATE chewy_enrichment_state
+            SET status = ?,
+                worker_id = NULL,
+                updated_at = ?
+            WHERE product_id = ? AND status = 'in_progress'
+            """,
+            (reset_to, now, str(product_id)),
+        )
+        conn.commit()
+
+
+def recover_stale_enrichment_states(stale_minutes: int = 30) -> int:
+    """Reset rows stuck in 'in_progress' beyond stale_minutes to 'pending'.
+
+    Used at runner start to unblock pids whose worker crashed or whose process
+    was killed mid-flight. Mirrors mark_stale_running_items for scrape items.
+    Returns the count of rows reset.
+    """
+    now_dt = datetime.utcnow()
+    cutoff = (now_dt - timedelta(minutes=stale_minutes)).isoformat(timespec="seconds")
+    with connect() as conn:
+        cur = conn.execute(
+            """
+            UPDATE chewy_enrichment_state
+            SET status = 'pending',
+                worker_id = NULL,
+                updated_at = ?
+            WHERE status = 'in_progress'
+              AND (last_started_at IS NULL OR last_started_at < ?)
+            """,
+            (now_dt.isoformat(timespec="seconds"), cutoff),
+        )
+        conn.commit()
+        return int(cur.rowcount or 0)
+
+
+def count_pending_enrichment(retry_failed: bool = True) -> int:
+    """How many pids are currently claimable."""
+    statuses = ["'pending'"]
+    if retry_failed:
+        statuses.append("'failed'")
+    status_clause = ",".join(statuses)
+    with connect() as conn:
+        row = conn.execute(
+            f"SELECT COUNT(*) AS n FROM chewy_enrichment_state WHERE status IN ({status_clause})"
+        ).fetchone()
+        return int(row["n"]) if row else 0

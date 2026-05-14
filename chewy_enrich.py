@@ -704,6 +704,10 @@ def parse_args():
                     help="Output directory for result/report files")
     ap.add_argument("--force-reenrich", action="store_true",
                     help="Ignore chewy_enrichment_state and re-process every product")
+    ap.add_argument("--parallel", action="store_true",
+                    help="Run with multiple workers (one per CW slot) via parallel_enrich_runner")
+    ap.add_argument("--workers", type=int, default=3,
+                    help="Number of parallel workers when --parallel is set (max = MAX_TEMPLATE_SLOTS)")
     return ap.parse_args()
 
 
@@ -747,8 +751,32 @@ async def main():
         product_ids = product_ids[:args.limit]
 
     normalized_dir = base_dir / "output" / "normalized_products"
-    await run_pipeline(product_ids, normalized_dir, out_dir, mode, label,
-                       force_reenrich=args.force_reenrich)
+    if args.parallel:
+        # Multi-worker path: delegate to parallel_enrich_runner
+        import parallel_enrich_runner
+        # Resolve source_urls from normalized files so seeded rows have URLs
+        source_urls = {}
+        for pid in product_ids:
+            fp = normalized_dir / f"chewy_{pid}.json"
+            if fp.exists():
+                try:
+                    with open(fp, "r", encoding="utf-8") as f:
+                        source_urls[str(pid)] = json.load(f).get("source_url")
+                except Exception:
+                    pass
+        await parallel_enrich_runner.run_parallel_enrichment(
+            product_ids=product_ids,
+            normalized_dir=normalized_dir,
+            output_dir=out_dir,
+            mode=mode,
+            label=label,
+            workers=args.workers,
+            source_urls=source_urls,
+            force_reenrich=args.force_reenrich,
+        )
+    else:
+        await run_pipeline(product_ids, normalized_dir, out_dir, mode, label,
+                           force_reenrich=args.force_reenrich)
 
 
 if __name__ == "__main__":
