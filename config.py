@@ -32,7 +32,7 @@ _load_local_env()
 
 # AdsPower Local API
 ADSPOWER_API_BASE = os.environ.get("ADSPOWER_API_BASE", "http://127.0.0.1:50325")
-ADSPOWER_PROFILE_ID = os.environ.get("ADSPOWER_PROFILE_ID", "k143x098")  # <-- Set your AdsPower profile ID here
+ADSPOWER_PROFILE_ID = os.environ.get("ADSPOWER_PROFILE_ID", "k1chlcc3")  # <-- Set your AdsPower profile ID here
 
 # ---------------------------------------------------------------------------
 # Feature Flags - Phase 3C
@@ -78,7 +78,7 @@ OUTPUT_DIR = "output"
 # Phase 4 - Profile Pool & White Screen Recovery
 # ---------------------------------------------------------------------------
 ADSP_PROFILE_POOL_ENABLED = os.environ.get("ADSP_PROFILE_POOL_ENABLED", "true").lower() == "true"
-ADSP_PROFILE_POOL_IDS = [p.strip() for p in os.environ.get("ADSP_PROFILE_POOL_IDS", "k143x098,k1cacstm,k1bps235").split(",") if p.strip()]
+ADSP_PROFILE_POOL_IDS = [p.strip() for p in os.environ.get("ADSP_PROFILE_POOL_IDS", "k1chlbmn,k1chlbol,k1chlcc3").split(",") if p.strip()]
 ADSP_PROFILE_ROTATION_MODE = os.environ.get("ADSP_PROFILE_ROTATION_MODE", "controlled")
 ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM = int(os.environ.get("ADSP_PROFILE_MAX_ATTEMPTS_PER_ITEM", "3"))
 ADSP_PROFILE_QUARANTINE_MINUTES = int(os.environ.get("ADSP_PROFILE_QUARANTINE_MINUTES", "30"))
@@ -109,9 +109,9 @@ ADSP_CW_3_NAME = os.environ.get("ADSP_CW_3_NAME", "CW_3")
 
 # Optional existing AdsPower profile IDs for the fixed slots. If left empty,
 # the recovery manager can create a profile for that slot through AdsPower API.
-ADSP_CW_1_PROFILE_ID = os.environ.get("ADSP_CW_1_PROFILE_ID", "")
-ADSP_CW_2_PROFILE_ID = os.environ.get("ADSP_CW_2_PROFILE_ID", "")
-ADSP_CW_3_PROFILE_ID = os.environ.get("ADSP_CW_3_PROFILE_ID", "")
+ADSP_CW_1_PROFILE_ID = os.environ.get("ADSP_CW_1_PROFILE_ID", "k1chlcdn")
+ADSP_CW_2_PROFILE_ID = os.environ.get("ADSP_CW_2_PROFILE_ID", "k1chlcc3")
+ADSP_CW_3_PROFILE_ID = os.environ.get("ADSP_CW_3_PROFILE_ID", "k1chlbol")
 
 ADSP_PROFILE_GROUP_ID = os.environ.get("ADSP_PROFILE_GROUP_ID", "0")
 ADSP_AUTO_REBUILD_ON_BLOCKED = os.environ.get("ADSP_AUTO_REBUILD_ON_BLOCKED", "true").lower() == "true"

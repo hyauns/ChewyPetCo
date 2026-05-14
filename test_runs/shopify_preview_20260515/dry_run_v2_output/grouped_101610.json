@@ -1,0 +1,390 @@
+{
+  "source": "chewy",
+  "source_product_id": "101610",
+  "source_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101610",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "101610:breed-size:large",
+      "title": "Royal Canin Veterinary Diet Adult Weight Control Large Breed Dry Dog Food",
+      "flavor": null,
+      "discriminator": {
+        "breed size": "Large"
+      },
+      "brand": "Royal Canin Veterinary Diet",
+      "handle_slug": "royal-canin-veterinary-diet-adult-large",
+      "category_path": [],
+      "description": "Royal Canin Canine Weight Control Large Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered large dogs. The complete and balanced weight control diet includes a precise fat and calorie content, which helps dogs maintain an ideal weight. It also contains a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full after eating. Omega-3 fatty acids, including EPA and DHA, support bone and joint health in your large dog. Plus, to support his digestive health, this formula promotes healthy digestion with prebiotics to nourish the microbiome.",
+      "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, powdered cellulose, pea fiber, chicken fat, wheat gluten, natural flavors, dried plain beet pulp, fish oil, vegetable oil, sodium silico aluminate, salt, potassium chloride, powdered psyllium seed husk, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, taurine, vitamins [DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], glucosamine hydrochloride, trace minerals [zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], L-carnitine, chondroitin sulfate, rosemary extract, preserved with mixed tocopherols and citric acid.",
+      "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|Omega-3 Fatty Acids|0.34% min|\r\n|Glucosamine|739 mg/kg min|\r\n|Chondroitin Sulfate|8 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin SulFate|25 mg/kg min|",
+      "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|57 lbs|3 + 7/ 8 cups per day|3 + 1/ 4 cups per day|\r\n|66 lbs|4 + 1/ 4 cups per day|3 + 5/ 8 cups per day|\r\n|77 lbs|4 + 3/ 4 cups per day|4 cups per day|\r\n|88 lbs|5 + 1/ 4 cups per day|4 + 1/ 2 cups per day|\r\n|99 lbs|5 + 3/ 4 cups per day|4 + 7/ 8 cups per day|",
+      "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+      "specifications": {},
+      "product_facts": {
+        "breed_size": "Large"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Royal Canin Veterinary Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Breed Size",
+                  "value": "Large",
+                  "normalized_key": "breed-size"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Breed Size: Large"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null,
+        "custom.breed-size": "Large"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/068552fc-ebba-7782-8000-8ab64825dc0d._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "43673",
+          "source_variant_id": "58667",
+          "sku": "58667",
+          "identifiers": {
+            "upc": "030111482914",
+            "gtin": "030111482914",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "58667",
+            "source_item_id": "58667"
+          },
+          "title": "Royal Canin Veterinary Diet Adult Weight Control Large Breed Dry Dog Food, 24.2-lb bag",
+          "price": "$116.99",
+          "compare_at_price": null,
+          "description": "Royal Canin Canine Weight Control Large Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered large dogs. The complete and balanced weight control diet includes a precise fat and calorie content, which helps dogs maintain an ideal weight. It also contains a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full after eating. Omega-3 fatty acids, including EPA and DHA, support bone and joint health in your large dog. Plus, to support his digestive health, this formula promotes healthy digestion with prebiotics to nourish the microbiome.",
+          "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, powdered cellulose, pea fiber, chicken fat, wheat gluten, natural flavors, dried plain beet pulp, fish oil, vegetable oil, sodium silico aluminate, salt, potassium chloride, powdered psyllium seed husk, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, taurine, vitamins [DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], glucosamine hydrochloride, trace minerals [zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], L-carnitine, chondroitin sulfate, rosemary extract, preserved with mixed tocopherols and citric acid.",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|Omega-3 Fatty Acids|0.34% min|\r\n|Glucosamine|739 mg/kg min|\r\n|Chondroitin Sulfate|8 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin SulFate|25 mg/kg min|",
+          "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|57 lbs|3 + 7/ 8 cups per day|3 + 1/ 4 cups per day|\r\n|66 lbs|4 + 1/ 4 cups per day|3 + 5/ 8 cups per day|\r\n|77 lbs|4 + 3/ 4 cups per day|4 cups per day|\r\n|88 lbs|5 + 1/ 4 cups per day|4 + 1/ 2 cups per day|\r\n|99 lbs|5 + 3/ 4 cups per day|4 + 7/ 8 cups per day|",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,287 kcal/kg, 270 kcal/cup\n\nOriginal: 3,252 kcal/kg, 267 kcal/cup",
+          "autoship_price": "$111.14",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068552fc-ebba-7782-8000-8ab64825dc0d._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/43673",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "43673",
+            "source_variant_id": "58667",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "24.2-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "breed size": "Large"
+        },
+        "group_key": [
+          [
+            "breed size",
+            "Large"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": [
+          "parent_content_not_applicable_to_discriminator"
+        ],
+        "rejected_content": {
+          "description": "Royal Canin Canine Weight Control Medium Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered medium-sized dogs. The complete and balanced weight control diet includes precise fat and calorie content, which helps dogs maintain an ideal weight. It also includes a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full and satisfied after eating. Omega-6 and omega-3 fatty acids, including EPA and DHA, promote healthy skin and a soft, shiny coat. Plus, for your medium dog’s digestive care, this targeted nutrition promotes healthy digestion with prebiotics to nourish the microbiome.",
+          "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, pea fiber, wheat gluten, powdered cellulose, natural flavors, chicken fat, dried plain beet pulp, vegetable oil, fish oil, sodium silico aluminate, powdered psyllium seed husk, potassium chloride, salt, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], L-lysine, taurine, trace minerals[zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], GLA safflower oil, L-carnitine, marigold extract (Tagetes erecta L.), rosemary extract, preserved with mixed tocopherols and citric acid.",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|EPA + DHA|0.18% min|\r\n|Omega-6 Fatty Acids|1.85% min|\r\n|Omega-3 Fatty Acids|0.35% min|\r\n|Gamma Linoleic Acid|0.01% min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|",
+          "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|24 lbs|2 cups per day|1 + 3/ 4 cups per day|\r\n|29 lbs|2 + 1/ 4 cups per day|2 cups per day|\r\n|33 lbs|2 + 5/ 8 cups per day|2 + 1/ 8 cups per day|\r\n|44 lbs|3 + 1/ 4 cups per day|2 + 3/ 4 cups per day|\r\n|55 lbs|3 + 3/ 4 cups per day|3 + 1/ 8 cups per day|",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|"
+        },
+        "rejected_reasons": [
+          "primary_mismatch: dim=breed size, expects=['large'], desc_primary=medium, ingr_primary=None"
+        ]
+      }
+    },
+    {
+      "source_group_id": "101610:breed-size:medium",
+      "title": "Royal Canin Veterinary Diet Adult Weight Control Medium Breed Dry Dog Food",
+      "flavor": null,
+      "discriminator": {
+        "breed size": "Medium"
+      },
+      "brand": "Royal Canin Veterinary Diet",
+      "handle_slug": "royal-canin-veterinary-diet-adult-medium",
+      "category_path": [],
+      "description": "Royal Canin Canine Weight Control Medium Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered medium-sized dogs. The complete and balanced weight control diet includes precise fat and calorie content, which helps dogs maintain an ideal weight. It also includes a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full and satisfied after eating. Omega-6 and omega-3 fatty acids, including EPA and DHA, promote healthy skin and a soft, shiny coat. Plus, for your medium dog’s digestive care, this targeted nutrition promotes healthy digestion with prebiotics to nourish the microbiome.",
+      "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, pea fiber, wheat gluten, powdered cellulose, natural flavors, chicken fat, dried plain beet pulp, vegetable oil, fish oil, sodium silico aluminate, powdered psyllium seed husk, potassium chloride, salt, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], L-lysine, taurine, trace minerals[zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], GLA safflower oil, L-carnitine, marigold extract (Tagetes erecta L.), rosemary extract, preserved with mixed tocopherols and citric acid.",
+      "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|EPA + DHA|0.18% min|\r\n|Omega-6 Fatty Acids|1.85% min|\r\n|Omega-3 Fatty Acids|0.35% min|\r\n|Gamma Linoleic Acid|0.01% min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|",
+      "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|24 lbs|2 cups per day|1 + 3/ 4 cups per day|\r\n|29 lbs|2 + 1/ 4 cups per day|2 cups per day|\r\n|33 lbs|2 + 5/ 8 cups per day|2 + 1/ 8 cups per day|\r\n|44 lbs|3 + 1/ 4 cups per day|2 + 3/ 4 cups per day|\r\n|55 lbs|3 + 3/ 4 cups per day|3 + 1/ 8 cups per day|",
+      "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+      "specifications": {},
+      "product_facts": {
+        "breed_size": "Medium"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Royal Canin Veterinary Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Breed Size",
+                  "value": "Medium",
+                  "normalized_key": "breed-size"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Breed Size: Medium"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null,
+        "custom.breed-size": "Medium"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/068552d4-7cac-7830-8000-ca0ba53322ff._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/is/catalog/48834._AC_SS1800_V1460478784_.jpg",
+        "https://image.chewy.com/is/image/catalog/48833_MAIN._AC_SS1800_V1627597604_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "101610",
+          "source_variant_id": "73704",
+          "sku": "73704",
+          "identifiers": {
+            "upc": "030111482501",
+            "gtin": "030111482501",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "73704",
+            "source_item_id": "73704"
+          },
+          "title": "Royal Canin Veterinary Diet Adult Weight Control Medium Breed Dry Dog Food, 17.6-lb bag",
+          "price": "$84.99",
+          "compare_at_price": null,
+          "description": "Royal Canin Canine Weight Control Medium Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered medium-sized dogs. The complete and balanced weight control diet includes precise fat and calorie content, which helps dogs maintain an ideal weight. It also includes a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full and satisfied after eating. Omega-6 and omega-3 fatty acids, including EPA and DHA, promote healthy skin and a soft, shiny coat. Plus, for your medium dog’s digestive care, this targeted nutrition promotes healthy digestion with prebiotics to nourish the microbiome.",
+          "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, pea fiber, wheat gluten, powdered cellulose, natural flavors, chicken fat, dried plain beet pulp, vegetable oil, fish oil, sodium silico aluminate, powdered psyllium seed husk, potassium chloride, salt, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], L-lysine, taurine, trace minerals[zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], GLA safflower oil, L-carnitine, marigold extract (Tagetes erecta L.), rosemary extract, preserved with mixed tocopherols and citric acid.",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|EPA + DHA|0.18% min|\r\n|Omega-6 Fatty Acids|1.85% min|\r\n|Omega-3 Fatty Acids|0.35% min|\r\n|Gamma Linoleic Acid|0.01% min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|",
+          "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|24 lbs|2 cups per day|1 + 3/ 4 cups per day|\r\n|29 lbs|2 + 1/ 4 cups per day|2 cups per day|\r\n|33 lbs|2 + 5/ 8 cups per day|2 + 1/ 8 cups per day|\r\n|44 lbs|3 + 1/ 4 cups per day|2 + 3/ 4 cups per day|\r\n|55 lbs|3 + 3/ 4 cups per day|3 + 1/ 8 cups per day|",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,301 kcal/kg, 277 kcal/cup\n\nOriginal: 3,259 kcal/kg, 274 kcal/cup",
+          "autoship_price": "$80.74",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068552d4-7cac-7830-8000-ca0ba53322ff._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101610",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "101610",
+            "source_variant_id": "73704",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "17.6-lb bag"
+        },
+        {
+          "source_entry_id": "34015",
+          "source_variant_id": "48834",
+          "sku": "48834",
+          "identifiers": {
+            "upc": "030111482808",
+            "gtin": "030111482808",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "48834",
+            "source_item_id": "48834"
+          },
+          "title": "Royal Canin Veterinary Diet Weight Control Formula Dry Dog Food, 26.4-lb bag",
+          "price": "$98.59",
+          "compare_at_price": null,
+          "description": "Royal Canin Canine Weight Control Medium Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered medium-sized dogs. The complete and balanced weight control diet includes precise fat and calorie content, which helps dogs maintain an ideal weight. It also includes a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full and satisfied after eating. Omega-6 and omega-3 fatty acids, including EPA and DHA, promote healthy skin and a soft, shiny coat. Plus, for your medium dog’s digestive care, this targeted nutrition promotes healthy digestion with prebiotics to nourish the microbiome.",
+          "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, pea fiber, wheat gluten, powdered cellulose, natural flavors, chicken fat, dried plain beet pulp, vegetable oil, fish oil, sodium silico aluminate, powdered psyllium seed husk, potassium chloride, salt, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], L-lysine, taurine, trace minerals[zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], GLA safflower oil, L-carnitine, marigold extract (Tagetes erecta L.), rosemary extract, preserved with mixed tocopherols and citric acid.",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|EPA + DHA|0.18% min|\r\n|Omega-6 Fatty Acids|1.85% min|\r\n|Omega-3 Fatty Acids|0.35% min|\r\n|Gamma Linoleic Acid|0.01% min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|",
+          "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|24 lbs|2 cups per day|1 + 3/ 4 cups per day|\r\n|29 lbs|2 + 1/ 4 cups per day|2 cups per day|\r\n|33 lbs|2 + 5/ 8 cups per day|2 + 1/ 8 cups per day|\r\n|44 lbs|3 + 1/ 4 cups per day|2 + 3/ 4 cups per day|\r\n|55 lbs|3 + 3/ 4 cups per day|3 + 1/ 8 cups per day|",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,301 kcal/kg, 277 kcal/cup\n\nOriginal: 3,259 kcal/kg, 274 kcal/cup",
+          "autoship_price": null,
+          "availability": "DISCONTINUED",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "explicit_unavailable_flag",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/is/catalog/48834._AC_SS1800_V1460478784_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/34015",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "34015",
+            "source_variant_id": "48834",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "26.4-lb bag"
+        },
+        {
+          "source_entry_id": "34014",
+          "source_variant_id": "48833",
+          "sku": "48833",
+          "identifiers": {
+            "upc": "030111482877",
+            "gtin": "030111482877",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "48833",
+            "source_item_id": "48833"
+          },
+          "title": "Royal Canin Veterinary Diet Adult Weight Control Medium Breed Dry Dog Food, 7.7-lb bag",
+          "price": "$34.99",
+          "compare_at_price": null,
+          "description": "Royal Canin Canine Weight Control Medium Dog is a veterinary-exclusive dry dog food specially formulated for weight control to promote maintenance of an ideal weight in spayed or neutered medium-sized dogs. The complete and balanced weight control diet includes precise fat and calorie content, which helps dogs maintain an ideal weight. It also includes a special blend of soluble and insoluble fibers, including psyllium, that helps him feel full and satisfied after eating. Omega-6 and omega-3 fatty acids, including EPA and DHA, promote healthy skin and a soft, shiny coat. Plus, for your medium dog’s digestive care, this targeted nutrition promotes healthy digestion with prebiotics to nourish the microbiome.",
+          "ingredients": "Corn, chicken by-product meal, corn gluten meal, barley, pea fiber, wheat gluten, powdered cellulose, natural flavors, chicken fat, dried plain beet pulp, vegetable oil, fish oil, sodium silico aluminate, powdered psyllium seed husk, potassium chloride, salt, calcium carbonate, fructooligosaccharides, choline chloride, DL-methionine, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), biotin, D-calcium pantothenate, vitamin A acetate, pyridoxine hydrochloride (vitamin B6), niacin supplement, folic acid, vitamin B12 supplement, thiamine mononitrate (vitamin B1), vitamin D3 supplement, riboflavin supplement], L-lysine, taurine, trace minerals[zinc proteinate, manganese proteinate, zinc oxide, ferrous sulfate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], GLA safflower oil, L-carnitine, marigold extract (Tagetes erecta L.), rosemary extract, preserved with mixed tocopherols and citric acid.",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fat|13.0% max|\r\n|Crude Fiber|9.0% max|\r\n|Moisture|10.0% max|\r\n|EPA + DHA|0.18% min|\r\n|Omega-6 Fatty Acids|1.85% min|\r\n|Omega-3 Fatty Acids|0.35% min|\r\n|Gamma Linoleic Acid|0.01% min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|26.0% min|\r\n|Crude Fat|9.0% min|\r\n|Crude Fiber|9.6% max|\r\n|Moisture|10.0% max|",
+          "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|24 lbs|2 cups per day|1 + 3/ 4 cups per day|\r\n|29 lbs|2 + 1/ 4 cups per day|2 cups per day|\r\n|33 lbs|2 + 5/ 8 cups per day|2 + 1/ 8 cups per day|\r\n|44 lbs|3 + 1/ 4 cups per day|2 + 3/ 4 cups per day|\r\n|55 lbs|3 + 3/ 4 cups per day|3 + 1/ 8 cups per day|",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,301 kcal/kg, 277 kcal/cup\n\nOriginal: 3,259 kcal/kg, 274 kcal/cup",
+          "autoship_price": null,
+          "availability": "DISCONTINUED",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "explicit_unavailable_flag",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/is/image/catalog/48833_MAIN._AC_SS1800_V1627597604_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/34014",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "34014",
+            "source_variant_id": "48833",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "7.7-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 3,
+        "image_source": "variant_images",
+        "discriminator": {
+          "breed size": "Medium"
+        },
+        "group_key": [
+          [
+            "breed size",
+            "Medium"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 91,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 metafields_plan missing complex fields.",
+      "Group 1 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 4,
+      "variants_with_gtin": 4,
+      "variants_with_upc": 4,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 0,
+      "gtin_coverage_percent": 100.0
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 4,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 3,
+      "guaranteed_analysis": 3,
+      "feeding_instructions": 3,
+      "transition_instructions": 3,
+      "description": 4,
+      "calorie_content": 3,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

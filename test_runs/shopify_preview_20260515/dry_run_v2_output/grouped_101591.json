@@ -1,0 +1,151 @@
+{
+  "source": "chewy",
+  "source_product_id": "101591",
+  "source_url": "https://www.chewy.com/wysong-uncanny-blend-freeze-dried-raw/dp/101591",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": false,
+  "products": [
+    {
+      "source_group_id": "101591",
+      "title": "Wysong Uncanny Blend Freeze-Dried Raw Dog & Cat Food Mix, 40-oz bucket",
+      "flavor": null,
+      "discriminator": {},
+      "brand": "Wysong",
+      "handle_slug": "wysong-uncanny-blend-freeze-dried-raw",
+      "category_path": [],
+      "description": "Wysong UnCanny is a nutritious blend of numerous ingredients designed to augment, balance, and increase the palatability of a raw meat diet. Mix with Wysong Archetype* raw diets to create the complete \"UnCanny\" - a canned food formulation without the can and without the raw-destroying heat processing – or mix with your own home prepared raw meats. UnCanny contains macroingredients such as chicken fat, eggs, cheese, yogurt, fruits and vegetables, and microingredients including prebiotics, probiotics, enzymes, nutraceuticals vitamins, and minerals.\r\n\r\n*About two 7.5-oz bags of Archetype will combine with one bucket of UnCanny so you will run out of each simultaneously (if following the feeding guidelines on the Recommended Usage tab).",
+      "ingredients": "Meat Protein Isolate, Chicken Fat, Flaxseeds, Cheddar Cheese, Eggs, Carrots, Yogurt, Blueberries, Gelatin, Peas, Whey, Apples, Natural Flavor, Montmorillonite Clay, Dried Kelp, Fish Oil, Yeast Culture, Taurine, Rock Salt, Sea Salt, Organic Barley Grass Powder, Apple Pectin, Yeast Extract, Citric Acid, Mixed Tocopherols, Choline Chloride, Hemicellulose Extract, Chicory Root, Rosemary Extract, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product, Pepper.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|30.0% min|\n|Crude Fat|14.0% min|\n|Crude Fiber|3.0% max|\n|Moisture|10.0% max|\n|Taurine|0.2% min|",
+      "feeding_instructions": "* Scoop out the desired amount of UnCanny™ into a bowl. 1/2 cup is a good starting point for a meal.\n* Add about 1/4 cup of Wysong Archetype™ (Chicken, Quail, Rabbit or Pollock formulations), or your own home prepared meats.\n* Add approximately 1/3 cup warm water (not above 118°) and let stand for a few minutes to thicken. More water will create more gravy or broth.\n* Stir and serve.\n* Leftovers should be sealed, refrigerated, and reused within 1 day.\n\n",
+      "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions.",
+      "specifications": {},
+      "product_facts": {},
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog, Cat",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Wysong",
+                  "normalized_key": "brand"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": []
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/wysong-uncanny-blend-freeze-dried-raw-dog-cat-food-mix-40oz-bucket/img-378802._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "101591",
+          "source_variant_id": "73685",
+          "sku": "73685",
+          "identifiers": {
+            "upc": "085835992010",
+            "gtin": "085835992010",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "73685",
+            "source_item_id": "73685"
+          },
+          "title": "Wysong Uncanny Blend Freeze-Dried Raw Dog & Cat Food Mix, 40-oz bucket",
+          "price": "$65.65",
+          "compare_at_price": null,
+          "description": "Wysong UnCanny is a nutritious blend of numerous ingredients designed to augment, balance, and increase the palatability of a raw meat diet. Mix with Wysong Archetype* raw diets to create the complete \"UnCanny\" - a canned food formulation without the can and without the raw-destroying heat processing – or mix with your own home prepared raw meats. UnCanny contains macroingredients such as chicken fat, eggs, cheese, yogurt, fruits and vegetables, and microingredients including prebiotics, probiotics, enzymes, nutraceuticals vitamins, and minerals.\r\n\r\n*About two 7.5-oz bags of Archetype will combine with one bucket of UnCanny so you will run out of each simultaneously (if following the feeding guidelines on the Recommended Usage tab).",
+          "ingredients": "Meat Protein Isolate, Chicken Fat, Flaxseeds, Cheddar Cheese, Eggs, Carrots, Yogurt, Blueberries, Gelatin, Peas, Whey, Apples, Natural Flavor, Montmorillonite Clay, Dried Kelp, Fish Oil, Yeast Culture, Taurine, Rock Salt, Sea Salt, Organic Barley Grass Powder, Apple Pectin, Yeast Extract, Citric Acid, Mixed Tocopherols, Choline Chloride, Hemicellulose Extract, Chicory Root, Rosemary Extract, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product, Pepper.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|30.0% min|\n|Crude Fat|14.0% min|\n|Crude Fiber|3.0% max|\n|Moisture|10.0% max|\n|Taurine|0.2% min|",
+          "feeding_instructions": "* Scoop out the desired amount of UnCanny™ into a bowl. 1/2 cup is a good starting point for a meal.\n* Add about 1/4 cup of Wysong Archetype™ (Chicken, Quail, Rabbit or Pollock formulations), or your own home prepared meats.\n* Add approximately 1/3 cup warm water (not above 118°) and let stand for a few minutes to thicken. More water will create more gravy or broth.\n* Stir and serve.\n* Leftovers should be sealed, refrigerated, and reused within 1 day.",
+          "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions.",
+          "calorie_content": "",
+          "autoship_price": "$62.37",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/wysong-uncanny-blend-freeze-dried-raw-dog-cat-food-mix-40oz-bucket/img-378802._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/wysong-uncanny-blend-freeze-dried-raw/dp/101591",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "101591",
+            "source_variant_id": "73685",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "Default Title"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {},
+        "group_key": [],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 93,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 1,
+      "variants_with_gtin": 1,
+      "variants_with_upc": 1,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 0,
+      "gtin_coverage_percent": 100.0
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 1,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 0,
+      "guaranteed_analysis": 0,
+      "feeding_instructions": 0,
+      "transition_instructions": 0,
+      "description": 1,
+      "calorie_content": 0,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

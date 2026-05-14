@@ -1,0 +1,81 @@
+{
+  "products": {
+    "101571": {
+      "status": "ok",
+      "url": "https://www.chewy.com/wysong-archetype-chicken-formula/dp/101571",
+      "out_file": "grouped_101571.json",
+      "product_count": 3,
+      "variant_count": 3
+    },
+    "101573": {
+      "status": "ok",
+      "url": "https://www.chewy.com/wysong-archetype-rabbit-formula/dp/101573",
+      "out_file": "grouped_101573.json",
+      "product_count": 3,
+      "variant_count": 3
+    },
+    "101575": {
+      "status": "ok",
+      "url": "https://www.chewy.com/wysong-archetype-quail-formula-freeze/dp/101575",
+      "out_file": "grouped_101575.json",
+      "product_count": 3,
+      "variant_count": 3
+    },
+    "101591": {
+      "status": "ok",
+      "url": "https://www.chewy.com/wysong-uncanny-blend-freeze-dried-raw/dp/101591",
+      "out_file": "grouped_101591.json",
+      "product_count": 1,
+      "variant_count": 1
+    },
+    "101610": {
+      "status": "ok",
+      "url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101610",
+      "out_file": "grouped_101610.json",
+      "product_count": 2,
+      "variant_count": 4
+    },
+    "101612": {
+      "status": "ok",
+      "url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101612",
+      "out_file": "grouped_101612.json",
+      "product_count": 2,
+      "variant_count": 4
+    },
+    "101613": {
+      "status": "ok",
+      "url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101613",
+      "out_file": "grouped_101613.json",
+      "product_count": 2,
+      "variant_count": 4
+    },
+    "1018830": {
+      "status": "ok",
+      "url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/1018830",
+      "out_file": "grouped_1018830.json",
+      "product_count": 2,
+      "variant_count": 5
+    },
+    "102094": {
+      "status": "ok",
+      "url": "https://www.chewy.com/hills-science-diet-adult-perfect/dp/102094",
+      "out_file": "grouped_102094.json",
+      "product_count": 2,
+      "variant_count": 4
+    },
+    "102101": {
+      "status": "ok",
+      "url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/102101",
+      "out_file": "grouped_102101.json",
+      "product_count": 3,
+      "variant_count": 7
+    },
+    "32049": {
+      "status": "ok",
+      "url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32049",
+      "out_file": "grouped_32049.json",
+      "product_count": 2,
+      "variant_count": 11
+    }
+  }
+}

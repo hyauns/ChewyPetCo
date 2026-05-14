@@ -1,0 +1,603 @@
+{
+  "source": "chewy",
+  "source_product_id": "102101",
+  "source_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/102101",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "102101:flavor:variety-pack",
+      "title": "Hill's Science Diet Sensitive Stomach & Sensitive Skin Variety Pack Adult Wet Dog Food",
+      "flavor": "Variety Pack",
+      "discriminator": {
+        "flavor": "Variety Pack"
+      },
+      "brand": "Hill's Science Diet",
+      "handle_slug": "hills-science-diet-adult-sensitive-variety-pack",
+      "category_path": [],
+      "description": "Does your best friend sometimes struggle with a finicky tummy or an irritatingly itchy patch of skin? Hill’s understands that seeing a beloved pup experience discomfort can be tough. That’s why Hill’s Science Diet Adult Sensitive Stomach & Skin Salmon & Vegetable Entrée wet dog food is thoughtfully crafted to offer comprehensive relief and support for adult dogs with these common challenges. If you’re searching for a dog food for sensitive stomachs that also nurtures skin health, this biology-based formula provides an ideal solution. It’s more than just a meal; it’s a commitment to their comfort and vitality. This highly digestible recipe features prebiotic fiber, which acts like a tiny tune-up for the gut, feeding beneficial bacteria to support a balanced microbiome. This scientific approach helps ease digestion and ensures optimal nutrient absorption, so their body gets the most out of every bite. Beyond gut health, this entrée is enriched with powerful nutrients like vitamin E and omega-6 fatty acids, essential building blocks that work to nourish your pet’s skin, helping to keep their coat healthy and beautifully lustrous. Plus, with a blend of antioxidants including vitamins C and E, it actively helps support a strong immune system, giving pet parents peace of mind. Hill’s Science Diet uses decades of cutting-edge research to create delicious and effective meals, ensuring pets receive the advanced nutrition they need to thrive.",
+      "ingredients": "Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).",
+      "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|",
+      "feeding_instructions": "Cover and refrigerate unused portion. Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+      "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Variety Pack"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Hill's Science Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Variety Pack",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Variety Pack"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Variety Pack",
+        "custom.flavor": "Variety Pack"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/069c5021-6d29-774b-8000-6e849b5e368b._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "243925",
+          "source_variant_id": "217370",
+          "sku": "217370",
+          "identifiers": {
+            "upc": "052742034560",
+            "gtin": "052742034560",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "217370",
+            "source_item_id": "217370"
+          },
+          "title": "Hill's Science Diet Sensitive Stomach & Sensitive Skin Variety Pack Adult Wet Dog Food, 12.8-oz can, 12 count",
+          "price": "$49.08",
+          "compare_at_price": null,
+          "description": "Hill’s knows how much you care for your best friend, and seeing them struggle with digestive upsets or a dull coat can be genuinely worrying. If you’re looking for a wet dog food for sensitive stomach and skin, this Hill’s Science Diet Adult Sensitive Stomach & Skin Canned Dog Food Variety Pack is crafted with both empathy and science in mind. This delicious wet dog food offers a thoughtfully balanced approach to wellness, providing triple support for the stomach, skin, and immune system. This formula is highly digestible, featuring prebiotic fiber that gently nurtures the gut biome, leading to healthy digestion dog food benefits and better nutrient absorption. This means your dog can feel more comfortable after meals. Hill’s also prioritizes their coat health, enriching each meal with vitamin E and omega-3 and -6 fatty acids to nourish the skin from the inside out, promoting a soft, lustrous coat that reflects their inner vitality. Beyond that, the inclusion of antioxidants, like vitamins C and E, helps build a strong immune system, like a robust defense system for their overall health. This comprehensive digestive care dog food is designed to alleviate those common worries, helping dogs thrive and enjoy every moment, making it an excellent dog food for sensitive skin option.",
+          "ingredients": "Salmon & Vegetable: Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Chicken Liver Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).\n\nChicken & Vegetable: Chicken Broth, Chicken, Turkey Giblets, Green Beans, Carrots, Green Peas, Potato Starch, Egg Whites, Oat Fiber, Powdered Cellulose, Dried Tomato Pomace, Dried Beet Pulp, Pea Protein, Flaxseed, Coconut Oil, Chicken Liver Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, DL-Methionine, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Vitamin A Supplement, Calcium Pantothenate, Pyridoxine Hydrochloride, Vitamin B12 Supplement, Riboflavin Supplement, Biotin, Vitamin D3 Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Folic Acid), Potassium Chloride, L-Lysine, Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+          "guaranteed_analysis": "**Salmon & Vegetable:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|\r\n\r\n\r\n**Chicken & Vegetable:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|5.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.5% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "**Skin Salmon & Vegetable:**\r\n\r\n\r\n|Weight|Daily Feeding (cans)| \r\n|---|---|---|---|\r\n|5 lbs|1/2|\r\n|10 lbs|1|\r\n|20 lbs|1 1/2|\r\n|30 lbs|2|\r\n|40 lbs|2 2/3|\r\n|50 lbs|3| \r\n|60 lbs|3 1/2|    \r\n|80 lbs|4 1/3|\r\n|100 lbs|5 1/4|\r\n|120 lbs|6|\r\n\r\n         \r\n\r\n**Chicken & Vegetable:**  \r\n\r\n|Weight|Daily Feeding (cans)| \r\n|---|---|---|---|\r\n|5 lbs|5/8|\r\n|10 lbs|1|\r\n|20 lbs|1 2/3|\r\n|30 lbs|2 1/4|\r\n|40 lbs|2 3/4|\r\n|50 lbs|3 1/4| \r\n|60 lbs|3 2/3|    \r\n|80 lbs|4 2/3|\r\n|100 lbs|5 1/2|\r\n|120 lbs|6 1/4|",
+          "transition_instructions": "A gradual transition to a new pet food is important to avoid digestive upset. To transition, mix your pet's current food with the new food. Over 7 days, gradually decrease the amount of the current pet food while increasing the amount of new pet food.",
+          "calorie_content": "Salmon & Vegetable: 379 kcal/12.8-oz can\n\nChicken & Vegetable: 360 kcal/12.8-oz can",
+          "autoship_price": "$46.63",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069c5021-6d29-774b-8000-6e849b5e368b._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/243925",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "243925",
+            "source_variant_id": "217370",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.8-oz can, 12 count"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Variety Pack"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Variety Pack"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    },
+    {
+      "source_group_id": "102101:flavor:chicken-vegetable",
+      "title": "Hill's Science Diet Adult Sensitive Stomach & Sensitive Skin Chicken & Vegetable Entree Wet Dog Food",
+      "flavor": "Chicken & Vegetable",
+      "discriminator": {
+        "flavor": "Chicken & Vegetable"
+      },
+      "brand": "Hill's Science Diet",
+      "handle_slug": "hills-science-diet-adult-sensitive-chicken-vegetable",
+      "category_path": [],
+      "description": "As pet parents, we understand the worry that comes with a dog struggling with digestive upset or an irritated, dull coat. If you are looking for a sensitive stomach dog food that also addresses skin health, Hill’s Science Diet Adult Sensitive Stomach & Skin Chicken & Vegetable Entrée wet dog food offers a scientifically crafted solution. This canned dog food is designed with biology-based nutrition, providing specialized care for sensitive systems. For pets needing a dog food sensitive skin and stomach formula, this recipe is a gamechanger. It’s formulated with a highly digestible blend that’s incredibly gentle on the digestive tract, ensuring dogs can absorb all the vital nutrients without discomfort. This means a happier tummy and more energy for playful moments. Hill’s also knows how much you cherish that soft, shiny coat! This sensitive stomach wet dog food is enriched with vitamin E and beneficial omega-3 and -6 fatty acids, which work together to deeply nourish the skin and promote a beautifully lustrous coat, making every cuddle even better. Beyond just comfort, this formula packs a punch for immunity with antioxidants like vitamins C and E, helping to support a strong and resilient immune system. It’s a delicious, complete meal that offers triple support for their stomach, skin, and overall health, helping pets thrive and continue to be the wonderful companions they are.",
+      "ingredients": "Chicken Broth, Turkey, Chicken, Carrots, Potatoes, Green Beans, Potato Starch, Pea Protein, Green Peas, Egg Whites, Flaxseed, Soybean Oil, Dried Beet Pulp, Hydrolyzed Chicken Flavor, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Niacin Supplement, Thiamine Mononitrate, Vitamin A Supplement, Calcium Pantothenate, Vitamin B12 Supplement, Pyridoxine Hydrochloride, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Folic Acid, Vitamin D3 Supplement), Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate, Manganous Oxide, Sodium Selenite), Beta-Carotene.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---|\r\n|Crude Protein|5.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.5% max|\r\n|Moisture|78.0% max|",
+      "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)|\r\n|---|---|\r\n|5 lb|5/8|\r\n|10 lb|1|\r\n|20 lb|1 2/3|\r\n|30 lb|2 1/4|\r\n|40 lb|2 3/4|\r\n|50 lb|3 1/4|\r\n|60 lb|3 2/3|\r\n|80 lb|4 2/3|\r\n|100 lb|5 1/2|\r\n|120 lb|6 1/4|",
+      "transition_instructions": "New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7 day period. Keep fresh water available at all times!",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Chicken & Vegetable"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Hill's Science Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Chicken & Vegetable",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Chicken & Vegetable"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Chicken & Vegetable",
+        "custom.flavor": "Chicken & Vegetable"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/068128c7-715a-76c0-8000-c5f465ebc32a._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/hills-science-diet-adult-sensitive-stomach-skin-chicken-vegetable-entree-canned-dog-food-12-8oz-case-of-24/img-311634._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/069c5022-8253-7b49-8000-6f3f87a1df26._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "1427246",
+          "source_variant_id": "1427246",
+          "sku": "1427246",
+          "identifiers": {
+            "upc": "100000000007",
+            "gtin": "100000000007",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1427246",
+            "source_item_id": "1427246"
+          },
+          "title": "Hill's Science Diet Adult Sensitive Stomach & Sensitive Skin Chicken & Vegetable Entree Wet Dog Food, 12.8-oz can, case of 4",
+          "price": "$19.99",
+          "compare_at_price": null,
+          "description": "As pet parents, we understand the worry that comes with a dog struggling with digestive upset or an irritated, dull coat. If you are looking for a sensitive stomach dog food that also addresses skin health, Hill’s Science Diet Adult Sensitive Stomach & Skin Chicken & Vegetable Entrée wet dog food offers a scientifically crafted solution. This canned dog food is designed with biology-based nutrition, providing specialized care for sensitive systems. For pets needing a dog food sensitive skin and stomach formula, this recipe is a gamechanger. It’s formulated with a highly digestible blend that’s incredibly gentle on the digestive tract, ensuring dogs can absorb all the vital nutrients without discomfort. This means a happier tummy and more energy for playful moments. Hill’s also knows how much you cherish that soft, shiny coat! This sensitive stomach wet dog food is enriched with vitamin E and beneficial omega-3 and -6 fatty acids, which work together to deeply nourish the skin and promote a beautifully lustrous coat, making every cuddle even better. Beyond just comfort, this formula packs a punch for immunity with antioxidants like vitamins C and E, helping to support a strong and resilient immune system. It’s a delicious, complete meal that offers triple support for their stomach, skin, and overall health, helping pets thrive and continue to be the wonderful companions they are.",
+          "ingredients": "Chicken Broth, Turkey, Chicken, Carrots, Potatoes, Green Beans, Potato Starch, Pea Protein, Green Peas, Egg Whites, Flaxseed, Soybean Oil, Dried Beet Pulp, Hydrolyzed Chicken Flavor, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Niacin Supplement, Thiamine Mononitrate, Vitamin A Supplement, Calcium Pantothenate, Vitamin B12 Supplement, Pyridoxine Hydrochloride, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Folic Acid, Vitamin D3 Supplement), Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate, Manganous Oxide, Sodium Selenite), Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---|\r\n|Crude Protein|5.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.5% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)|\r\n|---|---|\r\n|5 lb|5/8|\r\n|10 lb|1|\r\n|20 lb|1 2/3|\r\n|30 lb|2 1/4|\r\n|40 lb|2 3/4|\r\n|50 lb|3 1/4|\r\n|60 lb|3 2/3|\r\n|80 lb|4 2/3|\r\n|100 lb|5 1/2|\r\n|120 lb|6 1/4|",
+          "transition_instructions": "New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7 day period. Keep fresh water available at all times!",
+          "calorie_content": "360 kcal/can",
+          "autoship_price": null,
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068128c7-715a-76c0-8000-c5f465ebc32a._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/1427246",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1427246",
+            "source_variant_id": "1427246",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.8-oz can, case of 4"
+        },
+        {
+          "source_entry_id": "383185",
+          "source_variant_id": "356956",
+          "sku": "356956",
+          "identifiers": {
+            "upc": null,
+            "gtin": null,
+            "ean": null,
+            "mpn": null,
+            "source_sku": "356956",
+            "source_item_id": "356956"
+          },
+          "title": "Hill's Science Diet Adult Sensitive Stomach & Skin Chicken & Vegetable Entree Canned Dog Food, 12.8-oz, bundle of 24",
+          "price": "$98.14",
+          "compare_at_price": null,
+          "description": "As pet parents, we understand the worry that comes with a dog struggling with digestive upset or an irritated, dull coat. If you are looking for a sensitive stomach dog food that also addresses skin health, Hill’s Science Diet Adult Sensitive Stomach & Skin Chicken & Vegetable Entrée wet dog food offers a scientifically crafted solution. This canned dog food is designed with biology-based nutrition, providing specialized care for sensitive systems. For pets needing a dog food sensitive skin and stomach formula, this recipe is a gamechanger. It’s formulated with a highly digestible blend that’s incredibly gentle on the digestive tract, ensuring dogs can absorb all the vital nutrients without discomfort. This means a happier tummy and more energy for playful moments. Hill’s also knows how much you cherish that soft, shiny coat! This sensitive stomach wet dog food is enriched with vitamin E and beneficial omega-3 and -6 fatty acids, which work together to deeply nourish the skin and promote a beautifully lustrous coat, making every cuddle even better. Beyond just comfort, this formula packs a punch for immunity with antioxidants like vitamins C and E, helping to support a strong and resilient immune system. It’s a delicious, complete meal that offers triple support for their stomach, skin, and overall health, helping pets thrive and continue to be the wonderful companions they are.",
+          "ingredients": "Chicken Broth, Turkey, Chicken, Carrots, Potatoes, Green Beans, Potato Starch, Pea Protein, Green Peas, Egg Whites, Flaxseed, Soybean Oil, Dried Beet Pulp, Hydrolyzed Chicken Flavor, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Niacin Supplement, Thiamine Mononitrate, Vitamin A Supplement, Calcium Pantothenate, Vitamin B12 Supplement, Pyridoxine Hydrochloride, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Folic Acid, Vitamin D3 Supplement), Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate, Manganous Oxide, Sodium Selenite), Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---|\r\n|Crude Protein|5.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.5% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)|\r\n|---|---|\r\n|5 lb|5/8|\r\n|10 lb|1|\r\n|20 lb|1 2/3|\r\n|30 lb|2 1/4|\r\n|40 lb|2 3/4|\r\n|50 lb|3 1/4|\r\n|60 lb|3 2/3|\r\n|80 lb|4 2/3|\r\n|100 lb|5 1/2|\r\n|120 lb|6 1/4|",
+          "transition_instructions": "New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7 day period. Keep fresh water available at all times!",
+          "calorie_content": "360 kcal/can",
+          "autoship_price": "$93.23",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/hills-science-diet-adult-sensitive-stomach-skin-chicken-vegetable-entree-canned-dog-food-12-8oz-case-of-24/img-311634._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/383185",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "383185",
+            "source_variant_id": "356956",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "bundle of 24"
+        },
+        {
+          "source_entry_id": "184531",
+          "source_variant_id": "157791",
+          "sku": "157791",
+          "identifiers": {
+            "upc": "052742304083",
+            "gtin": "052742304083",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "157791",
+            "source_item_id": "157791"
+          },
+          "title": "Hill's Science Diet Adult Sensitive Stomach & Sensitive Skin Chicken & Vegetable Entree Wet Dog Food, 12.8-oz can, 12 count",
+          "price": "$49.07",
+          "compare_at_price": null,
+          "description": "As pet parents, we understand the worry that comes with a dog struggling with digestive upset or an irritated, dull coat. If you are looking for a sensitive stomach dog food that also addresses skin health, Hill’s Science Diet Adult Sensitive Stomach & Skin Chicken & Vegetable Entrée wet dog food offers a scientifically crafted solution. This canned dog food is designed with biology-based nutrition, providing specialized care for sensitive systems. For pets needing a dog food sensitive skin and stomach formula, this recipe is a gamechanger. It’s formulated with a highly digestible blend that’s incredibly gentle on the digestive tract, ensuring dogs can absorb all the vital nutrients without discomfort. This means a happier tummy and more energy for playful moments. Hill’s also knows how much you cherish that soft, shiny coat! This sensitive stomach wet dog food is enriched with vitamin E and beneficial omega-3 and -6 fatty acids, which work together to deeply nourish the skin and promote a beautifully lustrous coat, making every cuddle even better. Beyond just comfort, this formula packs a punch for immunity with antioxidants like vitamins C and E, helping to support a strong and resilient immune system. It’s a delicious, complete meal that offers triple support for their stomach, skin, and overall health, helping pets thrive and continue to be the wonderful companions they are.",
+          "ingredients": "Chicken Broth, Turkey, Chicken, Carrots, Potatoes, Green Beans, Potato Starch, Pea Protein, Green Peas, Egg Whites, Flaxseed, Soybean Oil, Dried Beet Pulp, Hydrolyzed Chicken Flavor, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Niacin Supplement, Thiamine Mononitrate, Vitamin A Supplement, Calcium Pantothenate, Vitamin B12 Supplement, Pyridoxine Hydrochloride, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Folic Acid, Vitamin D3 Supplement), Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate, Manganous Oxide, Sodium Selenite), Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---|\r\n|Crude Protein|5.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.5% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)|\r\n|---|---|\r\n|5 lb|5/8|\r\n|10 lb|1|\r\n|20 lb|1 2/3|\r\n|30 lb|2 1/4|\r\n|40 lb|2 3/4|\r\n|50 lb|3 1/4|\r\n|60 lb|3 2/3|\r\n|80 lb|4 2/3|\r\n|100 lb|5 1/2|\r\n|120 lb|6 1/4|",
+          "transition_instructions": "New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7 day period. Keep fresh water available at all times!",
+          "calorie_content": "360 kcal/can",
+          "autoship_price": "$46.62",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069c5022-8253-7b49-8000-6f3f87a1df26._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/184531",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "184531",
+            "source_variant_id": "157791",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.8-oz can, 12 count"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 3,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Chicken & Vegetable"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Chicken & Vegetable"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": [
+          "parent_content_not_applicable_to_discriminator"
+        ],
+        "rejected_content": {
+          "description": "Does your best friend sometimes struggle with a finicky tummy or an irritatingly itchy patch of skin? Hill’s understands that seeing a beloved pup experience discomfort can be tough. That’s why Hill’s Science Diet Adult Sensitive Stomach & Skin Salmon & Vegetable Entrée wet dog food is thoughtfully crafted to offer comprehensive relief and support for adult dogs with these common challenges. If you’re searching for a dog food for sensitive stomachs that also nurtures skin health, this biology-based formula provides an ideal solution. It’s more than just a meal; it’s a commitment to their comfort and vitality. This highly digestible recipe features prebiotic fiber, which acts like a tiny tune-up for the gut, feeding beneficial bacteria to support a balanced microbiome. This scientific approach helps ease digestion and ensures optimal nutrient absorption, so their body gets the most out of every bite. Beyond gut health, this entrée is enriched with powerful nutrients like vitamin E and omega-6 fatty acids, essential building blocks that work to nourish your pet’s skin, helping to keep their coat healthy and beautifully lustrous. Plus, with a blend of antioxidants including vitamins C and E, it actively helps support a strong immune system, giving pet parents peace of mind. Hill’s Science Diet uses decades of cutting-edge research to create delicious and effective meals, ensuring pets receive the advanced nutrition they need to thrive.",
+          "ingredients": "Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "Cover and refrigerate unused portion. Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+          "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup."
+        },
+        "rejected_reasons": [
+          "primary_mismatch: dim=flavor, expects=['chicken'], desc_primary=salmon, ingr_primary=chicken"
+        ]
+      }
+    },
+    {
+      "source_group_id": "102101:flavor:salmon-vegetable",
+      "title": "Hill's Science Diet Adult Sensitive Stomach & Sensitive Skin Grain-Free Salmon & Vegetable Entree Wet Dog Food",
+      "flavor": "Salmon & Vegetable",
+      "discriminator": {
+        "flavor": "Salmon & Vegetable"
+      },
+      "brand": "Hill's Science Diet",
+      "handle_slug": "hills-science-diet-adult-sensitive-salmon-vegetable",
+      "category_path": [],
+      "description": "Does your best friend sometimes struggle with a finicky tummy or an irritatingly itchy patch of skin? Hill’s understands that seeing a beloved pup experience discomfort can be tough. That’s why Hill’s Science Diet Adult Sensitive Stomach & Skin Salmon & Vegetable Entrée wet dog food is thoughtfully crafted to offer comprehensive relief and support for adult dogs with these common challenges. If you’re searching for a dog food for sensitive stomachs that also nurtures skin health, this biology-based formula provides an ideal solution. It’s more than just a meal; it’s a commitment to their comfort and vitality. This highly digestible recipe features prebiotic fiber, which acts like a tiny tune-up for the gut, feeding beneficial bacteria to support a balanced microbiome. This scientific approach helps ease digestion and ensures optimal nutrient absorption, so their body gets the most out of every bite. Beyond gut health, this entrée is enriched with powerful nutrients like vitamin E and omega-6 fatty acids, essential building blocks that work to nourish your pet’s skin, helping to keep their coat healthy and beautifully lustrous. Plus, with a blend of antioxidants including vitamins C and E, it actively helps support a strong immune system, giving pet parents peace of mind. Hill’s Science Diet uses decades of cutting-edge research to create delicious and effective meals, ensuring pets receive the advanced nutrition they need to thrive.",
+      "ingredients": "Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).",
+      "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|",
+      "feeding_instructions": "Cover and refrigerate unused portion. Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+      "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Salmon & Vegetable"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Hill's Science Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Salmon & Vegetable",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Salmon & Vegetable"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Salmon & Vegetable",
+        "custom.flavor": "Salmon & Vegetable"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/067f8357-910c-76c5-8000-ef0077fe145c._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/069c5023-68ff-7211-8000-0e29a971db11._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/hills-science-diet-adult-sensitive-stomach-skin-grain-free-salmon-vegetable-entree-canned-dog-food-12-8oz-case-of-24/img-311656._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "1804598",
+          "source_variant_id": "1804598",
+          "sku": "1804598",
+          "identifiers": {
+            "upc": "152742304519",
+            "gtin": "152742304519",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1804598",
+            "source_item_id": "1804598"
+          },
+          "title": "Hill's Science Diet Adult Sensitive Stomach & Sensitive Skin Grain-Free Salmon & Vegetable Entree Wet Dog Food, 12.8-oz can, case of 4",
+          "price": "$21.99",
+          "compare_at_price": null,
+          "description": "Does your best friend sometimes struggle with a finicky tummy or an irritatingly itchy patch of skin? Hill’s understands that seeing a beloved pup experience discomfort can be tough. That’s why Hill’s Science Diet Adult Sensitive Stomach & Skin Salmon & Vegetable Entrée wet dog food is thoughtfully crafted to offer comprehensive relief and support for adult dogs with these common challenges. If you’re searching for a dog food for sensitive stomachs that also nurtures skin health, this biology-based formula provides an ideal solution. It’s more than just a meal; it’s a commitment to their comfort and vitality. This highly digestible recipe features prebiotic fiber, which acts like a tiny tune-up for the gut, feeding beneficial bacteria to support a balanced microbiome. This scientific approach helps ease digestion and ensures optimal nutrient absorption, so their body gets the most out of every bite. Beyond gut health, this entrée is enriched with powerful nutrients like vitamin E and omega-6 fatty acids, essential building blocks that work to nourish your pet’s skin, helping to keep their coat healthy and beautifully lustrous. Plus, with a blend of antioxidants including vitamins C and E, it actively helps support a strong immune system, giving pet parents peace of mind. Hill’s Science Diet uses decades of cutting-edge research to create delicious and effective meals, ensuring pets receive the advanced nutrition they need to thrive.",
+          "ingredients": "Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "Cover and refrigerate unused portion. Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+          "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+          "calorie_content": "379 kcal/12.8 oz can",
+          "autoship_price": "$20.89",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/067f8357-910c-76c5-8000-ef0077fe145c._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/1804598",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1804598",
+            "source_variant_id": "1804598",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.8-oz can, case of 4"
+        },
+        {
+          "source_entry_id": "102101",
+          "source_variant_id": "74199",
+          "sku": "74199",
+          "identifiers": {
+            "upc": "052742304519",
+            "gtin": "052742304519",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "74199",
+            "source_item_id": "74199"
+          },
+          "title": "Hill's Science Diet Adult Sensitive Stomach & Sensitive Skin Grain-Free Salmon & Vegetable Entree Wet Dog Food, 12.8-oz can, case of 12",
+          "price": "$49.08",
+          "compare_at_price": null,
+          "description": "Does your best friend sometimes struggle with a finicky tummy or an irritatingly itchy patch of skin? Hill’s understands that seeing a beloved pup experience discomfort can be tough. That’s why Hill’s Science Diet Adult Sensitive Stomach & Skin Salmon & Vegetable Entrée wet dog food is thoughtfully crafted to offer comprehensive relief and support for adult dogs with these common challenges. If you’re searching for a dog food for sensitive stomachs that also nurtures skin health, this biology-based formula provides an ideal solution. It’s more than just a meal; it’s a commitment to their comfort and vitality. This highly digestible recipe features prebiotic fiber, which acts like a tiny tune-up for the gut, feeding beneficial bacteria to support a balanced microbiome. This scientific approach helps ease digestion and ensures optimal nutrient absorption, so their body gets the most out of every bite. Beyond gut health, this entrée is enriched with powerful nutrients like vitamin E and omega-6 fatty acids, essential building blocks that work to nourish your pet’s skin, helping to keep their coat healthy and beautifully lustrous. Plus, with a blend of antioxidants including vitamins C and E, it actively helps support a strong immune system, giving pet parents peace of mind. Hill’s Science Diet uses decades of cutting-edge research to create delicious and effective meals, ensuring pets receive the advanced nutrition they need to thrive.",
+          "ingredients": "Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "Cover and refrigerate unused portion. Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+          "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+          "calorie_content": "379 kcal/12.8 oz can",
+          "autoship_price": "$46.63",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069c5023-68ff-7211-8000-0e29a971db11._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/102101",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "102101",
+            "source_variant_id": "74199",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.8-oz can, case of 12"
+        },
+        {
+          "source_entry_id": "383142",
+          "source_variant_id": "356913",
+          "sku": "356913",
+          "identifiers": {
+            "upc": null,
+            "gtin": null,
+            "ean": null,
+            "mpn": null,
+            "source_sku": "356913",
+            "source_item_id": "356913"
+          },
+          "title": "Hill's Science Diet Adult Sensitive Stomach & Skin Grain-Free Salmon & Vegetable Entree Canned Dog Food, 12.8-oz, bundle of 24",
+          "price": "$98.16",
+          "compare_at_price": null,
+          "description": "Does your best friend sometimes struggle with a finicky tummy or an irritatingly itchy patch of skin? Hill’s understands that seeing a beloved pup experience discomfort can be tough. That’s why Hill’s Science Diet Adult Sensitive Stomach & Skin Salmon & Vegetable Entrée wet dog food is thoughtfully crafted to offer comprehensive relief and support for adult dogs with these common challenges. If you’re searching for a dog food for sensitive stomachs that also nurtures skin health, this biology-based formula provides an ideal solution. It’s more than just a meal; it’s a commitment to their comfort and vitality. This highly digestible recipe features prebiotic fiber, which acts like a tiny tune-up for the gut, feeding beneficial bacteria to support a balanced microbiome. This scientific approach helps ease digestion and ensures optimal nutrient absorption, so their body gets the most out of every bite. Beyond gut health, this entrée is enriched with powerful nutrients like vitamin E and omega-6 fatty acids, essential building blocks that work to nourish your pet’s skin, helping to keep their coat healthy and beautifully lustrous. Plus, with a blend of antioxidants including vitamins C and E, it actively helps support a strong immune system, giving pet parents peace of mind. Hill’s Science Diet uses decades of cutting-edge research to create delicious and effective meals, ensuring pets receive the advanced nutrition they need to thrive.",
+          "ingredients": "Chicken Broth, Salmon, Carrots, Turkey, Potatoes, Green Beans, Potato Starch, Pea Protein, Sugar, Egg Whites, Chicken Fat, Dried Whey, Dried Beet Pulp, Soybean Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Vitamin A Supplement, Biotin, Folic Acid), Taurine, minerals (Zinc Oxide, Ferrous Sulfate, Copper Sulfate, Manganese Sulfate, Manganous Oxide, Calcium Iodate).",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|3.0% min|\r\n|Crude Fiber|1.0% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "Cover and refrigerate unused portion. Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+          "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+          "calorie_content": "379 kcal/12.8 oz can",
+          "autoship_price": "$93.25",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/hills-science-diet-adult-sensitive-stomach-skin-grain-free-salmon-vegetable-entree-canned-dog-food-12-8oz-case-of-24/img-311656._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-sensitive/dp/383142",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "383142",
+            "source_variant_id": "356913",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "bundle of 24"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 3,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Salmon & Vegetable"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Salmon & Vegetable"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 79,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 custom.source_flavor does not match grouped flavor.",
+      "Group 0 metafields_plan missing complex fields.",
+      "Variant 356956 missing gtin.",
+      "Group 1 custom.source_flavor does not match grouped flavor.",
+      "Group 1 metafields_plan missing complex fields.",
+      "Variant 356913 missing gtin.",
+      "Group 2 custom.source_flavor does not match grouped flavor.",
+      "Group 2 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 7,
+      "variants_with_gtin": 5,
+      "variants_with_upc": 5,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 2,
+      "gtin_coverage_percent": 71.42857142857143
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 7,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 6,
+      "guaranteed_analysis": 6,
+      "feeding_instructions": 6,
+      "transition_instructions": 6,
+      "description": 7,
+      "calorie_content": 6,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

@@ -1,0 +1,15 @@
+{
+  "enriched": 4,
+  "failed": 0,
+  "wrong_product_api_rejected": 0,
+  "slug_mismatch": 0,
+  "fields_filled": {
+    "ingredients": 3,
+    "guaranteed_analysis": 3,
+    "feeding_instructions": 3,
+    "transition_instructions": 3,
+    "description": 4,
+    "calorie_content": 3,
+    "images": 0
+  }
+}

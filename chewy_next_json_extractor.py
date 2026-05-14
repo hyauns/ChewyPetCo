@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import re
 import sys
@@ -14,6 +15,46 @@ console = Console()
 OUT_DIR = Path(config.OUTPUT_DIR)
 CACHE_DIR = OUT_DIR / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# Chewy Apollo identity helpers
+# -----------------------------
+# - Apollo Item key encodes the entryID via base64: "Item:SXRlbToxMDE2MTA=" -> entryID 101610
+# - entryID is what /dp/{X} URLs use; partNumber is the SKU surfaced in product data.
+
+def decode_apollo_entry_id(apollo_key: str):
+    if not apollo_key or ":" not in apollo_key:
+        return None
+    suffix = apollo_key.split(":", 1)[1]
+    try:
+        decoded = base64.b64decode(suffix).decode("utf-8", errors="replace")
+    except Exception:
+        return None
+    if ":" in decoded:
+        return decoded.split(":", 1)[1]
+    return decoded
+
+
+# Attribute classification for product splitting.
+# Variant-axis attrs stay inside one Shopify product as variant options (Size selector).
+# Everything else (Flavor, Breed Size, Life Stage, Color, ...) becomes a product
+# discriminator: one Shopify product per unique value combination.
+#
+# Match exact attribute-name tokens, not substrings, otherwise "Breed Size" gets
+# mis-classified as size-axis because it contains the word "size".
+VARIANT_AXIS_KEYWORDS = frozenset({
+    "size", "weight", "pack", "count", "case", "bundle", "quantity", "carton",
+})
+
+
+def is_variant_axis_attr(name: str) -> bool:
+    """True only if every token in the attribute name is a size-axis keyword."""
+    if not name:
+        return False
+    tokens = re.findall(r"[a-z0-9]+", str(name).lower())
+    if not tokens:
+        return False
+    return all(t in VARIANT_AXIS_KEYWORDS for t in tokens)
 
 def find_json_paths(data, target_keywords, current_path="", results=None):
     if results is None:
@@ -97,6 +138,233 @@ async def fetch_initial_html(url: str, page) -> str:
         raise
     await asyncio.sleep(4)
     return await read_page_content_with_retry(page)
+
+
+def _collect_image_urls(img_nodes) -> list:
+    out = []
+    if not isinstance(img_nodes, list):
+        return out
+    for img in img_nodes:
+        if isinstance(img, dict):
+            img_url = img.get("url") or img.get("src") or img.get("originalUrl") or ""
+            if not img_url:
+                for ik, iv in img.items():
+                    if "url" in str(ik).lower() and isinstance(iv, str) and iv.startswith("http"):
+                        img_url = iv
+                        break
+            if img_url:
+                out.append(img_url)
+        elif isinstance(img, str) and img:
+            out.append(img)
+    return out
+
+
+def _apply_usage(result: dict, usage: str, content_str: str, overwrite: bool = True):
+    if not content_str or not isinstance(content_str, str):
+        return
+    usage = (usage or "").upper()
+    field_map = {
+        "INGREDIENTS": "ingredients",
+        "FEEDING_INSTRUCTIONS": "feeding_instructions",
+        "GUARANTEED_ANALYSIS": "guaranteed_analysis",
+        "DESCRIPTION": "description",
+        "TRANSITION_INSTRUCTIONS": "transition_instructions",
+    }
+    if "CALORI" in usage:
+        if overwrite or not result.get("calorie_content"):
+            result["calorie_content"] = content_str
+        return
+    field = field_map.get(usage)
+    if not field:
+        return
+    if overwrite or not result.get(field):
+        result[field] = content_str
+
+
+def extract_variant_info_from_apollo(next_data: dict,
+                                     target_variant_id: str = None,
+                                     target_entry_id: str = None) -> dict:
+    """Extract variant content from the Item node matching target_entry_id and/or target_variant_id (partNumber).
+
+    Matching priority (when both provided): entry_id (decoded Apollo key) AND partNumber.
+    When only one provided, use whichever matches.
+    """
+    result = {
+        "ingredients": "",
+        "guaranteed_analysis": "",
+        "description": "",
+        "feeding_instructions": "",
+        "transition_instructions": "",
+        "calorie_content": "",
+        "images": []
+    }
+    apollo_state = next_data.get("pageProps", {}).get("__APOLLO_STATE__", {})
+
+    for k, v in apollo_state.items():
+        if not (k.startswith("Item:") and isinstance(v, dict)):
+            continue
+        if target_variant_id is not None or target_entry_id is not None:
+            entry_id = decode_apollo_entry_id(k)
+            part_number = str(v.get("partNumber", ""))
+            matches_entry = target_entry_id is None or str(entry_id) == str(target_entry_id)
+            matches_part = target_variant_id is None or part_number == str(target_variant_id)
+            if not (matches_entry and matches_part):
+                continue
+
+        v_imgs = _collect_image_urls(v.get("images") or v.get("media"))
+        if not v_imgs:
+            full_img = v.get("fullImage")
+            if isinstance(full_img, dict):
+                # parameterized GraphQL keys like url({"autoCrop":true,"square":1800})
+                for ik, iv in full_img.items():
+                    if "url(" in str(ik) and isinstance(iv, str) and iv.startswith("http"):
+                        v_imgs.append(iv)
+        if not v_imgs:
+            for pk, pv in apollo_state.items():
+                if pk.startswith("Product:") and isinstance(pv, dict):
+                    v_imgs = _collect_image_urls(pv.get("images") or pv.get("media"))
+                    break
+        if v_imgs:
+            result["images"] = v_imgs
+
+        desc = v.get("description")
+        if isinstance(desc, str) and desc.strip():
+            result["description"] = desc.strip()
+
+        for group in (v.get("infoGroups") or []):
+            if not isinstance(group, dict):
+                continue
+            for section in (group.get("sections") or []):
+                if not isinstance(section, dict):
+                    continue
+                content_obj = section.get("content")
+                content_str = ""
+                if isinstance(content_obj, dict):
+                    content_str = content_obj.get("content", "")
+                elif isinstance(content_obj, str):
+                    content_str = content_obj
+                _apply_usage(result, section.get("usage"), content_str, overwrite=True)
+            # Legacy fallback (flat usage/content on the group itself)
+            content_raw = group.get("content")
+            content_str = ""
+            if isinstance(content_raw, dict):
+                content_str = content_raw.get("content", "")
+            elif isinstance(content_raw, str):
+                content_str = content_raw
+            _apply_usage(result, group.get("usage"), content_str, overwrite=False)
+
+        break
+    return result
+
+async def enrich_variants_from_api(normalized_product: dict, page, build_id: str) -> dict:
+    """Fetch per-variant API data (one call per variant entryID).
+
+    Each Chewy variant has its own content (feeding_instructions can differ per
+    breed-size variant), so we fetch every variant individually instead of one
+    candidate per flavor. Cache keys on entryID+buildId so re-runs are free.
+    """
+    if not build_id or not page:
+        return {"enriched": 0, "failed": 0, "reason": "no_build_id_or_page"}
+
+    variants = normalized_product.get("variants", [])
+    stats = {
+        "enriched": 0,
+        "failed": 0,
+        "wrong_product_api_rejected": 0,
+        "slug_mismatch": 0,
+        "fields_filled": {
+            "ingredients": 0, "guaranteed_analysis": 0,
+            "feeding_instructions": 0, "transition_instructions": 0,
+            "description": 0, "calorie_content": 0, "images": 0,
+        },
+    }
+
+    for v in variants:
+        entry_id = v.get("source_entry_id") or v.get("source_variant_id")
+        part_number = v.get("source_variant_id")
+        v_url = v.get("variant_url")
+        if not entry_id or not v_url:
+            stats["failed"] += 1
+            continue
+
+        next_url = build_next_data_url(v_url, build_id)
+        if not next_url:
+            stats["failed"] += 1
+            continue
+
+        try:
+            var_data = await fetch_next_data_json(next_url, page, build_id, entry_id)
+        except Exception as e:
+            console.print(f"[red]Variant enrichment exception for {entry_id}: {e}[/red]")
+            stats["failed"] += 1
+            continue
+
+        if var_data is None:
+            stats["slug_mismatch"] += 1
+            v.setdefault("warnings", []).append("api_enrichment_failed")
+            v["content_source"] = {"type": "apollo_variant_api",
+                                   "source_entry_id": entry_id,
+                                   "source_variant_id": part_number,
+                                   "confidence": "missing",
+                                   "reason": "api_404_or_null"}
+            continue
+
+        # Validate: matching item must exist with entryID AND partNumber both matching
+        apollo_resp = var_data.get("pageProps", {}).get("__APOLLO_STATE__", {})
+        response_valid = False
+        for rk, rv in apollo_resp.items():
+            if rk.startswith("Item:") and isinstance(rv, dict):
+                eid_decoded = decode_apollo_entry_id(rk)
+                if str(eid_decoded) == str(entry_id) and str(rv.get("partNumber", "")) == str(part_number):
+                    response_valid = True
+                    break
+        if not response_valid:
+            stats["wrong_product_api_rejected"] += 1
+            v.setdefault("warnings", []).append("api_enrichment_failed")
+            v["content_source"] = {"type": "apollo_variant_api",
+                                   "source_entry_id": entry_id,
+                                   "source_variant_id": part_number,
+                                   "confidence": "missing",
+                                   "reason": "wrong_product_api_response"}
+            continue
+
+        v_info = extract_variant_info_from_apollo(
+            var_data, target_variant_id=part_number, target_entry_id=entry_id
+        )
+
+        # Apply to THIS variant only (per-variant content)
+        filled_any = False
+        for field in ("ingredients", "guaranteed_analysis", "description",
+                      "feeding_instructions", "transition_instructions",
+                      "calorie_content"):
+            if v_info.get(field) and not v.get(field):
+                v[field] = v_info[field]
+                stats["fields_filled"][field] += 1
+                filled_any = True
+        if v_info.get("images"):
+            # moe/ URLs are real variant images per Chewy CDN; always treat as valid
+            if not v.get("images"):
+                v["images"] = v_info["images"]
+                stats["fields_filled"]["images"] += 1
+                filled_any = True
+
+        if filled_any:
+            stats["enriched"] += 1
+            v["content_source"] = {"type": "apollo_variant_api",
+                                   "source_entry_id": entry_id,
+                                   "source_variant_id": part_number,
+                                   "confidence": "high"}
+        else:
+            v["content_source"] = {"type": "apollo_variant_api",
+                                   "source_entry_id": entry_id,
+                                   "source_variant_id": part_number,
+                                   "confidence": "low",
+                                   "reason": "api_response_had_no_new_content"}
+
+        await asyncio.sleep(1.5)
+
+    return stats
+
 
 def extract_next_data_from_html(html: str) -> dict:
     m = re.search(r'<script id="__NEXT_DATA__" type="application/json">([^<]+)</script>', html)
@@ -207,34 +475,6 @@ def build_variant_identifiers(gtin: str, source_sku: str, source_item_id: str, m
                 
     return idents
 
-def extract_variant_info_from_apollo(next_data: dict) -> dict:
-    """Extracts description, ingredients, guaranteed_analysis from a variant's API JSON response."""
-    result = {"description": "", "ingredients": "", "guaranteed_analysis": ""}
-    props = next_data.get("pageProps", {})
-    apollo_state = props.get("__APOLLO_STATE__", {})
-    
-    for k, v in apollo_state.items():
-        if k.startswith("Item:") and "infoGroups" in v:
-            v_info = v.get("infoGroups", [])
-            if isinstance(v_info, list):
-                for group in v_info:
-                    if not isinstance(group, dict): continue
-                    sections = group.get("sections", [])
-                    for sec in sections:
-                        if not isinstance(sec, dict): continue
-                        usage = sec.get("usage", "")
-                        content_node = sec.get("content", {})
-                        content_str = content_node.get("content", "") if isinstance(content_node, dict) else ""
-                        if usage == "DESCRIPTION":
-                            result["description"] = content_str
-                        elif usage == "INGREDIENTS":
-                            result["ingredients"] = content_str
-                        elif usage == "GUARANTEED_ANALYSIS":
-                            result["guaranteed_analysis"] = content_str
-            # Stop after finding the first Item: with infoGroups (since this is a variant-specific fetch)
-            break
-    return result
-
 def parse_apollo_product(next_data: dict, source_url: str) -> dict:
     props = next_data.get("props", {}).get("pageProps", {})
     apollo_state = props.get("__APOLLO_STATE__", {})
@@ -254,14 +494,14 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
     breadcrumbs = []
     
     product_node = None
-    item_nodes = []
-    
+    item_nodes = []  # list of (apollo_key, item_dict)
+
     for k, v in apollo_state.items():
         if not isinstance(v, dict): continue
         if k.startswith("Product:"):
             product_node = v
         elif k.startswith("Item:"):
-            item_nodes.append(v)
+            item_nodes.append((k, v))
         if v.get("__typename") == "Breadcrumb":
             breadcrumbs.append(v.get("name"))
         # Collect product-level images from Apollo media/image nodes
@@ -269,6 +509,18 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             img_url = v.get("url") or v.get("src") or v.get("originalUrl")
             if img_url and img_url not in images:
                 images.append(img_url)
+
+    # Filter item_nodes to canonical variants only when Product.items({...}) is present.
+    canonical_refs = set()
+    if product_node:
+        for pk, pv in product_node.items():
+            if isinstance(pk, str) and pk.startswith("items(") and isinstance(pv, list):
+                for it in pv:
+                    if isinstance(it, dict) and it.get("__ref"):
+                        canonical_refs.add(it["__ref"])
+                break
+    if canonical_refs:
+        item_nodes = [(k, v) for k, v in item_nodes if k in canonical_refs]
             
     if product_node:
         title = product_node.get("name", "")
@@ -286,12 +538,13 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
                 elif isinstance(img, str) and img not in images:
                     images.append(img)
         
-    import base64
     base64_id = base64.b64encode(f"Item:{base_product_id}".encode()).decode()
-    main_item = apollo_state.get(f"Item:{base64_id}")
+    main_item_key = f"Item:{base64_id}"
+    main_item = apollo_state.get(main_item_key)
     if not main_item and item_nodes:
-        main_item = item_nodes[0]
+        main_item_key, main_item = item_nodes[0]
         
+    transition_inst = ""
     if main_item:
         if not title: title = main_item.get("name", "")
         if not desc: desc = main_item.get("description", "")
@@ -311,24 +564,50 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
                 elif usage == "FEEDING_INSTRUCTIONS":
                     if feeding_inst is None: feeding_inst = content
                     else: feeding_inst += "\n\n" + content
+                elif usage == "TRANSITION_INSTRUCTIONS":
+                    transition_inst = content
                 elif usage == "DESCRIPTION":
                     desc = content
                 elif usage == "KEY_BENEFITS":
                     specs["Key Benefits"] = content
-                    
+
+    # Structured product-level attribute table for Specifications.
+    # Chewy stores these on Product as keys like attributes({"identifier":"PetType"})
+    # plus a generic attributes({"includeEnsemble":true,"usage":["DEFINING"]}).
+    product_attributes_table = {}
+    if product_node:
+        for k, v in product_node.items():
+            if not (isinstance(k, str) and k.startswith("attributes(")):
+                continue
+            # Parse identifier from the key, e.g. attributes({"identifier":"PetType"}) -> PetType
+            id_match = re.search(r'"identifier"\s*:\s*"([^"]+)"', k)
+            label = id_match.group(1) if id_match else None
+            values = []
+            if isinstance(v, list):
+                for entry in v:
+                    if isinstance(entry, dict):
+                        for av in (entry.get("values") or []):
+                            if isinstance(av, dict) and "__ref" in av:
+                                rn = apollo_state.get(av["__ref"], {})
+                                val = rn.get("value")
+                                if val: values.append(val)
+            if label and values:
+                product_attributes_table[label] = values
+
     variants_data = item_nodes
     normalized_variants = []
-    for v in variants_data:
+    for apollo_key, v in variants_data:
         v_id = v.get("partNumber") or v.get("id")
         if not v_id: continue
-        
+        entry_id = decode_apollo_entry_id(apollo_key) or str(v_id)
+
         option_values = {}
         def_attrs = v.get("definingAttributes", [])
         if isinstance(def_attrs, list):
             for attr in def_attrs:
                 if isinstance(attr, dict) and "name" in attr:
                     option_values[attr.get("name", "").lower()] = attr.get("value", "")
-                    
+
         attr_key = next((ak for ak in v.keys() if "attributeValues" in ak), None)
         if attr_key:
             val_list = v.get(attr_key)
@@ -343,15 +622,42 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
                                 attr_name = attr_meta.get("name")
                                 if attr_name:
                                     option_values[attr_name.lower()] = ref_data.get("value", "")
-                                    
+
         price = v.get("advertisedPrice") or v.get("price")
         if isinstance(price, dict):
             price = price.get("salePrice") or price.get("price")
-            
-        in_stock = v.get("inStock")
-        if in_stock is None:
-            in_stock = v.get("availability") == "AVAILABLE"
-            
+
+        # Stock detection — multiple signals from Chewy's Apollo state:
+        #   inStock, isInStock (boolean), availability/availabilityStatus (enum strings),
+        #   isUnavailable, isDiscontinued, isPermanentlyDiscontinued.
+        avail_status = v.get("availabilityStatus") or v.get("availability") or ""
+        avail_upper = str(avail_status).upper()
+        in_stock_signals = [v.get("inStock"), v.get("isInStock")]
+        unavailable_flags = [v.get("isUnavailable"), v.get("isDiscontinued"),
+                             v.get("isPermanentlyDiscontinued")]
+        oos_status_strings = {"OUT_OF_STOCK", "UNAVAILABLE", "DISCONTINUED",
+                              "TEMPORARILY_UNAVAILABLE", "TEMPORARILY_OUT_OF_STOCK",
+                              "PERMANENTLY_DISCONTINUED"}
+        if any(f is True for f in unavailable_flags):
+            in_stock = False
+            stock_reason = "explicit_unavailable_flag"
+        elif avail_upper in oos_status_strings:
+            in_stock = False
+            stock_reason = f"availability_status:{avail_upper}"
+        elif any(s is True for s in in_stock_signals):
+            in_stock = True
+            stock_reason = "in_stock_signal_true"
+        elif avail_upper == "AVAILABLE" or avail_upper == "IN_STOCK":
+            in_stock = True
+            stock_reason = f"availability_status:{avail_upper}"
+        elif any(s is False for s in in_stock_signals):
+            in_stock = False
+            stock_reason = "in_stock_signal_false"
+        else:
+            in_stock = None
+            stock_reason = "unknown_no_signal"
+        out_of_stock = (in_stock is False)
+
         v_images = []
         full_img = v.get("fullImage", {})
         if isinstance(full_img, dict):
@@ -363,33 +669,42 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
                     if "url(" in img_k:
                         v_images.append(img_v)
                         break
-                        
+
         raw_gtin = v.get("gtin")
         mpn = v.get("manufacturerPartNumber")
         idents = build_variant_identifiers(raw_gtin, v_id, v_id, mpn)
-        
-        # Extract variant-specific description and ingredients if available
+
+        # Variant-specific content (from inline infoGroups on this Item)
         v_desc = ""
         v_ingredients = ""
         v_guaranteed = ""
-        v_info = v.get("infoGroups", [])
-        if isinstance(v_info, list):
-            for group in v_info:
-                if not isinstance(group, dict): continue
-                sections = group.get("sections", [])
-                for sec in sections:
-                    if not isinstance(sec, dict): continue
-                    usage = sec.get("usage", "")
-                    content_node = sec.get("content", {})
-                    content_str = content_node.get("content", "") if isinstance(content_node, dict) else ""
-                    if usage == "DESCRIPTION":
-                        v_desc = content_str
-                    elif usage == "INGREDIENTS":
-                        v_ingredients = content_str
-                    elif usage == "GUARANTEED_ANALYSIS":
-                        v_guaranteed = content_str
+        v_feeding = ""
+        v_transition = ""
+        v_calorie = ""
+        for group in (v.get("infoGroups") or []):
+            if not isinstance(group, dict): continue
+            for sec in (group.get("sections") or []):
+                if not isinstance(sec, dict): continue
+                usage = (sec.get("usage") or "").upper()
+                content_node = sec.get("content", {})
+                content_str = content_node.get("content", "") if isinstance(content_node, dict) else ""
+                if not content_str:
+                    continue
+                if usage == "DESCRIPTION":
+                    v_desc = content_str
+                elif usage == "INGREDIENTS":
+                    v_ingredients = content_str
+                elif usage == "GUARANTEED_ANALYSIS":
+                    v_guaranteed = content_str
+                elif usage == "FEEDING_INSTRUCTIONS":
+                    v_feeding = content_str
+                elif usage == "TRANSITION_INSTRUCTIONS":
+                    v_transition = content_str
+                elif "CALORI" in usage:
+                    v_calorie = content_str
 
         normalized_variants.append({
+            "source_entry_id": entry_id,
             "source_variant_id": v_id,
             "sku": v_id,
             "identifiers": idents,
@@ -400,21 +715,30 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             "description": v_desc,
             "ingredients": v_ingredients,
             "guaranteed_analysis": v_guaranteed,
+            "feeding_instructions": v_feeding,
+            "transition_instructions": v_transition,
+            "calorie_content": v_calorie,
             "autoship_price": v.get("autoshipPrice"),
-            "availability": v.get("availability"),
+            "availability": avail_status,
             "in_stock": in_stock,
-            "images": v_images, 
-            "variant_url": f"https://www.chewy.com/{slug}/dp/{v_id}"
+            "out_of_stock": out_of_stock,
+            "stock_reason": stock_reason,
+            "shopify_inventory_policy": "deny" if out_of_stock else "continue",
+            "images": v_images,
+            "variant_url": f"https://www.chewy.com/{slug}/dp/{entry_id}",
         })
-        
+
     if not normalized_variants:
         price = None
         if product_node and isinstance(product_node.get("price"), dict):
             price = product_node["price"].get("salePrice") or product_node["price"].get("price")
         if not price and main_item and isinstance(main_item.get("price"), dict):
             price = main_item["price"].get("salePrice") or main_item["price"].get("price")
-            
+
+        fallback_entry = decode_apollo_entry_id(main_item_key) if main_item else None
+        fallback_entry = fallback_entry or base_product_id
         normalized_variants.append({
+            "source_entry_id": fallback_entry,
             "source_variant_id": base_product_id,
             "sku": base_product_id,
             "identifiers": build_variant_identifiers(None, base_product_id, base_product_id, None),
@@ -426,7 +750,10 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
             "availability": None,
             "in_stock": True,
             "images": images,
-            "variant_url": source_url
+            "variant_url": f"https://www.chewy.com/{slug}/dp/{fallback_entry}",
+            "feeding_instructions": "",
+            "transition_instructions": "",
+            "calorie_content": "",
         })
         
     # Fallback: if no product-level images found, collect from all variant images
@@ -450,6 +777,8 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
         "guaranteed_analysis": guaranteed_analysis,
         "specifications": specs,
         "feeding_instructions": feeding_inst,
+        "transition_instructions": transition_inst,
+        "product_attributes_table": product_attributes_table,
         "images": images,
         "variants": normalized_variants,
         "warnings": []
@@ -960,146 +1289,391 @@ def normalize_chewy_product(raw_product: dict) -> dict:
     
     return raw_product
 
-def split_product_by_flavor(normalized_product: dict) -> dict:
-    variants = normalized_product.get("variants", [])
-    groups = {}
-    for v in variants:
-        opts = v.get("option_values", {})
-        flavor = None
-        for k, val in opts.items():
-            if "flavor" in k.lower():
-                flavor = val
-                break
-        if not flavor:
-            flavor = "Default"
-            
-        if flavor not in groups:
-            groups[flavor] = []
-        groups[flavor].append(v)
-        
-    # Detect if this is a single product with no size/flavor variants
-    is_single_product = len(groups) == 1 and "Default" in groups
-    if is_single_product:
-        has_size_or_flavor_opts = False
-        for v in variants:
-            opts = v.get("option_values", {})
-            for k in opts:
-                if any(x in k.lower() for x in ["size", "weight", "count", "pack", "flavor"]):
-                    has_size_or_flavor_opts = True
-                    break
-            if has_size_or_flavor_opts:
-                break
-        is_single_product = not has_size_or_flavor_opts
+# Protein keywords for flavor matching
+_PROTEIN_KEYWORDS = [
+    "duck", "chicken", "beef", "lamb", "salmon", "turkey", "venison",
+    "pork", "catfish", "trout", "whitefish", "goat", "kangaroo", "rabbit",
+    "bison", "tuna", "herring", "mackerel", "sardine", "cod", "pollock",
+    "quail", "pheasant", "elk", "boar", "guinea fowl", "anchovy",
+]
 
+
+_BREED_SIZE_KEYWORDS = ["giant", "large", "medium", "small", "mini", "toy"]
+
+
+def _primary_keyword(text: str, vocab: list):
+    """Return the keyword from vocab that appears earliest as a whole word in text."""
+    if not text:
+        return None
+    earliest = len(text) + 1
+    hit = None
+    for kw in vocab:
+        m = re.search(r'\b' + re.escape(kw) + r'\b', text)
+        if m and m.start() < earliest:
+            earliest = m.start()
+            hit = kw
+    return hit
+
+
+def _content_matches_discriminator(parent_text_fields: dict,
+                                   discriminator_key: str,
+                                   discriminator_value: str) -> dict:
+    """Generalised safety check: does parent text content match this discriminator value?
+
+    For flavor → uses protein keyword check (Chicken vs Lamb etc.)
+    For breed size → uses breed size keyword check (Large vs Medium etc.)
+    Other → allow (returns safe=True)
+    """
+    if not discriminator_value or discriminator_value == "Default":
+        return {"safe": True, "reason": "default_value"}
+
+    key_lower = (discriminator_key or "").lower()
+    val_lower = discriminator_value.lower()
+
+    if "flavor" in key_lower:
+        vocab = _PROTEIN_KEYWORDS
+    elif "breed" in key_lower and "size" in key_lower:
+        vocab = _BREED_SIZE_KEYWORDS
+    else:
+        # No protein/breed-size dimension to check — allow parent content
+        return {"safe": True, "reason": "no_check_for_discriminator"}
+
+    allowed = {kw for kw in vocab if kw in val_lower}
+    if not allowed:
+        return {"safe": True, "reason": "value_has_no_known_keyword"}
+
+    text = " ".join([
+        parent_text_fields.get("description", ""),
+        parent_text_fields.get("ingredients", ""),
+    ]).lower()
+    if not text.strip():
+        return {"safe": True, "reason": "no_parent_text_content"}
+
+    primary_desc = _primary_keyword(parent_text_fields.get("description", "").lower(), vocab)
+    primary_ingr = _primary_keyword(parent_text_fields.get("ingredients", "").lower(), vocab)
+
+    if primary_desc and primary_desc in allowed:
+        return {"safe": True, "reason": "primary_keyword_matches"}
+    if not primary_desc and primary_ingr and primary_ingr in allowed:
+        return {"safe": True, "reason": "primary_keyword_matches_ingr"}
+    if not primary_desc and not primary_ingr:
+        return {"safe": True, "reason": "no_known_keyword_in_text"}
+
+    return {
+        "safe": False,
+        "reason": (f"primary_mismatch: dim={discriminator_key}, "
+                   f"expects={sorted(allowed)}, "
+                   f"desc_primary={primary_desc}, ingr_primary={primary_ingr}"),
+    }
+
+
+def _parent_content_matches_flavor(parent_text_fields: dict, flavor: str) -> dict:
+    """Backward-compatible wrapper. Prefer _content_matches_discriminator going forward."""
+    return _content_matches_discriminator(parent_text_fields, "flavor", flavor)
+
+
+_SIZE_SUFFIX_PATTERN = (
+    r"(?:,\s*|\s+-\s*|\s+)"
+    r"(?:\d+(?:\.\d+)?(?:-| )?(?:lb|oz|kg|g)\s*(?:bag|can|pouch|tray|bottle|box|carton|tub|tubes?)s?"
+    r"|\d+\s*(?:cans?|count|pack|pouches?|tubs?|tubes?)"
+    r"|\b(?:case|pack|bundle)\s+of\s+\d+(?:\s*\([^)]*\))?)"
+    r".*?$"
+)
+
+
+def _slugify(text: str) -> str:
+    return re.sub(r'[^a-z0-9]+', '-', str(text or "").lower()).strip('-')
+
+
+def _extract_size_value(variant: dict, fallback_title: str = "") -> str:
+    """Pick the size string to display for a variant (e.g. '24.2-lb bag')."""
+    title = variant.get("title") or fallback_title
+    match = re.search(_SIZE_SUFFIX_PATTERN, title, flags=re.IGNORECASE)
+    if match:
+        return match.group(0).strip(" ,-")
+    opts = variant.get("option_values", {}) or {}
+    for k, val in opts.items():
+        if is_variant_axis_attr(k) and val:
+            return str(val)
+    return "Default Title"
+
+
+def split_product_by_flavor(normalized_product: dict) -> dict:
+    """Split a normalized Chewy product into one Shopify product per non-Size defining-attribute
+    combination. Size-like attrs (Size, Weight, Pack, Count, Case, Bundle, Quantity) stay as variant axis.
+
+    Each Shopify product receives a stable handle/group_id and inherits parent content only when
+    it's safe for that discriminator value (e.g. parent "Chicken Recipe" text not applied to Lamb).
+    Variant-level content (per-variant API fetch) always takes precedence over parent.
+    """
+    variants = normalized_product.get("variants", [])
+
+    parent_text_fields = {
+        "description": normalized_product.get("description", "") or "",
+        "ingredients": normalized_product.get("ingredients", "") or "",
+        "guaranteed_analysis": normalized_product.get("guaranteed_analysis", "") or "",
+        "feeding_instructions": normalized_product.get("feeding_instructions", "") or "",
+        "transition_instructions": normalized_product.get("transition_instructions", "") or "",
+    }
+
+    # 1. Build discriminator tuple per variant: every non-axis defining attribute.
+    #    Group key is the sorted ((attr_name, value), ...) tuple — stable & unique.
+    groups = {}  # group_key -> {"discriminator": dict, "variants": list}
+    for v in variants:
+        opts = v.get("option_values", {}) or {}
+        disc = {}
+        for attr_name, attr_val in opts.items():
+            if not attr_val:
+                continue
+            if is_variant_axis_attr(attr_name):
+                continue
+            disc[attr_name] = attr_val
+        # Edge case: variant has no defining attrs at all → single-product fallback group
+        group_key = tuple(sorted(disc.items())) if disc else ()
+        if group_key not in groups:
+            groups[group_key] = {"discriminator": disc, "variants": []}
+        groups[group_key]["variants"].append(v)
+
+    is_multi_product = len(groups) > 1
     products_out = []
-    
-    for flavor, flavor_variants in groups.items():
-        base_title = flavor_variants[0].get("title") or normalized_product.get("title", "")
-        clean_title = base_title
-        
-        # Only strip size suffixes from title when product has multiple size/flavor variants
-        if not is_single_product:
-            suffix_pattern = r"(?:,\s*|\s+)(?:\d+(?:\.\d+)?(?:-| )?(?:lb|oz|kg|g)\s*(?:bag|can|pouch|tray|bottle|box|carton)s?|\d+\s*(?:cans?|count|pack|pouches?)|\b(?:case|pack)\s+of\s+\d+).*?$"
-            clean_title = re.sub(suffix_pattern, "", clean_title, flags=re.IGNORECASE)
-        
-        slug_flavor = re.sub(r'[^a-z0-9]+', '-', str(flavor).lower()).strip('-')
-        handle_slug = f"{normalized_product.get('slug', 'product')}"
-        if flavor != "Default":
-            handle_slug += f"-{slug_flavor}"
-            
-        group_id = f"{normalized_product.get('source_product_id')}"
-        if flavor != "Default":
-            group_id += f":flavor:{slug_flavor}"
-            
+
+    base_title = normalized_product.get("title", "") or ""
+    # Strip size suffix off the parent title so it's reusable as a product title.
+    base_clean_title = re.sub(_SIZE_SUFFIX_PATTERN, "", base_title,
+                              flags=re.IGNORECASE).strip() or base_title
+
+    for group_key, group in groups.items():
+        disc = group["discriminator"]
+        group_variants = group["variants"]
+
+        # Build product title:
+        #   "<base clean title> — <Attr1: Val1>, <Attr2: Val2>"
+        if disc:
+            disc_label_parts = []
+            for attr_name, attr_val in sorted(disc.items()):
+                # Title-case the attr name (already lowercase in option_values)
+                pretty_name = " ".join(w.capitalize() for w in attr_name.split())
+                disc_label_parts.append(f"{pretty_name}: {attr_val}")
+            disc_label = " — " + ", ".join(disc_label_parts)
+        else:
+            disc_label = ""
+
+        # Pick the most informative variant title for this group:
+        #   1. Maximise number of discriminator values present in the title
+        #   2. Then prefer the longest title (most complete)
+        # This avoids Chewy's habit of dropping breed-size words on the default variant
+        # (e.g. one variant is "Royal Canin … Dental Dry Dog Food" while siblings are
+        # "Royal Canin … Adult Dental Medium & Large Breed Dry Dog Food").
+        candidate_titles = [v.get("title", "") for v in group_variants if v.get("title")]
+
+        def _title_score(t):
+            tlow = t.lower()
+            matches = sum(1 for _, val in disc.items()
+                          if val and str(val).lower() in tlow)
+            return (matches, len(t))
+
+        best_title = max(candidate_titles, key=_title_score) if candidate_titles else base_title
+        v_clean_title = re.sub(_SIZE_SUFFIX_PATTERN, "", best_title,
+                               flags=re.IGNORECASE).strip()
+        product_title = v_clean_title or (base_clean_title + disc_label)
+
+        # Belt-and-braces: if a discriminator value is STILL missing from the chosen
+        # title (e.g. all variants in the group have the truncated name), inject it
+        # before the food-form anchor.
+        title_aug_log = []
+        for attr_name, attr_val in disc.items():
+            if not attr_val or str(attr_val).lower() in product_title.lower():
+                continue
+            anchor = re.search(r'\b(Dry|Wet|Canned|Freeze-Dried|Soft|Raw|Semi-Moist)\b',
+                               product_title, flags=re.IGNORECASE)
+            is_breed_size = "breed" in attr_name.lower() and "size" in attr_name.lower()
+            addition = (f"{attr_val} Breed" if is_breed_size else str(attr_val))
+            if anchor:
+                product_title = (
+                    product_title[:anchor.start()].rstrip()
+                    + " " + addition + " "
+                    + product_title[anchor.start():]
+                )
+            else:
+                product_title = product_title + " — " + addition
+            title_aug_log.append({"attr": attr_name, "value": attr_val, "injected": addition})
+
+        # Handle / slug
+        handle_parts = [_slugify(normalized_product.get("slug") or product_title)]
+        for _, val in sorted(disc.items()):
+            handle_parts.append(_slugify(val))
+        handle_slug = "-".join(p for p in handle_parts if p)
+
+        # Group ID
+        group_id = str(normalized_product.get("source_product_id", "unknown"))
+        for attr_name, val in sorted(disc.items()):
+            group_id += f":{_slugify(attr_name)}:{_slugify(val)}"
+
+        # Choose primary flavor (for backward compat with `flavor` field downstream)
+        primary_flavor = None
+        for attr_name, val in disc.items():
+            if "flavor" in attr_name.lower():
+                primary_flavor = val
+                break
+
+        # 2. Build the variant list — each variant becomes a Shopify variant with option1=Size.
         new_variants = []
-        for v in flavor_variants:
-            new_v = v.copy()
-            size_val = "Default Title"
-            opts = new_v.get("option_values", {})
-            for k, val in opts.items():
-                if "size" in k.lower() or "weight" in k.lower() or "count" in k.lower() or "pack" in k.lower():
-                    size_val = val
-                    break
-            if "option_values" in new_v:
-                del new_v["option_values"]
+        for v in group_variants:
+            new_v = {k: val for k, val in v.items() if k != "option_values"}
+            size_val = _extract_size_value(v, fallback_title=base_title)
             new_v["option1_name"] = "Size"
             new_v["option1_value"] = size_val
             new_variants.append(new_v)
-            
-        flavor_images = []
-        for v in flavor_variants:
-            if v.get("images"):
-                flavor_images.extend(v["images"])
-        
-        seen_images = set()
-        deduped_images = []
-        for img in flavor_images:
-            if img not in seen_images:
-                deduped_images.append(img)
-                seen_images.add(img)
-                
+
+        # 3. Aggregate images (variant images take precedence; dedupe).
+        seen, deduped_images = set(), []
+        for v in group_variants:
+            for img in (v.get("images") or []):
+                if img and img not in seen:
+                    seen.add(img)
+                    deduped_images.append(img)
         if not deduped_images:
-            deduped_images = normalized_product.get("images", [])
-            
+            deduped_images = list(normalized_product.get("images", []) or [])
+
         debug = {
             "architecture": normalized_product.get("architecture"),
-            "original_variant_count": len(flavor_variants),
-            "image_source": "variant_flavor_images" if flavor_images else "base_product_fallback",
-            "original_title": base_title,
-            "cleaned_title": clean_title,
-            "title_cleanup_applied": clean_title != base_title,
-            "title_cleanup_removed_suffix": base_title[len(clean_title):] if clean_title != base_title else "",
-            "parser_warnings": normalized_product.get("warnings", []).copy()
+            "original_variant_count": len(group_variants),
+            "image_source": "variant_images" if any(v.get("images") for v in group_variants) else "base_product_fallback",
+            "discriminator": disc,
+            "group_key": list(disc.items()),
+            "title_source": "longest_variant_with_disc_match",
+            "title_augmentations": title_aug_log,
+            "parser_warnings": list(normalized_product.get("warnings", []) or []),
         }
-            
-        p_facts = normalized_product.get("product_facts", {}).copy()
-        if flavor != "Default":
-            p_facts["primary_flavor"] = flavor
-            
-        content_sections = normalized_product.get("content_sections", {}).copy()
-        specs = content_sections.get("specifications", {}).copy()
+
+        # 4. Safe parent-content assignment.
+        #    Variant-level content (from API enrichment) always wins per-variant.
+        #    For PRODUCT-LEVEL fields, only apply parent content if it matches this discriminator.
+        safe_desc = ""
+        safe_ingr = ""
+        safe_ga = ""
+        safe_fi = ""
+        safe_trans = ""
+
+        parent_safe = True
+        unsafe_reasons = []
+        if is_multi_product and disc:
+            for attr_name, attr_val in disc.items():
+                check = _content_matches_discriminator(parent_text_fields, attr_name, attr_val)
+                if not check["safe"]:
+                    parent_safe = False
+                    unsafe_reasons.append(check["reason"])
+
+        if parent_safe:
+            safe_desc = parent_text_fields["description"]
+            safe_ingr = parent_text_fields["ingredients"]
+            safe_ga = parent_text_fields["guaranteed_analysis"]
+            safe_fi = parent_text_fields["feeding_instructions"]
+            safe_trans = parent_text_fields["transition_instructions"]
+        else:
+            rejected = {k: v for k, v in parent_text_fields.items() if v}
+            if rejected:
+                debug["rejected_content"] = rejected
+                debug["rejected_reasons"] = unsafe_reasons
+            debug["parser_warnings"].append("parent_content_not_applicable_to_discriminator")
+
+        # Variant-level content overrides — pick first non-empty across variants of this group
+        for field, slot in [("description", "safe_desc"),
+                            ("ingredients", "safe_ingr"),
+                            ("guaranteed_analysis", "safe_ga"),
+                            ("feeding_instructions", "safe_fi"),
+                            ("transition_instructions", "safe_trans")]:
+            current = locals()[slot]
+            if current:
+                continue
+            for v in group_variants:
+                if v.get(field):
+                    if slot == "safe_desc": safe_desc = v[field]
+                    elif slot == "safe_ingr": safe_ingr = v[field]
+                    elif slot == "safe_ga": safe_ga = v[field]
+                    elif slot == "safe_fi": safe_fi = v[field]
+                    elif slot == "safe_trans": safe_trans = v[field]
+                    break
+
+        # 5. Product facts / metafields / content_sections (preserved best-effort).
+        p_facts = (normalized_product.get("product_facts") or {}).copy()
+        if primary_flavor:
+            p_facts["primary_flavor"] = primary_flavor
+        for attr_name, val in disc.items():
+            if "breed" in attr_name.lower() and "size" in attr_name.lower():
+                p_facts["breed_size"] = val
+
+        content_sections = (normalized_product.get("content_sections") or {}).copy()
+        specs = (content_sections.get("specifications") or {}).copy()
         if not specs.get("groups"):
             fb_items = []
-            if normalized_product.get("brand"): fb_items.append({"label": "Brand", "value": normalized_product["brand"], "normalized_key": "brand"})
-            if p_facts.get("pet_type"): fb_items.append({"label": "Pet Type", "value": p_facts["pet_type"], "normalized_key": "pet_type"})
-            if p_facts.get("food_form"): fb_items.append({"label": "Food Form", "value": p_facts["food_form"], "normalized_key": "food_form"})
-            if p_facts.get("life_stage"): fb_items.append({"label": "Life Stage", "value": p_facts["life_stage"], "normalized_key": "life_stage"})
-            if flavor != "Default": fb_items.append({"label": "Primary Flavor", "value": flavor, "normalized_key": "primary_flavor"})
-            if p_facts.get("package_type"): fb_items.append({"label": "Package Type", "value": p_facts["package_type"], "normalized_key": "package_type"})
-            
+            attr_table = normalized_product.get("product_attributes_table") or {}
+            for label, vals in attr_table.items():
+                if vals:
+                    fb_items.append({"label": label, "value": ", ".join(vals),
+                                     "normalized_key": _slugify(label)})
+            if normalized_product.get("brand"):
+                fb_items.append({"label": "Brand", "value": normalized_product["brand"],
+                                 "normalized_key": "brand"})
+            for attr_name, val in disc.items():
+                pretty = " ".join(w.capitalize() for w in attr_name.split())
+                fb_items.append({"label": pretty, "value": val,
+                                 "normalized_key": _slugify(attr_name)})
             if fb_items:
-                specs["groups"] = [{"title": "Product Details", "items": fb_items}]
-                specs["source_raw"] = "Fallback generated."
-                debug["parser_warnings"].append("Specifications fallback generated from normalized product facts.")
-        
+                specs["groups"] = [{"title": "Specifications", "items": fb_items}]
+                specs["source_raw"] = "Generated from Apollo attribute table + defining attributes."
         content_sections["specifications"] = specs
-            
-        m_plan = normalized_product.get("metafields_plan", {}).copy()
-        m_plan["custom.primary_flavor"] = p_facts.get("primary_flavor")
-        m_plan["custom.source_flavor"] = flavor
-        
-        storefront_display = normalized_product.get("storefront_display", {}).copy()
+
+        m_plan = (normalized_product.get("metafields_plan") or {}).copy()
+        m_plan["custom.primary_flavor"] = primary_flavor
+        if not safe_ingr: m_plan["custom.ingredients_json"] = None
+        if not safe_ga: m_plan["custom.guaranteed_analysis_json"] = None
+        for attr_name, val in disc.items():
+            m_plan[f"custom.{_slugify(attr_name)}"] = val
+
+        storefront_display = (normalized_product.get("storefront_display") or {}).copy()
         highlights = []
-        if p_facts.get("primary_flavor"): highlights.append(p_facts["primary_flavor"])
+        if primary_flavor: highlights.append(primary_flavor)
+        if p_facts.get("breed_size"): highlights.append(f"Breed Size: {p_facts['breed_size']}")
         if p_facts.get("life_stage"): highlights.append(p_facts["life_stage"])
         if p_facts.get("pet_type"): highlights.append(p_facts["pet_type"])
         storefront_display["highlights"] = highlights
-        
-        for idx, sec in enumerate(storefront_display.get("accordion_sections", [])):
-            if sec["key"] == "specifications" and specs.get("groups"):
+
+        for idx, sec in enumerate(storefront_display.get("accordion_sections", []) or []):
+            if sec.get("key") == "specifications" and specs.get("groups"):
                 storefront_display["accordion_sections"][idx]["enabled"] = True
-            
+            if sec.get("key") in ("ingredients", "guaranteed_analysis", "feeding_instructions"):
+                field_map = {"ingredients": safe_ingr,
+                             "guaranteed_analysis": safe_ga,
+                             "feeding_instructions": safe_fi}
+                if not field_map.get(sec["key"]):
+                    storefront_display["accordion_sections"][idx]["enabled"] = False
+
+        # Product-level stock summary: out_of_stock if EVERY variant is OOS.
+        # If at least one variant is in_stock the product is sellable on Shopify.
+        v_stocks = [v.get("out_of_stock") for v in new_variants]
+        all_oos = bool(new_variants) and all(s is True for s in v_stocks)
+        any_in_stock = any(s is False for s in v_stocks)
+        product_out_of_stock = all_oos
+        product_stock_state = (
+            "all_variants_out_of_stock" if all_oos
+            else "in_stock" if any_in_stock
+            else "stock_unknown"
+        )
+
         products_out.append({
             "source_group_id": group_id,
-            "title": clean_title,
-            "flavor": flavor if flavor != "Default" else None,
+            "title": product_title,
+            "flavor": primary_flavor,
+            "discriminator": disc,
             "brand": normalized_product.get("brand", ""),
             "handle_slug": handle_slug,
             "category_path": normalized_product.get("category_path", []),
-            "description": normalized_product.get("description", ""),
-            "ingredients": normalized_product.get("ingredients", ""),
-            "guaranteed_analysis": normalized_product.get("guaranteed_analysis", ""),
-            "feeding_instructions": normalized_product.get("feeding_instructions", ""),
+            "description": safe_desc,
+            "ingredients": safe_ingr,
+            "guaranteed_analysis": safe_ga,
+            "feeding_instructions": safe_fi,
+            "transition_instructions": safe_trans,
             "specifications": normalized_product.get("specifications", {}),
             "product_facts": p_facts,
             "content_sections": content_sections,
@@ -1107,16 +1681,113 @@ def split_product_by_flavor(normalized_product: dict) -> dict:
             "metafields_plan": m_plan,
             "images": deduped_images,
             "variants": new_variants,
-            "debug": debug
+            "out_of_stock": product_out_of_stock,
+            "stock_state": product_stock_state,
+            "debug": debug,
         })
-        
+
     return {
         "source": normalized_product.get("source"),
         "source_product_id": normalized_product.get("source_product_id"),
         "source_url": normalized_product.get("source_url"),
         "architecture": normalized_product.get("architecture"),
-        "grouping_strategy": "flavor_as_product_size_as_variant",
-        "products": products_out
+        "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+        "is_multi_product": is_multi_product,
+        "products": products_out,
+    }
+
+
+def dedupe_products_across_pages(all_grouped: list) -> dict:
+    """Cross-source-page deduplication of Shopify products.
+
+    Chewy "ensemble" products are often reachable via multiple URLs — e.g. the
+    Wysong Archetype family has 3 separate landing pages (Chicken / Quail / Rabbit)
+    that each expose the SAME 3 variants. Without dedupe we'd import 9 products
+    into Shopify when there are really only 3.
+
+    Fingerprint = sorted tuple of variant `source_entry_id`s. Products sharing the
+    same fingerprint are merged; we keep the version coming from the source page
+    whose URL product_id matches one of the variant entry_ids (the "canonical"
+    landing page for that flavor / breed / etc.).
+
+    Args:
+        all_grouped: list of grouped product dicts (each is one source page output
+                     from split_product_by_flavor).
+
+    Returns:
+        {
+            "kept_products": [shopify_product, ...],   # deduped Shopify products
+            "duplicates_log": [{...}, ...],            # per-fingerprint dedupe trace
+            "total_candidates": int,
+            "unique_products": int,
+        }
+    """
+    candidates = []
+    for entry in all_grouped:
+        source_pid = str(entry.get("source_product_id") or "")
+        source_url = entry.get("source_url") or ""
+        for p in (entry.get("products") or []):
+            entry_ids = [v.get("source_entry_id") for v in (p.get("variants") or [])
+                         if v.get("source_entry_id")]
+            fingerprint = tuple(sorted(str(eid) for eid in entry_ids))
+            candidates.append({
+                "fingerprint": fingerprint,
+                "source_pid": source_pid,
+                "source_url": source_url,
+                "product": p,
+            })
+
+    by_fp = {}
+    for c in candidates:
+        by_fp.setdefault(c["fingerprint"], []).append(c)
+
+    kept_products = []
+    duplicates_log = []
+    for fp, group in by_fp.items():
+        if len(group) == 1:
+            winner = group[0]
+            wp = dict(winner["product"])
+            wp["canonical_source"] = {
+                "source_product_id": winner["source_pid"],
+                "source_url": winner["source_url"],
+                "fingerprint": list(fp),
+                "duplicate_count": 0,
+            }
+            kept_products.append(wp)
+            continue
+
+        def _score(cand):
+            variant_ids = set(cand["fingerprint"])
+            url_pid_matches_variant = 1 if cand["source_pid"] in variant_ids else 0
+            return (url_pid_matches_variant, -len(cand["source_pid"]))
+
+        ordered = sorted(group, key=_score, reverse=True)
+        winner = ordered[0]
+        losers = ordered[1:]
+        wp = dict(winner["product"])
+        wp["canonical_source"] = {
+            "source_product_id": winner["source_pid"],
+            "source_url": winner["source_url"],
+            "fingerprint": list(fp),
+            "duplicate_count": len(losers),
+            "dropped_source_pids": [l["source_pid"] for l in losers],
+        }
+        kept_products.append(wp)
+        duplicates_log.append({
+            "fingerprint": list(fp),
+            "product_title": winner["product"].get("title"),
+            "kept_from_source_pid": winner["source_pid"],
+            "dropped_from_source_pids": [l["source_pid"] for l in losers],
+            "match_reason": ("source_pid_in_variant_set"
+                             if winner["source_pid"] in set(fp)
+                             else "first_by_score"),
+        })
+
+    return {
+        "kept_products": kept_products,
+        "duplicates_log": duplicates_log,
+        "total_candidates": len(candidates),
+        "unique_products": len(kept_products),
     }
 
 

@@ -1,0 +1,390 @@
+{
+  "source": "chewy",
+  "source_product_id": "101613",
+  "source_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101613",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "101613:breed-size:medium-large",
+      "title": "Royal Canin Veterinary Diet Adult Dental Medium & Large Breed Dry Dog Food",
+      "flavor": null,
+      "discriminator": {
+        "breed size": "Medium & Large"
+      },
+      "brand": "Royal Canin Veterinary Diet",
+      "handle_slug": "royal-canin-veterinary-diet-adult-medium-large",
+      "category_path": [],
+      "description": "Royal Canin Veterinary Health Nutrition Canine Dental Medium and Large Dog Dry Food is a veterinary-exclusive adult food specially formulated to support your medium or large pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. It contains calcium and phosphorus to help support healthy teeth. And, the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. Plus, this kibble contains omega-3 fatty acids, glucosamine, and chondroitin, which help maintain healthy bones and joints.",
+      "ingredients": "Water sufficient for processing, pork by-products, chicken liver, pork liver, brewers rice flour, salmon, natural flavors, pork plasma, powdered cellulose, wheat gluten, calcium carbonate, guar gum, calcium sulfate, carrageenan, taurine, sodium tripolyphosphate, potassium chloride, vitamins [L-ascorbyl-2-polyphosphate (source of vitamin C), DL-alpha tocopherol acetate (source of vitamin E), thiamine mononitrate (vitamin B1), niacin supplement, biotin, D-calcium pantothenate, riboflavin supplement, pyridoxine hydrochloride (vitamin B6), vitamin B12 supplement, folic acid, vitamin D3 supplement], hydrolyzed yeast, choline chloride, sodium silico aluminate, L-carnitine, trace minerals [zinc proteinate, zinc oxide, ferrous sulfate, copper sulfate, manganous oxide, sodium selenite, calcium iodate], marigold extract (Tagetes erecta L.).",
+      "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.9% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|\r\n|Omega-3 Fatty Acids|0.37% min|\r\n|Glucosamine|728 mg/kg min|\r\n|Chondroitin Sulfate|24 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|5.3.0% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin Sulfate|25 mg/kg min|",
+      "feeding_instructions": "Feeding guides are general recommendations only. The amount of food required by your dog may vary above or below that listed in this feeding guide. In consultation with your veterinarian, it is recommended that you weigh your dog 4 - 6 weeks after starting a new diet in order to adjust food intake to maintain or achieve an optimal body weight and body condition score. Consult your veterinarian for specific feeding guidelines for your dog.\r\n\r\nThis diet is formulated to be complete and balanced. It is unnecessary to feed leftover foods, kitchen scraps or additional supplements.\r\n\r\nIt is recommended that your dog be fed 2 - 4 equal portions of the diet per day. Ensure fresh drinking water is available at all times. Store this product in a cool, dry place.",
+      "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+      "specifications": {},
+      "product_facts": {
+        "breed_size": "Medium & Large"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Royal Canin Veterinary Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Breed Size",
+                  "value": "Medium & Large",
+                  "normalized_key": "breed-size"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Breed Size: Medium & Large"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null,
+        "custom.breed-size": "Medium & Large"
+      },
+      "images": [
+        "https://image.chewy.com/is/catalog/48741._AC_SS1800_V1460478784_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/06855303-a93c-7214-8000-a52327afff4f._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/royal-canin-veterinary-diet-adult-dental-medium-large-breed-dry-dog-food-17-6lb-bag/img-142663._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "33922",
+          "source_variant_id": "48741",
+          "sku": "48741",
+          "identifiers": {
+            "upc": "030111498311",
+            "gtin": "030111498311",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "48741",
+            "source_item_id": "48741"
+          },
+          "title": "Royal Canin Veterinary Diet Dental Dry Dog Food, 33-lb bag",
+          "price": "$117.09",
+          "compare_at_price": null,
+          "description": "Royal Canin Veterinary Health Nutrition Canine Dental Medium and Large Dog Dry Food is a veterinary-exclusive adult food specially formulated to support your medium or large pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. It contains calcium and phosphorus to help support healthy teeth. And, the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. Plus, this kibble contains omega-3 fatty acids, glucosamine, and chondroitin, which help maintain healthy bones and joints.",
+          "ingredients": "Water sufficient for processing, pork by-products, chicken liver, pork liver, brewers rice flour, salmon, natural flavors, pork plasma, powdered cellulose, wheat gluten, calcium carbonate, guar gum, calcium sulfate, carrageenan, taurine, sodium tripolyphosphate, potassium chloride, vitamins [L-ascorbyl-2-polyphosphate (source of vitamin C), DL-alpha tocopherol acetate (source of vitamin E), thiamine mononitrate (vitamin B1), niacin supplement, biotin, D-calcium pantothenate, riboflavin supplement, pyridoxine hydrochloride (vitamin B6), vitamin B12 supplement, folic acid, vitamin D3 supplement], hydrolyzed yeast, choline chloride, sodium silico aluminate, L-carnitine, trace minerals [zinc proteinate, zinc oxide, ferrous sulfate, copper sulfate, manganous oxide, sodium selenite, calcium iodate], marigold extract (Tagetes erecta L.).",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.9% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|\r\n|Omega-3 Fatty Acids|0.37% min|\r\n|Glucosamine|728 mg/kg min|\r\n|Chondroitin Sulfate|24 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|5.3.0% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin Sulfate|25 mg/kg min|",
+          "feeding_instructions": "Feeding guides are general recommendations only. The amount of food required by your dog may vary above or below that listed in this feeding guide. In consultation with your veterinarian, it is recommended that you weigh your dog 4 - 6 weeks after starting a new diet in order to adjust food intake to maintain or achieve an optimal body weight and body condition score. Consult your veterinarian for specific feeding guidelines for your dog.\r\n\r\nThis diet is formulated to be complete and balanced. It is unnecessary to feed leftover foods, kitchen scraps or additional supplements.\r\n\r\nIt is recommended that your dog be fed 2 - 4 equal portions of the diet per day. Ensure fresh drinking water is available at all times. Store this product in a cool, dry place.",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,759 kcal/kg, 320 kcal/cup\n\nOriginal: 3,667 kcal/kg, 315 kcal/cup",
+          "autoship_price": null,
+          "availability": "DISCONTINUED",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "explicit_unavailable_flag",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/is/catalog/48741._AC_SS1800_V1460478784_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/33922",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "33922",
+            "source_variant_id": "48741",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "33-lb bag"
+        },
+        {
+          "source_entry_id": "33921",
+          "source_variant_id": "48740",
+          "sku": "48740",
+          "identifiers": {
+            "upc": "030111498359",
+            "gtin": "030111498359",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "48740",
+            "source_item_id": "48740"
+          },
+          "title": "Royal Canin Veterinary Diet Adult Dental Medium & Large Breed Dry Dog Food, 7.7-lb bag",
+          "price": "$52.99",
+          "compare_at_price": null,
+          "description": "Royal Canin Veterinary Health Nutrition Canine Dental Medium and Large Dog Dry Food is a veterinary-exclusive adult food specially formulated to support your medium or large pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. It contains calcium and phosphorus to help support healthy teeth. And, the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. Plus, this kibble contains omega-3 fatty acids, glucosamine, and chondroitin, which help maintain healthy bones and joints.",
+          "ingredients": "Water sufficient for processing, pork by-products, chicken liver, pork liver, brewers rice flour, salmon, natural flavors, pork plasma, powdered cellulose, wheat gluten, calcium carbonate, guar gum, calcium sulfate, carrageenan, taurine, sodium tripolyphosphate, potassium chloride, vitamins [L-ascorbyl-2-polyphosphate (source of vitamin C), DL-alpha tocopherol acetate (source of vitamin E), thiamine mononitrate (vitamin B1), niacin supplement, biotin, D-calcium pantothenate, riboflavin supplement, pyridoxine hydrochloride (vitamin B6), vitamin B12 supplement, folic acid, vitamin D3 supplement], hydrolyzed yeast, choline chloride, sodium silico aluminate, L-carnitine, trace minerals [zinc proteinate, zinc oxide, ferrous sulfate, copper sulfate, manganous oxide, sodium selenite, calcium iodate], marigold extract (Tagetes erecta L.).",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.9% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|\r\n|Omega-3 Fatty Acids|0.37% min|\r\n|Glucosamine|728 mg/kg min|\r\n|Chondroitin Sulfate|24 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|5.3.0% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin Sulfate|25 mg/kg min|",
+          "feeding_instructions": "Feeding guides are general recommendations only. The amount of food required by your dog may vary above or below that listed in this feeding guide. In consultation with your veterinarian, it is recommended that you weigh your dog 4 - 6 weeks after starting a new diet in order to adjust food intake to maintain or achieve an optimal body weight and body condition score. Consult your veterinarian for specific feeding guidelines for your dog.\r\n\r\nThis diet is formulated to be complete and balanced. It is unnecessary to feed leftover foods, kitchen scraps or additional supplements.\r\n\r\nIt is recommended that your dog be fed 2 - 4 equal portions of the diet per day. Ensure fresh drinking water is available at all times. Store this product in a cool, dry place.",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,759 kcal/kg, 320 kcal/cup\n\nOriginal: 3,667 kcal/kg, 315 kcal/cup",
+          "autoship_price": "$50.34",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06855303-a93c-7214-8000-a52327afff4f._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/33921",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "33921",
+            "source_variant_id": "48740",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "7.7-lb bag"
+        },
+        {
+          "source_entry_id": "101613",
+          "source_variant_id": "73707",
+          "sku": "73707",
+          "identifiers": {
+            "upc": "030111498304",
+            "gtin": "030111498304",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "73707",
+            "source_item_id": "73707"
+          },
+          "title": "Royal Canin Veterinary Diet Adult Dental Medium & Large Breed Dry Dog Food, 17.6-lb bag",
+          "price": "$96.99",
+          "compare_at_price": null,
+          "description": "Royal Canin Veterinary Health Nutrition Canine Dental Medium and Large Dog Dry Food is a veterinary-exclusive adult food specially formulated to support your medium or large pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. It contains calcium and phosphorus to help support healthy teeth. And, the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. Plus, this kibble contains omega-3 fatty acids, glucosamine, and chondroitin, which help maintain healthy bones and joints.",
+          "ingredients": "Water sufficient for processing, pork by-products, chicken liver, pork liver, brewers rice flour, salmon, natural flavors, pork plasma, powdered cellulose, wheat gluten, calcium carbonate, guar gum, calcium sulfate, carrageenan, taurine, sodium tripolyphosphate, potassium chloride, vitamins [L-ascorbyl-2-polyphosphate (source of vitamin C), DL-alpha tocopherol acetate (source of vitamin E), thiamine mononitrate (vitamin B1), niacin supplement, biotin, D-calcium pantothenate, riboflavin supplement, pyridoxine hydrochloride (vitamin B6), vitamin B12 supplement, folic acid, vitamin D3 supplement], hydrolyzed yeast, choline chloride, sodium silico aluminate, L-carnitine, trace minerals [zinc proteinate, zinc oxide, ferrous sulfate, copper sulfate, manganous oxide, sodium selenite, calcium iodate], marigold extract (Tagetes erecta L.).",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.9% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|\r\n|Omega-3 Fatty Acids|0.37% min|\r\n|Glucosamine|728 mg/kg min|\r\n|Chondroitin Sulfate|24 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|5.3.0% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin Sulfate|25 mg/kg min|",
+          "feeding_instructions": "Feeding guides are general recommendations only. The amount of food required by your dog may vary above or below that listed in this feeding guide. In consultation with your veterinarian, it is recommended that you weigh your dog 4 - 6 weeks after starting a new diet in order to adjust food intake to maintain or achieve an optimal body weight and body condition score. Consult your veterinarian for specific feeding guidelines for your dog.\r\n\r\nThis diet is formulated to be complete and balanced. It is unnecessary to feed leftover foods, kitchen scraps or additional supplements.\r\n\r\nIt is recommended that your dog be fed 2 - 4 equal portions of the diet per day. Ensure fresh drinking water is available at all times. Store this product in a cool, dry place.",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,759 kcal/kg, 320 kcal/cup\n\nOriginal: 3,667 kcal/kg, 315 kcal/cup",
+          "autoship_price": "$92.14",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/royal-canin-veterinary-diet-adult-dental-medium-large-breed-dry-dog-food-17-6lb-bag/img-142663._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/101613",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "101613",
+            "source_variant_id": "73707",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "17.6-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 3,
+        "image_source": "variant_images",
+        "discriminator": {
+          "breed size": "Medium & Large"
+        },
+        "group_key": [
+          [
+            "breed size",
+            "Medium & Large"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    },
+    {
+      "source_group_id": "101613:breed-size:small",
+      "title": "Royal Canin Veterinary Diet Adult Dental Small Breed Dry Dog Food",
+      "flavor": null,
+      "discriminator": {
+        "breed size": "Small"
+      },
+      "brand": "Royal Canin Veterinary Diet",
+      "handle_slug": "royal-canin-veterinary-diet-adult-small",
+      "category_path": [],
+      "description": "Royal Canin Veterinary Health Nutrition Canine Dental Small Dog Dry Food is a veterinary-exclusive dry food specially formulated to support your little pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. Plus, it contains calcium and phosphorus to help support healthy teeth, and the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. And, because small furbabies have a tendency to have lower urinary tract health concerns, this diet is formulated to promote diluted urine which helps reduce the risk of crystal formation.",
+      "ingredients": "New: Brewers Rice, Corn, Chicken By-Product Meal, Chicken Fat, Wheat Gluten, Dried Chicory Root, Pea Fiber, Natural Flavors, Fish Oil, Salt, Calcium Carbonate, Potassium Chloride, Sodium Tripolyphosphate, Vegetable Oil, Sodium Silico Aluminate, Fructooligosaccharides, Vitamins[Dl-Alpha Tocopherol Acetate (Source Of Vitamin E), L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), Niacin Supplement, D-Calcium Pantothenate, Biotin, Pyridoxine Hydrochloride (Vitamin B6), Riboflavin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin A Acetate, Vitamin B12 Supplement, Folic Acid, Vitamin D3 Supplement], Choline Chloride, Taurine, Dl-Methionine, Trace Minerals[Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Sodium Selenite, Calcium Iodate, Copper Proteinate], Marigold Extract (Tagetes Erecta L.), N-Butyric Acid, Green Tea Extract, Magnesium Oxide, L-Carnitine, Rosemary Extract, Preserved With Mixed Tocopherols And Citric Acid. Original: Chicken By-Product Meal, Brewers Rice, Corn, Brown Rice, Corn Gluten Meal, Chicken Fat, Natural Flavors, Powdered Cellulose, Dried Plain Beet Pulp, Wheat Gluten, Calcium Sulfate, Salt, Fish Oil, Vegetable Oil, Potassium Chloride, Fructooligosaccharides, Sodium Tripolyphosphate, Dl-Methionine, Choline Chloride, Taurine, L-Lysine, Tea, Marigold Extract (Tagetes Erecta L.), Vitamins [Dl-Alpha-Tocopherol Acetate (Source Of Vitamin E), L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), Biotin, Pyridoxine Hydrochloride (Vitamin B6), D-Calcium Pantothenate, Vitamin A Acetate, Niacin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin B12 Supplement, Folic Acid, Riboflavin Supplement, Vitamin D3 Supplement], Trace Minerals [Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Calcium Iodate, Sodium Selenite, Copper Proteinate], L-Carnitine, Rosemary Extract, Preserved With Mixed Tocopherols And Citric Acid.",
+      "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.8% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.58% min|\r\n|Calcium|0.98% max|\r\n|Phosphorus|0.36% min|\r\n|Sodium|0.98% max|\r\n|Magnesium|0.13% max|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|23.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|6.5% max|\r\n|Moisture|10.0% max|",
+      "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|4.4 lbs|1/ 2|1/ 2|\r\n|8.8 lbs|7/ 8|3/ 4|\r\n|13 lbs|1 + 1/ 4|1 + 1/ 8|\r\n|18 lbs|1 + 1/ 2|1 + 3/ 8|\r\n|22 lbs|1 + 7/ 8|1 + 5/ 8|",
+      "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+      "specifications": {},
+      "product_facts": {
+        "breed_size": "Small"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Royal Canin Veterinary Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Breed Size",
+                  "value": "Small",
+                  "normalized_key": "breed-size"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Breed Size: Small"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null,
+        "custom.breed-size": "Small"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/06855301-74ec-7f7a-8000-e4f0c04a66f1._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "33996",
+          "source_variant_id": "48815",
+          "sku": "48815",
+          "identifiers": {
+            "upc": "030111498403",
+            "gtin": "030111498403",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "48815",
+            "source_item_id": "48815"
+          },
+          "title": "Royal Canin Veterinary Diet Adult Dental Small Breed Dry Dog Food, 8.8-lb bag",
+          "price": "$58.99",
+          "compare_at_price": null,
+          "description": "Royal Canin Veterinary Health Nutrition Canine Dental Small Dog Dry Food is a veterinary-exclusive dry food specially formulated to support your little pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. Plus, it contains calcium and phosphorus to help support healthy teeth, and the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. And, because small furbabies have a tendency to have lower urinary tract health concerns, this diet is formulated to promote diluted urine which helps reduce the risk of crystal formation.",
+          "ingredients": "New: Brewers Rice, Corn, Chicken By-Product Meal, Chicken Fat, Wheat Gluten, Dried Chicory Root, Pea Fiber, Natural Flavors, Fish Oil, Salt, Calcium Carbonate, Potassium Chloride, Sodium Tripolyphosphate, Vegetable Oil, Sodium Silico Aluminate, Fructooligosaccharides, Vitamins[Dl-Alpha Tocopherol Acetate (Source Of Vitamin E), L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), Niacin Supplement, D-Calcium Pantothenate, Biotin, Pyridoxine Hydrochloride (Vitamin B6), Riboflavin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin A Acetate, Vitamin B12 Supplement, Folic Acid, Vitamin D3 Supplement], Choline Chloride, Taurine, Dl-Methionine, Trace Minerals[Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Sodium Selenite, Calcium Iodate, Copper Proteinate], Marigold Extract (Tagetes Erecta L.), N-Butyric Acid, Green Tea Extract, Magnesium Oxide, L-Carnitine, Rosemary Extract, Preserved With Mixed Tocopherols And Citric Acid. Original: Chicken By-Product Meal, Brewers Rice, Corn, Brown Rice, Corn Gluten Meal, Chicken Fat, Natural Flavors, Powdered Cellulose, Dried Plain Beet Pulp, Wheat Gluten, Calcium Sulfate, Salt, Fish Oil, Vegetable Oil, Potassium Chloride, Fructooligosaccharides, Sodium Tripolyphosphate, Dl-Methionine, Choline Chloride, Taurine, L-Lysine, Tea, Marigold Extract (Tagetes Erecta L.), Vitamins [Dl-Alpha-Tocopherol Acetate (Source Of Vitamin E), L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), Biotin, Pyridoxine Hydrochloride (Vitamin B6), D-Calcium Pantothenate, Vitamin A Acetate, Niacin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin B12 Supplement, Folic Acid, Riboflavin Supplement, Vitamin D3 Supplement], Trace Minerals [Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Calcium Iodate, Sodium Selenite, Copper Proteinate], L-Carnitine, Rosemary Extract, Preserved With Mixed Tocopherols And Citric Acid.",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.8% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.58% min|\r\n|Calcium|0.98% max|\r\n|Phosphorus|0.36% min|\r\n|Sodium|0.98% max|\r\n|Magnesium|0.13% max|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|23.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|6.5% max|\r\n|Moisture|10.0% max|",
+          "feeding_instructions": "|Weight of Dog|Ideal Weight|Overweight|\r\n| --- | --- |--- |\r\n|4.4 lbs|1/ 2|1/ 2|\r\n|8.8 lbs|7/ 8|3/ 4|\r\n|13 lbs|1 + 1/ 4|1 + 1/ 8|\r\n|18 lbs|1 + 1/ 2|1 + 3/ 8|\r\n|22 lbs|1 + 7/ 8|1 + 5/ 8|",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|",
+          "calorie_content": "New: 3,734 kcal/kg, 329 kcal/cup\n\nOriginal: 3,625 kcal/kg, 330 kcal/cup",
+          "autoship_price": "$56.04",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06855301-74ec-7f7a-8000-e4f0c04a66f1._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-veterinary-diet-adult/dp/33996",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "33996",
+            "source_variant_id": "48815",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "8.8-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "breed size": "Small"
+        },
+        "group_key": [
+          [
+            "breed size",
+            "Small"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": [
+          "parent_content_not_applicable_to_discriminator"
+        ],
+        "rejected_content": {
+          "description": "Royal Canin Veterinary Health Nutrition Canine Dental Medium and Large Dog Dry Food is a veterinary-exclusive adult food specially formulated to support your medium or large pup’s oral health. It’s been awarded the Veterinary Oral Health Council (VOHC) “Helps Control Tartar” seal of approval, as it’s clinically proven to effectively reduce tartar buildup. It contains calcium and phosphorus to help support healthy teeth. And, the uniquely designed kibble size and shape encourage chewing, which creates a tooth-brushing effect to help reduce plaque accumulation and tartar buildup. Plus, this kibble contains omega-3 fatty acids, glucosamine, and chondroitin, which help maintain healthy bones and joints.",
+          "ingredients": "Water sufficient for processing, pork by-products, chicken liver, pork liver, brewers rice flour, salmon, natural flavors, pork plasma, powdered cellulose, wheat gluten, calcium carbonate, guar gum, calcium sulfate, carrageenan, taurine, sodium tripolyphosphate, potassium chloride, vitamins [L-ascorbyl-2-polyphosphate (source of vitamin C), DL-alpha tocopherol acetate (source of vitamin E), thiamine mononitrate (vitamin B1), niacin supplement, biotin, D-calcium pantothenate, riboflavin supplement, pyridoxine hydrochloride (vitamin B6), vitamin B12 supplement, folic acid, vitamin D3 supplement], hydrolyzed yeast, choline chloride, sodium silico aluminate, L-carnitine, trace minerals [zinc proteinate, zinc oxide, ferrous sulfate, copper sulfate, manganous oxide, sodium selenite, calcium iodate], marigold extract (Tagetes erecta L.).",
+          "guaranteed_analysis": "**New:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|15.0% min|\r\n|Crude Fiber|4.9% max|\r\n|Moisture|10.0% max|\r\n|Calcium|0.6% min|\r\n|Phosphorus|0.4% min|\r\n|\r\n|Omega-3 Fatty Acids|0.37% min|\r\n|Glucosamine|728 mg/kg min|\r\n|Chondroitin Sulfate|24 mg/kg min|\r\n\r\n**Original:**\r\n\r\n|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|20.0% min|\r\n|Crude Fat|14.0% min|\r\n|Crude Fiber|5.3.0% max|\r\n|Moisture|10.0% max|\r\n|Glucosamine|750 mg/kg min|\r\n|Chondroitin Sulfate|25 mg/kg min|",
+          "feeding_instructions": "Feeding guides are general recommendations only. The amount of food required by your dog may vary above or below that listed in this feeding guide. In consultation with your veterinarian, it is recommended that you weigh your dog 4 - 6 weeks after starting a new diet in order to adjust food intake to maintain or achieve an optimal body weight and body condition score. Consult your veterinarian for specific feeding guidelines for your dog.\r\n\r\nThis diet is formulated to be complete and balanced. It is unnecessary to feed leftover foods, kitchen scraps or additional supplements.\r\n\r\nIt is recommended that your dog be fed 2 - 4 equal portions of the diet per day. Ensure fresh drinking water is available at all times. Store this product in a cool, dry place.",
+          "transition_instructions": "Pets can be sensitive to sudden changes in their diets. For this reason, it is extremely important to follow a gradual transition plan to best support your pet's health and product effectiveness. It is recommended to follow at least a 7-day transition plan before exclusively feeding your pet a new food. Start by mixing 75% of your pet's current diet with 25% of the new diet on Day 1 and Day 2. On Day 3 and Day 4, mix 50% of the current diet with 50% of the new diet. On Day 5 and Day 6, mix 25% of the current diet with 75% of the new diet. On Day 7, you can feed your pet the new food exclusively. Ask your Veterinarian about the best way to transition your pet to a new food.\n\n|Transition Day|Current Diet|New Diet|\n| --- | --- |--- |\n|Days 1-2|75%|25%|\n|Days 3-4|50%|50%|\n|Days 5-6|25%|75%|\n|Day 7|0%|100%|"
+        },
+        "rejected_reasons": [
+          "primary_mismatch: dim=breed size, expects=['small'], desc_primary=medium, ingr_primary=None"
+        ]
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 91,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 metafields_plan missing complex fields.",
+      "Group 1 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 4,
+      "variants_with_gtin": 4,
+      "variants_with_upc": 4,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 0,
+      "gtin_coverage_percent": 100.0
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 4,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 3,
+      "guaranteed_analysis": 3,
+      "feeding_instructions": 3,
+      "transition_instructions": 3,
+      "description": 4,
+      "calorie_content": 3,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

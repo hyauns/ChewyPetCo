@@ -1,0 +1,449 @@
+{
+  "source": "chewy",
+  "source_product_id": "101575",
+  "source_url": "https://www.chewy.com/wysong-archetype-quail-formula-freeze/dp/101575",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "101575:flavor:chicken",
+      "title": "Wysong Archetype Chicken Formula Freeze-Dried Raw Dog & Cat Food",
+      "flavor": "Chicken",
+      "discriminator": {
+        "flavor": "Chicken"
+      },
+      "brand": "Wysong",
+      "handle_slug": "wysong-archetype-quail-formula-freeze-chicken",
+      "category_path": [],
+      "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+      "ingredients": "Chicken, Chicken Organs, Ground Chicken Bone, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|44.0% min|\n|Crude Fat|36.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.3.0% min|",
+      "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+      "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Chicken"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog, Cat",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Wysong",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Chicken",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Chicken"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Chicken",
+        "custom.flavor": "Chicken"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/wysong-archetype-chicken-formula-freeze-dried-raw-dog-cat-food-7-5oz-bag/img-656828._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "101571",
+          "source_variant_id": "73665",
+          "sku": "73665",
+          "identifiers": {
+            "upc": "085835990085",
+            "gtin": "085835990085",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "73665",
+            "source_item_id": "73665"
+          },
+          "title": "Wysong Archetype Chicken Formula Freeze-Dried Raw Dog & Cat Food, 7.5-oz bag",
+          "price": "$21.74",
+          "compare_at_price": null,
+          "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+          "ingredients": "Chicken, Chicken Organs, Ground Chicken Bone, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|44.0% min|\n|Crude Fat|36.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.3.0% min|",
+          "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+          "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions.",
+          "calorie_content": "",
+          "autoship_price": "$20.65",
+          "availability": "OUT_OF_STOCK",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "availability_status:OUT_OF_STOCK",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/wysong-archetype-chicken-formula-freeze-dried-raw-dog-cat-food-7-5oz-bag/img-656828._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/wysong-archetype-quail-formula-freeze/dp/101571",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "101571",
+            "source_variant_id": "73665",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "7.5-oz bag"
+        }
+      ],
+      "out_of_stock": true,
+      "stock_state": "all_variants_out_of_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Chicken"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Chicken"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": [
+          "parent_content_not_applicable_to_discriminator"
+        ],
+        "rejected_content": {
+          "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+          "ingredients": "Quail, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|50.0% min|\n|Crude Fat|25.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.3.0% min|",
+          "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+          "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions."
+        },
+        "rejected_reasons": [
+          "primary_mismatch: dim=flavor, expects=['chicken'], desc_primary=None, ingr_primary=quail"
+        ]
+      }
+    },
+    {
+      "source_group_id": "101575:flavor:quail",
+      "title": "Wysong Archetype Quail Formula Freeze-Dried Raw Dog & Cat Food",
+      "flavor": "Quail",
+      "discriminator": {
+        "flavor": "Quail"
+      },
+      "brand": "Wysong",
+      "handle_slug": "wysong-archetype-quail-formula-freeze-quail",
+      "category_path": [],
+      "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+      "ingredients": "Quail, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|50.0% min|\n|Crude Fat|25.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.3.0% min|",
+      "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+      "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Quail"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog, Cat",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Wysong",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Quail",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Quail"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Quail",
+        "custom.flavor": "Quail"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/wysong-archetype-quail-formula-freeze-dried-raw-dog-cat-food-7-5oz-bag/img-446612._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "101575",
+          "source_variant_id": "73669",
+          "sku": "73669",
+          "identifiers": {
+            "upc": "085835990023",
+            "gtin": "085835990023",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "73669",
+            "source_item_id": "73669"
+          },
+          "title": "Wysong Archetype Quail Formula Freeze-Dried Raw Dog & Cat Food, 7.5-oz bag",
+          "price": "$26.19",
+          "compare_at_price": null,
+          "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+          "ingredients": "Quail, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|50.0% min|\n|Crude Fat|25.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.3.0% min|",
+          "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+          "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions.",
+          "calorie_content": "",
+          "autoship_price": "$24.88",
+          "availability": "OUT_OF_STOCK",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "availability_status:OUT_OF_STOCK",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/wysong-archetype-quail-formula-freeze-dried-raw-dog-cat-food-7-5oz-bag/img-446612._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/wysong-archetype-quail-formula-freeze/dp/101575",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "101575",
+            "source_variant_id": "73669",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "7.5-oz bag"
+        }
+      ],
+      "out_of_stock": true,
+      "stock_state": "all_variants_out_of_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Quail"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Quail"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    },
+    {
+      "source_group_id": "101575:flavor:rabbit",
+      "title": "Wysong Archetype Rabbit Formula Freeze-Dried Raw Dog & Cat Food",
+      "flavor": "Rabbit",
+      "discriminator": {
+        "flavor": "Rabbit"
+      },
+      "brand": "Wysong",
+      "handle_slug": "wysong-archetype-quail-formula-freeze-rabbit",
+      "category_path": [],
+      "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+      "ingredients": "Rabbit, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|48.0% min|\n|Crude Fat|21.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.2% min|",
+      "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+      "transition_instructions": "To avoid digestive disturbances, introduce gradually and increase portions as needed.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Rabbit"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog, Cat",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Wysong",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Rabbit",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Rabbit"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Rabbit",
+        "custom.flavor": "Rabbit"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/wysong-archetype-rabbit-formula-freeze-dried-raw-dog-cat-food-7-5oz-bag/img-542299._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "101573",
+          "source_variant_id": "73667",
+          "sku": "73667",
+          "identifiers": {
+            "upc": "085835990047",
+            "gtin": "085835990047",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "73667",
+            "source_item_id": "73667"
+          },
+          "title": "Wysong Archetype Rabbit Formula Freeze-Dried Raw Dog & Cat Food, 7.5-oz bag",
+          "price": "$26.19",
+          "compare_at_price": null,
+          "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+          "ingredients": "Rabbit, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|48.0% min|\n|Crude Fat|21.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.2% min|",
+          "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+          "transition_instructions": "To avoid digestive disturbances, introduce gradually and increase portions as needed.",
+          "calorie_content": "",
+          "autoship_price": "$24.88",
+          "availability": "OUT_OF_STOCK",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "availability_status:OUT_OF_STOCK",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/wysong-archetype-rabbit-formula-freeze-dried-raw-dog-cat-food-7-5oz-bag/img-542299._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/wysong-archetype-quail-formula-freeze/dp/101573",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "101573",
+            "source_variant_id": "73667",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "7.5-oz bag"
+        }
+      ],
+      "out_of_stock": true,
+      "stock_state": "all_variants_out_of_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Rabbit"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Rabbit"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": [
+          "parent_content_not_applicable_to_discriminator"
+        ],
+        "rejected_content": {
+          "description": "Archetype is the original raw dog and cat food diet from Wysong, and emulates the food canines and felines eat in the wild – the diet they are genetically programmed for. Wysong raw dog & cat food products are manufactured with a proprietary TNT (True Non-Thermal) technology, and are the safest, most genetically appropriate raw pet foods on the market. Archetype, first and foremost, is not heated above 118 degrees Fahrenheit – a True Non-Thermal freeze-dried raw product! These products are designed to achieve optimal nutrition that is beyond minimal regulatory standards for so-called “100% complete and balanced” diets.",
+          "ingredients": "Quail, Natural Flavor, Taurine, Organic Blueberry, Organic Barley Grass, Chia Seeds, Broccoli Sprouts, Carrots, Plums, Whey, Sea Salt, Dried Kelp, Yeast Extract, Citric Acid, Mixed Tocopherols, Rosemary Extract, Yeast Culture, Minerals (Potassium Chloride, Zinc Proteinate, Zinc Sulfate, Ferrous Sulfate, Iron Proteinate, Copper Sulfate, Copper Proteinate, Manganese Sulfate, Manganese Proteinate, Sodium Selenite, Calcium Iodate), Calcium Carbonate, Vitamins (Ascorbic Acid [Source of Vitamin C], Vitamin E Supplement, Niacin Supplement, Calcium Pantothenate, Vitamin A Supplement, Thiamine Mononitrate, Pyridoxine Hydrochloride, Riboflavin Supplement, Vitamin D3 Supplement, Biotin, Vitamin B12 Supplement, Folic Acid), Dried Bacillus Licheniformis Fermentation Product, Dried Aspergillus Oryzae Fermentation Product, Dried Aspergillus Niger Fermentation Product, Dried Enterococcus Faecium Fermentation Product, Dried Lactobacillus Casei Fermentation Product, Dried Lactobacillus Acidophilus Fermentation Product, Dried Bacillus Subtilis Fermentation Product, Dried Lactobacillus Plantarum Fermentation Product, Dried Lactobacillus Lactis Fermentation Product.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|50.0% min|\n|Crude Fat|25.0% min|\n|Crude Fiber|0.5% max|\n|Moisture|4.0% max|\n|Taurine|0.3.0% min|",
+          "feeding_instructions": "**Dog:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|3 lbs|1/4 cup|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|20 lbs|3/4 - 1 cup|\n|40 lbs|1 1/2 - 2 cups|\n|60 lbs|2 1/2 - 3 cups|\n|80 lbs|3 - 3 1/2 cups|\n\n**Cat:**\n\n|Weight|Daily Feeding (cup)|\n|---|---|\n|5 lbs|1/4 - 1/3 cup|\n|10 lbs|1/3 - 1/2 cup|\n|15 lbs|1/2 - 3/4 cup|\n|20 lbs|3/4 - 1 cup|\n\n**Suggestions for use:**\n1. Chunks: Offer as a treat, reward, or meal. \n2. Shreds and powder: Mix with water to create a gravy for meals, to top - dress Wysong dry or canned diet meals, or to top - dress homemade meals. \n3. Mix with Wysong UnCanny.\n\nArchetype may be fed dry or soaked in water for 10 - 15 minutes. Excess moistened food should be refrigerated for the next feeding or discarded. Fro maximum health benefit, rotate Archetype with fresh foods and other Wysong Diets. \n\nAlways keep fresh, pure water available (enhanced with Wysong WellSpring water rejuvenator) and offer plenty of fresh air, sunshine, exercise, and big doses of your tender loving care. \n\nKeep tightly sealed, and store in a cool, dry place out of direct sunlight.",
+          "transition_instructions": "To avoid digestive disturbances, mix with the present diet beginning at about 10% and then gradually increase proportions."
+        },
+        "rejected_reasons": [
+          "primary_mismatch: dim=flavor, expects=['rabbit'], desc_primary=None, ingr_primary=quail"
+        ]
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 83,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 custom.source_flavor does not match grouped flavor.",
+      "Group 0 metafields_plan missing complex fields.",
+      "Group 1 custom.source_flavor does not match grouped flavor.",
+      "Group 1 metafields_plan missing complex fields.",
+      "Group 2 custom.source_flavor does not match grouped flavor.",
+      "Group 2 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 3,
+      "variants_with_gtin": 3,
+      "variants_with_upc": 3,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 0,
+      "gtin_coverage_percent": 100.0
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 3,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 2,
+      "guaranteed_analysis": 2,
+      "feeding_instructions": 2,
+      "transition_instructions": 2,
+      "description": 3,
+      "calorie_content": 0,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

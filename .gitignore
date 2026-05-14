@@ -8,3 +8,9 @@ scraper_jobs.db
 .DS_Store
 urls.txt
 .env
+.claude/
+.venv/
+venv/
+*.malformed
+*.recovered
+*.recovered.sql

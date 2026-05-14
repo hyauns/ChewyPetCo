@@ -1,0 +1,381 @@
+{
+  "source": "chewy",
+  "source_product_id": "102094",
+  "source_url": "https://www.chewy.com/hills-science-diet-adult-perfect/dp/102094",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "102094:flavor:chicken-vegetables",
+      "title": "Hill's Science Diet Adult Perfect Weight Management Chicken & Vegetables Entree Wet Dog Food",
+      "flavor": "Chicken & Vegetables",
+      "discriminator": {
+        "flavor": "Chicken & Vegetables"
+      },
+      "brand": "Hill's Science Diet",
+      "handle_slug": "hills-science-diet-adult-perfect-chicken-vegetables",
+      "category_path": [],
+      "description": "Hill's Science Diet Adult Perfect Weight Chicken & Vegetables Entree Canned Dog Food is a paw-some choice for pups who need a little help managing their weight. This recipe promotes safe and effective weight loss and healthy weight maintenance. It also provides lean muscle support to help keep your furbaby looking and feeling his best. It tastes paw-some, too, and is made with wholesome ingredients like chicken, green beans, carrots and peas. This food is free of artificial flavors and preservatives, and it delivers balanced nutrition. Prebiotic fibers promote gentle digestion. This food is paw-fect for adult dogs who need fewer calories, like dogs who are neutered, less active or prone to weight gain.",
+      "ingredients": "Chicken Broth, Chicken, Turkey Giblets, Green Beans, Carrots, Green Peas, Potato Starch, Egg Whites, Pea Protein, Oat Fiber, Powdered Cellulose, Dried Tomato Pomace, Dried Beet Pulp, Flaxseed, Coconut Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, DL-Methionine, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Vitamin A Supplement, Calcium Pantothenate, Pyridoxine Hydrochloride, Vitamin B12 Supplement, Riboflavin Supplement, Biotin, Vitamin D3 Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Folic Acid), Potassium Chloride, L-Lysine, Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|5.5% min|\r\n|Crude Fat|2.0% min|\r\n|Crude Fiber|4.0% max|\r\n|Moisture|78.0% max|",
+      "feeding_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+      "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Chicken & Vegetables"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Hill's Science Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Chicken & Vegetables",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Chicken & Vegetables"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Chicken & Vegetables",
+        "custom.flavor": "Chicken & Vegetables"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/068128bf-7b7d-7503-8000-250d7806457c._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "102094",
+          "source_variant_id": "74193",
+          "sku": "74193",
+          "identifiers": {
+            "upc": "052742297514",
+            "gtin": "052742297514",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "74193",
+            "source_item_id": "74193"
+          },
+          "title": "Hill's Science Diet Adult Perfect Weight Management Chicken & Vegetables Entree Wet Dog Food, 12.8-oz can, case of 12",
+          "price": "$53.88",
+          "compare_at_price": null,
+          "description": "Hill's Science Diet Adult Perfect Weight Chicken & Vegetables Entree Canned Dog Food is a paw-some choice for pups who need a little help managing their weight. This recipe promotes safe and effective weight loss and healthy weight maintenance. It also provides lean muscle support to help keep your furbaby looking and feeling his best. It tastes paw-some, too, and is made with wholesome ingredients like chicken, green beans, carrots and peas. This food is free of artificial flavors and preservatives, and it delivers balanced nutrition. Prebiotic fibers promote gentle digestion. This food is paw-fect for adult dogs who need fewer calories, like dogs who are neutered, less active or prone to weight gain.",
+          "ingredients": "Chicken Broth, Chicken, Turkey Giblets, Green Beans, Carrots, Green Peas, Potato Starch, Egg Whites, Pea Protein, Oat Fiber, Powdered Cellulose, Dried Tomato Pomace, Dried Beet Pulp, Flaxseed, Coconut Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, DL-Methionine, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Vitamin A Supplement, Calcium Pantothenate, Pyridoxine Hydrochloride, Vitamin B12 Supplement, Riboflavin Supplement, Biotin, Vitamin D3 Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Folic Acid), Potassium Chloride, L-Lysine, Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|5.5% min|\r\n|Crude Fat|2.0% min|\r\n|Crude Fiber|4.0% max|\r\n|Moisture|78.0% max|",
+          "feeding_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+          "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+          "calorie_content": "310 kcal/12.8 oz can",
+          "autoship_price": "$51.19",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068128bf-7b7d-7503-8000-250d7806457c._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-perfect/dp/102094",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "102094",
+            "source_variant_id": "74193",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.8-oz can, case of 12"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 1,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Chicken & Vegetables"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Chicken & Vegetables"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    },
+    {
+      "source_group_id": "102094:flavor:hearty-vegetable-chicken",
+      "title": "Hill's Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food",
+      "flavor": "Hearty Vegetable & Chicken",
+      "discriminator": {
+        "flavor": "Hearty Vegetable & Chicken"
+      },
+      "brand": "Hill's Science Diet",
+      "handle_slug": "hills-science-diet-adult-perfect-hearty-vegetable-chicken",
+      "category_path": [],
+      "description": "Hill's Science Diet Adult Perfect Weight Chicken & Vegetables Entree Canned Dog Food is a paw-some choice for pups who need a little help managing their weight. This recipe promotes safe and effective weight loss and healthy weight maintenance. It also provides lean muscle support to help keep your furbaby looking and feeling his best. It tastes paw-some, too, and is made with wholesome ingredients like chicken, green beans, carrots and peas. This food is free of artificial flavors and preservatives, and it delivers balanced nutrition. Prebiotic fibers promote gentle digestion. This food is paw-fect for adult dogs who need fewer calories, like dogs who are neutered, less active or prone to weight gain.",
+      "ingredients": "Chicken Broth, Chicken, Turkey Giblets, Green Beans, Carrots, Green Peas, Potato Starch, Egg Whites, Pea Protein, Oat Fiber, Powdered Cellulose, Dried Tomato Pomace, Dried Beet Pulp, Flaxseed, Coconut Oil, Hydrolyzed Chicken Flavor, Dicalcium Phosphate, Carrageenan, DL-Methionine, Choline Chloride, Iodized Salt, Dried Apple Pomace, vitamins (Vitamin E Supplement, Ascorbic Acid (source of Vitamin C), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Vitamin A Supplement, Calcium Pantothenate, Pyridoxine Hydrochloride, Vitamin B12 Supplement, Riboflavin Supplement, Biotin, Vitamin D3 Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Folic Acid), Potassium Chloride, L-Lysine, Calcium Carbonate, Taurine, minerals (Ferrous Sulfate, Zinc Oxide, Copper Sulfate, Manganese Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|5.5% min|\r\n|Crude Fat|2.0% min|\r\n|Crude Fiber|4.0% max|\r\n|Moisture|78.0% max|",
+      "feeding_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pets new food with decreasing amounts of the old food over a 7 - day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup. Science Diet is available in a wide variety of dry foods, canned foods and treats for your pets unique needs.",
+      "transition_instructions": "Adjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian. New to this food? Mix increasing amounts of your pet's new food with decreasing amounts of the old food over a 7-day period. Keep fresh water available at all times! Your pets nutritional needs may change as they age. Ask your vet at every checkup.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Hearty Vegetable & Chicken"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Hill's Science Diet",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Hearty Vegetable & Chicken",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Hearty Vegetable & Chicken"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Hearty Vegetable & Chicken",
+        "custom.flavor": "Hearty Vegetable & Chicken"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/0678e83a-8646-7cf1-8000-7ced96f41b74._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/069e628a-4514-7308-8000-405d55cb62d1._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "1656078",
+          "source_variant_id": "1656078",
+          "sku": "1656078",
+          "identifiers": {
+            "upc": null,
+            "gtin": null,
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1656078",
+            "source_item_id": "1656078"
+          },
+          "title": "Hill's Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food, 12.5-oz can, case of 4",
+          "price": "$19.99",
+          "compare_at_price": null,
+          "description": "Help your adult dog keep a healthy weight with Hill’s Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food. This food provides great weight-management nutrition that helps with long-lasting weight support in adult dogs. This specially formulated food features natural ingredients along with added vitamins, minerals, and amino acids. Loved by dogs, this delicious wet food is also a great source of high-quality protein to support lean muscle in dogs.",
+          "ingredients": "Chicken Broth, Pork Liver, Carrots, Green Peas, Powdered Cellulose, Rice Starch, Chicken, Rice, Spinach, Wheat Gluten, Dried Tomato Pomace, Flaxseed, Hydrolyzed Chicken Flavor, Coconut Oil, Potassium Alginate, Fish Oil, Calcium Chloride, Natural Flavor, Guar Gum, Dicalcium Phosphate, Lipoic Acid, Calcium Lactate, Calcium Gluconate, vitamins (Vitamin E Supplement, L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Vitamin D3 Supplement, Folic Acid), Sodium Tripolyphosphate, Potassium Citrate, Taurine, Iodized Salt, L-Lysine, minerals (Zinc Oxide, Ferrous Sulfate, Manganese Sulfate, Copper Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|1.5% min|\r\n|Crude Fiber|4.0% max|\r\n|Moisture|84.0% max|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)\r\n|---|---|\r\n|5 lb|1/2|\r\n|10 lb|1|\r\n|20 lb|1 1/2|\r\n|30 lb|2|\r\n|40 lb|2 1/2|\r\n|50 lb|3|\r\n|60 lb|3 1/3|\r\n|80 lb|4 1/4|\r\n|100 lb|5|\r\n|120 lb|5 2/3|\r\n\r\nAdjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian.",
+          "transition_instructions": "A gradual transition to a new pet food is important to avoid digestive upset.  To transition, mix your pet’s current food with the new food. Over 7 days, gradually decrease the amount of the current pet food while increasing the amount of new pet food.",
+          "calorie_content": "247 kcal/12.5 oz (354 g) can",
+          "autoship_price": null,
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/0678e83a-8646-7cf1-8000-7ced96f41b74._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-perfect/dp/1656078",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1656078",
+            "source_variant_id": "1656078",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.5-oz can, case of 4"
+        },
+        {
+          "source_entry_id": "383144",
+          "source_variant_id": "356915",
+          "sku": "356915",
+          "identifiers": {
+            "upc": null,
+            "gtin": null,
+            "ean": null,
+            "mpn": null,
+            "source_sku": "356915",
+            "source_item_id": "356915"
+          },
+          "title": "Hill's Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food, 12.5-oz, bundle of 24",
+          "price": "$107.76",
+          "compare_at_price": null,
+          "description": "Help your adult dog keep a healthy weight with Hill’s Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food. This food provides great weight-management nutrition that helps with long-lasting weight support in adult dogs. This specially formulated food features natural ingredients along with added vitamins, minerals, and amino acids. Loved by dogs, this delicious wet food is also a great source of high-quality protein to support lean muscle in dogs.",
+          "ingredients": "Chicken Broth, Pork Liver, Carrots, Green Peas, Powdered Cellulose, Rice Starch, Chicken, Rice, Spinach, Wheat Gluten, Dried Tomato Pomace, Flaxseed, Hydrolyzed Chicken Flavor, Coconut Oil, Potassium Alginate, Fish Oil, Calcium Chloride, Natural Flavor, Guar Gum, Dicalcium Phosphate, Lipoic Acid, Calcium Lactate, Calcium Gluconate, vitamins (Vitamin E Supplement, L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Vitamin D3 Supplement, Folic Acid), Sodium Tripolyphosphate, Potassium Citrate, Taurine, Iodized Salt, L-Lysine, minerals (Zinc Oxide, Ferrous Sulfate, Manganese Sulfate, Copper Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|1.5% min|\r\n|Crude Fiber|4.0% max|\r\n|Moisture|84.0% max|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)\r\n|---|---|\r\n|5 lb|1/2|\r\n|10 lb|1|\r\n|20 lb|1 1/2|\r\n|30 lb|2|\r\n|40 lb|2 1/2|\r\n|50 lb|3|\r\n|60 lb|3 1/3|\r\n|80 lb|4 1/4|\r\n|100 lb|5|\r\n|120 lb|5 2/3|\r\n\r\nAdjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian.",
+          "transition_instructions": "A gradual transition to a new pet food is important to avoid digestive upset.  To transition, mix your pet’s current food with the new food. Over 7 days, gradually decrease the amount of the current pet food while increasing the amount of new pet food.",
+          "calorie_content": "247 kcal/12.5 oz (354 g) can",
+          "autoship_price": "$102.37",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069e628a-4514-7308-8000-405d55cb62d1._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-perfect/dp/383144",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "383144",
+            "source_variant_id": "356915",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "bundle of 24"
+        },
+        {
+          "source_entry_id": "121657",
+          "source_variant_id": "94053",
+          "sku": "94053",
+          "identifiers": {
+            "upc": "052742002002",
+            "gtin": "052742002002",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "94053",
+            "source_item_id": "94053"
+          },
+          "title": "Hill's Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food, 12.5-oz can, case of 12",
+          "price": "$53.88",
+          "compare_at_price": null,
+          "description": "Help your adult dog keep a healthy weight with Hill’s Science Diet Adult Perfect Weight Management Hearty Vegetable & Chicken Stew Wet Dog Food. This food provides great weight-management nutrition that helps with long-lasting weight support in adult dogs. This specially formulated food features natural ingredients along with added vitamins, minerals, and amino acids. Loved by dogs, this delicious wet food is also a great source of high-quality protein to support lean muscle in dogs.",
+          "ingredients": "Chicken Broth, Pork Liver, Carrots, Green Peas, Powdered Cellulose, Rice Starch, Chicken, Rice, Spinach, Wheat Gluten, Dried Tomato Pomace, Flaxseed, Hydrolyzed Chicken Flavor, Coconut Oil, Potassium Alginate, Fish Oil, Calcium Chloride, Natural Flavor, Guar Gum, Dicalcium Phosphate, Lipoic Acid, Calcium Lactate, Calcium Gluconate, vitamins (Vitamin E Supplement, L-Ascorbyl-2-Polyphosphate (source of Vitamin C), Thiamine Mononitrate, Niacin Supplement, Pyridoxine Hydrochloride, Calcium Pantothenate, Vitamin B12 Supplement, Riboflavin Supplement, Menadione Sodium Bisulfite Complex (source of Vitamin K), Biotin, Vitamin D3 Supplement, Folic Acid), Sodium Tripolyphosphate, Potassium Citrate, Taurine, Iodized Salt, L-Lysine, minerals (Zinc Oxide, Ferrous Sulfate, Manganese Sulfate, Copper Sulfate, Calcium Iodate), L-Carnitine, Beta-Carotene.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\r\n|---|---:|\r\n|Crude Protein|4.0% min|\r\n|Crude Fat|1.5% min|\r\n|Crude Fiber|4.0% max|\r\n|Moisture|84.0% max|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cans)\r\n|---|---|\r\n|5 lb|1/2|\r\n|10 lb|1|\r\n|20 lb|1 1/2|\r\n|30 lb|2|\r\n|40 lb|2 1/2|\r\n|50 lb|3|\r\n|60 lb|3 1/3|\r\n|80 lb|4 1/4|\r\n|100 lb|5|\r\n|120 lb|5 2/3|\r\n\r\nAdjust feeding amounts as necessary to maintain optimal weight. If you are unsure, ask your veterinarian.",
+          "transition_instructions": "A gradual transition to a new pet food is important to avoid digestive upset.  To transition, mix your pet’s current food with the new food. Over 7 days, gradually decrease the amount of the current pet food while increasing the amount of new pet food.",
+          "calorie_content": "247 kcal/12.5 oz (354 g) can",
+          "autoship_price": "$51.19",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069e628a-4514-7308-8000-405d55cb62d1._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/hills-science-diet-adult-perfect/dp/121657",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "121657",
+            "source_variant_id": "94053",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "12.5-oz can, case of 12"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 3,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Hearty Vegetable & Chicken"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Hearty Vegetable & Chicken"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 83,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 custom.source_flavor does not match grouped flavor.",
+      "Group 0 metafields_plan missing complex fields.",
+      "Variant 1656078 missing gtin.",
+      "Variant 356915 missing gtin.",
+      "Group 1 custom.source_flavor does not match grouped flavor.",
+      "Group 1 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 4,
+      "variants_with_gtin": 2,
+      "variants_with_upc": 2,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 2,
+      "gtin_coverage_percent": 50.0
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 4,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 3,
+      "guaranteed_analysis": 3,
+      "feeding_instructions": 3,
+      "transition_instructions": 3,
+      "description": 4,
+      "calorie_content": 3,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

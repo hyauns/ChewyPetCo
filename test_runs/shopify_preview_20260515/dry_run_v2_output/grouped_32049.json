@@ -1,0 +1,680 @@
+{
+  "source": "chewy",
+  "source_product_id": "32049",
+  "source_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32049",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "32049:flavor:chicken",
+      "title": "Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food",
+      "flavor": "Chicken",
+      "discriminator": {
+        "flavor": "Chicken"
+      },
+      "brand": "Blue Buffalo",
+      "handle_slug": "blue-buffalo-wilderness-chicken-chicken",
+      "category_path": [],
+      "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real chicken as the first ingredient, this natural food provides balanced nutrition to help your pup thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without the grains some pet parents choose to avoid. The high-quality protein from deboned chicken helps your adult furbaby develop and maintain strong, healthy, lean muscles. Plus, all Blue Wilderness dry foods include exclusive antioxidant-rich LifeSource Bits, which help support immune system health. Crafted from the finest natural ingredients, enhanced with vitamins, minerals, and other nutrients. This recipe is made without chicken (or poultry) by-product meals, corn, wheat, or soy, and artificial flavors or preservatives, so you can feel good about feeding your furry family member this dry food.",
+      "ingredients": "Deboned Chicken, Chicken Meal, Peas, Pea Protein, Tapioca Starch, Fish Meal (source of Omega 3 Fatty Acids), Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Flaxseed (source of Omega 6 Fatty Acids), Pea Starch, Natural Flavor, Dried Egg Product, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Salt, L-Threonine, Potassium Chloride, preserved with Mixed Tocopherols, Dried Sweet Potatoes, Carrots, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|0.5% min|\n|Omega 6 Fatty Acids*|2.75% min|\n|Glucosamine*|400 mg/kg min|",
+      "feeding_instructions": "|Weight of Dog|Daily Feeding (cups)|\r\n|---|---|\r\n|Up to 15 lbs|1/2  - 1 1/4|\r\n|16 - 25 lbs|1 1/4 - 1 3/4|\r\n|26 - 40 lbs|1 3/4 - 2 1/4|\r\n|41 - 60 lbs|2 1/4 - 3 1/4|\r\n|61 - 80 lbs|3 1/4 - 4|\r\n|81 - 100 lbs|4 - 4 3/4|\r\n|Over 100 lbs|4 3/4 cups, plus 1/2 cup for each additional 20 lbs|",
+      "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Chicken"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Blue Buffalo",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Chicken",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Chicken"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Chicken",
+        "custom.flavor": "Chicken"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/06998b04-2bb4-7a59-8000-ac7a280f30ce._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/06998b04-362c-7ee7-8000-bfe844f15b34._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/06998b04-41ee-7f9e-8000-084b0bf932c0._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/069b967f-4dde-79e1-8000-a1729a5eed90._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "1684006",
+          "source_variant_id": "1684006",
+          "sku": "1684006",
+          "identifiers": {
+            "upc": "840243156030",
+            "gtin": "840243156030",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1684006",
+            "source_item_id": "1684006"
+          },
+          "title": "Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food, 13-lb bag",
+          "price": "$46.99",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real chicken as the first ingredient, this natural food provides balanced nutrition to help your pup thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without the grains some pet parents choose to avoid. The high-quality protein from deboned chicken helps your adult furbaby develop and maintain strong, healthy, lean muscles. Plus, all Blue Wilderness dry foods include exclusive antioxidant-rich LifeSource Bits, which help support immune system health. Crafted from the finest natural ingredients, enhanced with vitamins, minerals, and other nutrients. This recipe is made without chicken (or poultry) by-product meals, corn, wheat, or soy, and artificial flavors or preservatives, so you can feel good about feeding your furry family member this dry food.",
+          "ingredients": "Deboned Chicken, Chicken Meal, Peas, Pea Protein, Tapioca Starch, Fish Meal (source of Omega 3 Fatty Acids), Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Flaxseed (source of Omega 6 Fatty Acids), Pea Starch, Natural Flavor, Dried Egg Product, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Salt, L-Threonine, Potassium Chloride, preserved with Mixed Tocopherols, Dried Sweet Potatoes, Carrots, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|0.5% min|\n|Omega 6 Fatty Acids*|2.75% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cups)|\r\n|---|---|\r\n|Up to 15 lbs|1/2  - 1 1/4|\r\n|16 - 25 lbs|1 1/4 - 1 3/4|\r\n|26 - 40 lbs|1 3/4 - 2 1/4|\r\n|41 - 60 lbs|2 1/4 - 3 1/4|\r\n|61 - 80 lbs|3 1/4 - 4|\r\n|81 - 100 lbs|4 - 4 3/4|\r\n|Over 100 lbs|4 3/4 cups, plus 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,652 kcal/kg",
+          "autoship_price": "$44.64",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06998b04-2bb4-7a59-8000-ac7a280f30ce._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/1684006",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1684006",
+            "source_variant_id": "1684006",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "13-lb bag"
+        },
+        {
+          "source_entry_id": "32052",
+          "source_variant_id": "46872",
+          "sku": "46872",
+          "identifiers": {
+            "upc": "840243105342",
+            "gtin": "840243105342",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "46872",
+            "source_item_id": "46872"
+          },
+          "title": "Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food, 24-lb bag",
+          "price": "$68.98",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real chicken as the first ingredient, this natural food provides balanced nutrition to help your pup thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without the grains some pet parents choose to avoid. The high-quality protein from deboned chicken helps your adult furbaby develop and maintain strong, healthy, lean muscles. Plus, all Blue Wilderness dry foods include exclusive antioxidant-rich LifeSource Bits, which help support immune system health. Crafted from the finest natural ingredients, enhanced with vitamins, minerals, and other nutrients. This recipe is made without chicken (or poultry) by-product meals, corn, wheat, or soy, and artificial flavors or preservatives, so you can feel good about feeding your furry family member this dry food.",
+          "ingredients": "Deboned Chicken, Chicken Meal, Peas, Pea Protein, Tapioca Starch, Fish Meal (source of Omega 3 Fatty Acids), Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Flaxseed (source of Omega 6 Fatty Acids), Pea Starch, Natural Flavor, Dried Egg Product, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Salt, L-Threonine, Potassium Chloride, preserved with Mixed Tocopherols, Dried Sweet Potatoes, Carrots, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|0.5% min|\n|Omega 6 Fatty Acids*|2.75% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cups)|\r\n|---|---|\r\n|Up to 15 lbs|1/2  - 1 1/4|\r\n|16 - 25 lbs|1 1/4 - 1 3/4|\r\n|26 - 40 lbs|1 3/4 - 2 1/4|\r\n|41 - 60 lbs|2 1/4 - 3 1/4|\r\n|61 - 80 lbs|3 1/4 - 4|\r\n|81 - 100 lbs|4 - 4 3/4|\r\n|Over 100 lbs|4 3/4 cups, plus 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,652 kcal/kg",
+          "autoship_price": "$65.53",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06998b04-362c-7ee7-8000-bfe844f15b34._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32052",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "32052",
+            "source_variant_id": "46872",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "24-lb bag"
+        },
+        {
+          "source_entry_id": "32050",
+          "source_variant_id": "46870",
+          "sku": "46870",
+          "identifiers": {
+            "upc": "840243105328",
+            "gtin": "840243105328",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "46870",
+            "source_item_id": "46870"
+          },
+          "title": "Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food, 4.5-lb bag",
+          "price": "$19.98",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real chicken as the first ingredient, this natural food provides balanced nutrition to help your pup thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without the grains some pet parents choose to avoid. The high-quality protein from deboned chicken helps your adult furbaby develop and maintain strong, healthy, lean muscles. Plus, all Blue Wilderness dry foods include exclusive antioxidant-rich LifeSource Bits, which help support immune system health. Crafted from the finest natural ingredients, enhanced with vitamins, minerals, and other nutrients. This recipe is made without chicken (or poultry) by-product meals, corn, wheat, or soy, and artificial flavors or preservatives, so you can feel good about feeding your furry family member this dry food.",
+          "ingredients": "Deboned Chicken, Chicken Meal, Peas, Pea Protein, Tapioca Starch, Fish Meal (source of Omega 3 Fatty Acids), Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Flaxseed (source of Omega 6 Fatty Acids), Pea Starch, Natural Flavor, Dried Egg Product, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Salt, L-Threonine, Potassium Chloride, preserved with Mixed Tocopherols, Dried Sweet Potatoes, Carrots, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|0.5% min|\n|Omega 6 Fatty Acids*|2.75% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cups)|\r\n|---|---|\r\n|Up to 15 lbs|1/2  - 1 1/4|\r\n|16 - 25 lbs|1 1/4 - 1 3/4|\r\n|26 - 40 lbs|1 3/4 - 2 1/4|\r\n|41 - 60 lbs|2 1/4 - 3 1/4|\r\n|61 - 80 lbs|3 1/4 - 4|\r\n|81 - 100 lbs|4 - 4 3/4|\r\n|Over 100 lbs|4 3/4 cups, plus 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,652 kcal/kg",
+          "autoship_price": "$18.98",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06998b04-41ee-7f9e-8000-084b0bf932c0._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32050",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "32050",
+            "source_variant_id": "46870",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "4.5-lb bag"
+        },
+        {
+          "source_entry_id": "4047150",
+          "source_variant_id": "4047150",
+          "sku": "4047150",
+          "identifiers": {
+            "upc": "840243161355",
+            "gtin": "840243161355",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "4047150",
+            "source_item_id": "4047150"
+          },
+          "title": "Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food, 34-lb bag",
+          "price": "$96.66",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Chicken Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real chicken as the first ingredient, this natural food provides balanced nutrition to help your pup thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without the grains some pet parents choose to avoid. The high-quality protein from deboned chicken helps your adult furbaby develop and maintain strong, healthy, lean muscles. Plus, all Blue Wilderness dry foods include exclusive antioxidant-rich LifeSource Bits, which help support immune system health. Crafted from the finest natural ingredients, enhanced with vitamins, minerals, and other nutrients. This recipe is made without chicken (or poultry) by-product meals, corn, wheat, or soy, and artificial flavors or preservatives, so you can feel good about feeding your furry family member this dry food.",
+          "ingredients": "Deboned Chicken, Chicken Meal, Peas, Pea Protein, Tapioca Starch, Fish Meal (source of Omega 3 Fatty Acids), Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Flaxseed (source of Omega 6 Fatty Acids), Pea Starch, Natural Flavor, Dried Egg Product, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Salt, L-Threonine, Potassium Chloride, preserved with Mixed Tocopherols, Dried Sweet Potatoes, Carrots, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|0.5% min|\n|Omega 6 Fatty Acids*|2.75% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight of Dog|Daily Feeding (cups)|\r\n|---|---|\r\n|Up to 15 lbs|1/2  - 1 1/4|\r\n|16 - 25 lbs|1 1/4 - 1 3/4|\r\n|26 - 40 lbs|1 3/4 - 2 1/4|\r\n|41 - 60 lbs|2 1/4 - 3 1/4|\r\n|61 - 80 lbs|3 1/4 - 4|\r\n|81 - 100 lbs|4 - 4 3/4|\r\n|Over 100 lbs|4 3/4 cups, plus 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,652 kcal/kg",
+          "autoship_price": "$91.83",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069b967f-4dde-79e1-8000-a1729a5eed90._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/4047150",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "4047150",
+            "source_variant_id": "4047150",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "34-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 4,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Chicken"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Chicken"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": [
+          "parent_content_not_applicable_to_discriminator"
+        ],
+        "rejected_content": {
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days."
+        },
+        "rejected_reasons": [
+          "primary_mismatch: dim=flavor, expects=['chicken'], desc_primary=salmon, ingr_primary=salmon"
+        ]
+      }
+    },
+    {
+      "source_group_id": "32049:flavor:salmon",
+      "title": "Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food",
+      "flavor": "Salmon",
+      "discriminator": {
+        "flavor": "Salmon"
+      },
+      "brand": "Blue Buffalo",
+      "handle_slug": "blue-buffalo-wilderness-chicken-salmon",
+      "category_path": [],
+      "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+      "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+      "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+      "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+      "specifications": {},
+      "product_facts": {
+        "primary_flavor": "Salmon"
+      },
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Blue Buffalo",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Flavor",
+                  "value": "Salmon",
+                  "normalized_key": "flavor"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": [
+          "Salmon"
+        ]
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": "Salmon",
+        "custom.flavor": "Salmon"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/06902738-1ab3-79a7-8000-5f655a9a1866._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/is/image/catalog/212231_MAIN._AC_SS1800_V1669943212_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/069b9697-208e-7ff7-8000-9970064bd9a2._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/06902735-d2df-7d2f-8000-08d299f72ecb._AC_SS1800_V1_.jpg",
+        "https://image.chewy.com/is/image/catalog/355830_MAIN._AC_SS1800_V1645055195_.jpg",
+        "https://image.chewy.com/is/image/catalog/46868_MAIN._AC_SS1800_V1669945132_.jpg",
+        "https://image.chewy.com/catalog/general/images/moe/06902737-bf58-7fd3-8000-a52ec014099d._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "32047",
+          "source_variant_id": "46867",
+          "sku": "46867",
+          "identifiers": {
+            "upc": "840243105359",
+            "gtin": "840243105359",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "46867",
+            "source_item_id": "46867"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food, 4.5-lb bag",
+          "price": "$21.98",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": "$20.88",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06902738-1ab3-79a7-8000-5f655a9a1866._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32047",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "32047",
+            "source_variant_id": "46867",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "4.5-lb bag"
+        },
+        {
+          "source_entry_id": "238818",
+          "source_variant_id": "212231",
+          "sku": "212231",
+          "identifiers": {
+            "upc": "840243130719",
+            "gtin": "840243130719",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "212231",
+            "source_item_id": "212231"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Grain-Free Dry Dog Food, 20-lb bag",
+          "price": "$63.99",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": null,
+          "availability": "NEW_VERSION_AVAILABLE",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "explicit_unavailable_flag",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/is/image/catalog/212231_MAIN._AC_SS1800_V1669943212_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/238818",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "238818",
+            "source_variant_id": "212231",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "20-lb bag"
+        },
+        {
+          "source_entry_id": "4047166",
+          "source_variant_id": "4047166",
+          "sku": "4047166",
+          "identifiers": {
+            "upc": "840243161362",
+            "gtin": "840243161362",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "4047166",
+            "source_item_id": "4047166"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food, 34-lb bag",
+          "price": "$104.81",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": "$99.57",
+          "availability": "OUT_OF_STOCK",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "availability_status:OUT_OF_STOCK",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/069b9697-208e-7ff7-8000-9970064bd9a2._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/4047166",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "4047166",
+            "source_variant_id": "4047166",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "34-lb bag"
+        },
+        {
+          "source_entry_id": "1683942",
+          "source_variant_id": "1683942",
+          "sku": "1683942",
+          "identifiers": {
+            "upc": "840243156047",
+            "gtin": "840243156047",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1683942",
+            "source_item_id": "1683942"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food, 13-lb bag",
+          "price": "$50.99",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": "$48.44",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06902735-d2df-7d2f-8000-08d299f72ecb._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/1683942",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1683942",
+            "source_variant_id": "1683942",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "13-lb bag"
+        },
+        {
+          "source_entry_id": "382059",
+          "source_variant_id": "355830",
+          "sku": "355830",
+          "identifiers": {
+            "upc": null,
+            "gtin": null,
+            "ean": null,
+            "mpn": null,
+            "source_sku": "355830",
+            "source_item_id": "355830"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Grain-Free Dry Dog Food, 24-lb bag, bundle of 2",
+          "price": "$147.96",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": "$140.56",
+          "availability": "DISCONTINUED",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "explicit_unavailable_flag",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/is/image/catalog/355830_MAIN._AC_SS1800_V1645055195_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/382059",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "382059",
+            "source_variant_id": "355830",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "24-lb bag, bundle of 2"
+        },
+        {
+          "source_entry_id": "32048",
+          "source_variant_id": "46868",
+          "sku": "46868",
+          "identifiers": {
+            "upc": "840243105366",
+            "gtin": "840243105366",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "46868",
+            "source_item_id": "46868"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Grain-Free Dry Dog Food, 11-lb bag",
+          "price": "$47.99",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": null,
+          "availability": "NEW_VERSION_AVAILABLE",
+          "in_stock": false,
+          "out_of_stock": true,
+          "stock_reason": "explicit_unavailable_flag",
+          "shopify_inventory_policy": "deny",
+          "images": [
+            "https://image.chewy.com/is/image/catalog/46868_MAIN._AC_SS1800_V1669945132_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32048",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "32048",
+            "source_variant_id": "46868",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "11-lb bag"
+        },
+        {
+          "source_entry_id": "32049",
+          "source_variant_id": "46869",
+          "sku": "46869",
+          "identifiers": {
+            "upc": "840243105373",
+            "gtin": "840243105373",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "46869",
+            "source_item_id": "46869"
+          },
+          "title": "Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food, 24-lb bag",
+          "price": "$73.98",
+          "compare_at_price": null,
+          "description": "Fuel your furry friend’s next adventure with Blue Buffalo Wilderness Salmon Recipe Adult High-Protein Grain-Free Dry Dog Food. Made with real, high-quality salmon as the first ingredient, this natural food provides balanced nutrition to help your tail wagger thrive while satisfying their wild side. With 34% protein, this grain-free formula contains fats, complex carbohydrates, fruits, and vegetables for wholesome, well-rounded nutrition without any grains. It also includes omega-3 and -6 fatty acids to support skin and coat health, making it the perfect choice for pet parents who want to avoid grains in their pup’s diet.",
+          "ingredients": "Salmon, Chicken Meal, Peas, Pea Protein, Fish Meal (source of Omega 3 Fatty Acids), Tapioca Starch, Dried Tomato Pomace, Chicken Fat (preserved with Mixed Tocopherols), Dried Egg Product, Pea Starch, Flaxseed (source of Omega 6 Fatty Acids), Natural Flavor, Direct Dehydrated Alfalfa Pellets, DL-Methionine, Dried Chicory Root, Potatoes, Pea Fiber, Alfalfa Nutrient Concentrate, Calcium Carbonate, Choline Chloride, Dicalcium Phosphate, L-Threonine, preserved with Mixed Tocopherols, Salt, Dried Sweet Potatoes, Carrots, Potassium Chloride, Zinc Amino Acid Chelate, Zinc Sulfate, Vegetable Juice for color, Glucosamine Hydrochloride, Ferrous Sulfate, Vitamin E Supplement, Iron Amino Acid Chelate, Blueberries, Cranberries, Barley Grass, Parsley, Turmeric, Dried Kelp, Yucca Schidigera Extract, Niacin (Vitamin B3), Calcium Pantothenate (Vitamin B5), L-Ascorbyl-2-Polyphosphate (source of Vitamin C), L-Lysine, Copper Sulfate, Biotin (Vitamin B7), Vitamin A Supplement, Copper Amino Acid Chelate, Manganese Sulfate, Taurine, Manganese Amino Acid Chelate, Thiamine Mononitrate (Vitamin B1), Riboflavin (Vitamin B2), Vitamin D3 Supplement, Vitamin B12 Supplement, Pyridoxine Hydrochloride (Vitamin B6), Calcium Iodate, Dried Yeast, Dried Enterococcus faecium fermentation product, Dried Lactobacillus acidophilus fermentation product, Dried Aspergillus niger fermentation extract, Dried Trichoderma longibrachiatum fermentation extract, Dried Bacillus subtilis fermentation extract, Folic Acid (Vitamin B9), Sodium Selenite, Oil of Rosemary.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|34.0% min|\n|Crude Fat|15.0% min|\n|Crude Fiber|6.0% max|\n|Moisture|10.0% max|\n|Calcium|1.4% min|\n|Phosphorus|0.9% min|\n|Omega 3 Fatty Acids*|1.0% min|\n|Omega 6 Fatty Acids*|2.5% min|\n|Glucosamine*|400 mg/kg min|",
+          "feeding_instructions": "|Weight|Daily Feeding|\n|---|---|\n|Up to 15 lbs|1/2 - 1 |\n|16 - 25 lbs|1 - 1 3/4|\n|26 - 40 lbs|1 3/4 - 2 1/4|\n|41 - 60 lbs|2 1/4 - 3 1/4|\n|61 - 80 lbs|3 1/4 - 4|\n|81 - 100 lbs|4 - 4 3/4|\n|Over 100 lbs|Feed 4 3/4  + 1/2 cup for each additional 20 lbs|",
+          "transition_instructions": "Start by mixing 25% of BLUE with your dog’s old food, and gradually increase the proportion of BLUE over the next 14 days.",
+          "calorie_content": "3,649 kcal/kg",
+          "autoship_price": "$70.28",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/06902737-bf58-7fd3-8000-a52ec014099d._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/blue-buffalo-wilderness-chicken/dp/32049",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "32049",
+            "source_variant_id": "46869",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "24-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 7,
+        "image_source": "variant_images",
+        "discriminator": {
+          "flavor": "Salmon"
+        },
+        "group_key": [
+          [
+            "flavor",
+            "Salmon"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 85,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 custom.source_flavor does not match grouped flavor.",
+      "Group 0 metafields_plan missing complex fields.",
+      "Variant 355830 missing gtin.",
+      "Group 1 custom.source_flavor does not match grouped flavor.",
+      "Group 1 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 11,
+      "variants_with_gtin": 10,
+      "variants_with_upc": 10,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 1,
+      "gtin_coverage_percent": 90.9090909090909
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 11,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 10,
+      "guaranteed_analysis": 10,
+      "feeding_instructions": 10,
+      "transition_instructions": 10,
+      "description": 11,
+      "calorie_content": 10,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

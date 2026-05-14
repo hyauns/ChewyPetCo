@@ -1,0 +1,408 @@
+{
+  "source": "chewy",
+  "source_product_id": "1018830",
+  "source_url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/1018830",
+  "architecture": "apollo",
+  "grouping_strategy": "discriminator_attrs_as_product_size_as_variant",
+  "is_multi_product": true,
+  "products": [
+    {
+      "source_group_id": "1018830:lifestage:adult",
+      "title": "Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food",
+      "flavor": null,
+      "discriminator": {
+        "lifestage": "Adult"
+      },
+      "brand": "Royal Canin",
+      "handle_slug": "royal-canin-breed-health-nutrition-adult",
+      "category_path": [],
+      "description": "Delight your French Bulldog every time you open a bag of Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food. This recipe features a customized curved-shaped kibble that is specially designed for your French Bulldog’s short muzzle and jaw shape, making this food easy for your little dog to pick up and chew. Not only that, but this complete and balanced puppy food provides the nutrition to help your best friend thrive. An exclusive mix of antioxidants and vitamin E promotes healthy development of your puppy’s immune system, while exclusive nutrients help support the skin barrier for healthy skin. This food is formulated with high-quality protein and prebiotics to support digestive health and a balanced intestinal flora, contributing to optimal stool quality. Serve your furbaby this tasty food and promote your puppy’s overall wellness with every meal.",
+      "ingredients": "Brewers rice, chicken by-product meal, wheat, chicken fat, chicken meal, wheat gluten, natural flavors, dried plain beet pulp, corn protein meal, vegetable oil, sodium aluminosilicate, monocalcium phosphate, potassium chloride, salt, pea fiber, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), niacin supplement, D-calcium pantothenate, biotin, pyridoxine hydrochloride (vitamin B6), riboflavin supplement, thiamine mononitrate (vitamin B1), vitamin A acetate, vitamin B12 supplement, folic acid, vitamin D3 supplement], fructooligosaccharides, marine microalgae oil, yeast extract, choline chloride, rosemary extract, preserved with mixed tocopherols and citric acid, fish oil, taurine, calcium carbonate, L-threonine, glucosamine hydrochloride, trace minerals[zinc proteinate, zinc oxide, ferrous sulfate, manganese proteinate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], DL-methionine, marigold extract (Tagetes erecta L.), Yucca schidigera extract, L-carnitine, carotene, chondroitin sulfate.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|28.0% min|\n|Crude Fat|18.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Vitamin E|420 IU/kg min|\n|Taurine|0.1% min|\n|Ascorbic acid|240 mg/kg min|\n|Lutein|5 mg/kg min|\n|Glucosamine|742 mg/kg min|\n|Chondroitin sulfate|7 mg/kg min|",
+      "feeding_instructions": "|Age of Dog|Adult Weight of 17.6 lbs|Adult Weight of 22 lbs|Adult Weight of 30.9 lbs|\n|---|---|---|---|\n|2 months|1 1/4|1 1/2|1 7/8|\n|3 months|1 1/2|1 3/4|2 1/4|\n|4 months|1 5/8|1 7/8|2 3/8|\n|5 months|1 5/8|1 7/8|2 1/2|\n|6 months|1 5/8|1 7/8|2 1/2|\n|7 months|1 1/2|1 3/4|2 1/4|\n|9 months|1 1/8|1 3/8|1 7/8|\n|11 months|Royal Canin French Bulldog Adult Dry Dog Food|1 3/8|1 3/4|\n|12 months|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|",
+      "transition_instructions": "When switching to Royal Canin from a previous dog food: do not suddenly change dog food, but rather mix in the new dog food over a period of seven to ten days.",
+      "specifications": {},
+      "product_facts": {},
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Royal Canin",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Lifestage",
+                  "value": "Adult",
+                  "normalized_key": "lifestage"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": []
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null,
+        "custom.lifestage": "Adult"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/068efb87-b6de-7366-8000-eedb6bd042ec._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "108951",
+          "source_variant_id": "81122",
+          "sku": "81122",
+          "identifiers": {
+            "upc": "030111457868",
+            "gtin": "030111457868",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "81122",
+            "source_item_id": "81122"
+          },
+          "title": "Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food, 6-lb bag",
+          "price": "$34.99",
+          "compare_at_price": null,
+          "description": "Give your furbaby tasty nutrition tailored just for them with Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food. This food features a customized curved-shaped kibble specially designed for your French bulldog’s short muzzle and jaw shape, making it easy for them to pick up and chew. This complete and balanced recipe provides the nutrition needed to help your best friend thrive. Protein and L-carnitine help support healthy muscles, while exclusive nutrients help support the skin barrier for healthy skin. A combination of highly digestible proteins, precise fiber content, and high-quality carbohydrate sources helps to support your Frenchie’s healthy digestion and decrease flatulence and unpleasant stool odors. Serve up this delicious food and promote your pup’s overall wellness with every meal.",
+          "ingredients": "Brewers Rice, Wheat, Chicken By-Product Meal, Chicken Fat, Wheat Gluten, Pork Meal, Natural Flavors, Dried Plain Beet Pulp, Fish Oil, Vegetable Oil, Sodium Silico Aluminate, Potassium Chloride, Salt, Calcium Carbonate, Fructooligosaccharides, Sodium Tripolyphosphate, Vitamins [DL-Alpha Tocopherol Acetate (Source Of Vitamin E), Niacin Supplement, L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), D-Calcium Pantothenate, Biotin, Pyridoxine Hydrochloride (Vitamin B6), Riboflavin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin A Acetate, Folic Acid, Vitamin B12 Supplement, Vitamin D3 Supplement], Choline Chloride, L-Tyrosine, Glucosamine Hydrochloride, Marigold Extract (Tagetes Erecta L.), Taurine, DL-Methionine, Trace Minerals [Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Calcium Iodate, Sodium Selenite, Copper Proteinate], L-Lysine, Magnesium Oxide, Green Tea Extract, L-Carnitine, Chondroitin Sulfate, Rosemary Extract, Preserved With Mixed Tocopherols and Citric Acid.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|24.0% min|\n|Crude Fat|16.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Eicosapentaenoic Acid (EPA)|0.17% min|\n|Docosahexaenoic Acid (DHA)|0.07% min|\n|L-Carnitine*|70 mg/kg min|\n|Glucosamine*|743 mg/kg min|\n|Chondroitin Sulfate*|8 mg/kg min|\n\n*Not recognized as an essential nutrient by the AAFCO Dog Food Nutrient Profiles.",
+          "feeding_instructions": "|Weight|Medium Activity Daily Feeding (cup)|High Activity Daily Feeding (cup)|\n|---|---|---|\n|17.6 lbs|1 1/2|1 3/4|\n|19.8 lbs|1 5/8|1 7/8|\n|22 lbs|1 3/4|2|\n|24.3 lbs|1 7/8|2 1/8|\n|26.5 lbs|2|2 1/4|\n|30.9 lbs|2 1/4|2 5/8|\n\nThis is only a guide. Optimal feeding amounts may vary according to your dog's temperament, activity level and environment. If you have any questions regarding your pet's health, please contact your veterinarian.",
+          "transition_instructions": "We recommend at least a 7 day transition before you begin feeding the new food exclusively. \n\n|Days|Old Diet|New Diet|\n|---|---|---|\n|Day 1 and 2|75%|25%|\n|Day 3 and 4|50%|50%|\n|Day 5 and 6|25%|75%|\n|Day 7|-|100%|\n\nThis allows your pet’s digestive system to smoothly adapt to the new food.",
+          "calorie_content": "This diet contains 3,844 kilocalories of metabolizable energy (ME) per kilogram or 331 kilocalories ME per cup on an as fed basis (calculated).",
+          "autoship_price": "$33.24",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068efb87-b6de-7366-8000-eedb6bd042ec._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/108951",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "108951",
+            "source_variant_id": "81122",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "6-lb bag"
+        },
+        {
+          "source_entry_id": "1618102",
+          "source_variant_id": "1618102",
+          "sku": "1618102",
+          "identifiers": {
+            "upc": "030111457837",
+            "gtin": "030111457837",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1618102",
+            "source_item_id": "1618102"
+          },
+          "title": "Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food, 30-lb bag",
+          "price": "$99.99",
+          "compare_at_price": null,
+          "description": "Give your furbaby tasty nutrition tailored just for them with Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food. This food features a customized curved-shaped kibble specially designed for your French bulldog’s short muzzle and jaw shape, making it easy for them to pick up and chew. This complete and balanced recipe provides the nutrition needed to help your best friend thrive. Protein and L-carnitine help support healthy muscles, while exclusive nutrients help support the skin barrier for healthy skin. A combination of highly digestible proteins, precise fiber content, and high-quality carbohydrate sources helps to support your Frenchie’s healthy digestion and decrease flatulence and unpleasant stool odors. Serve up this delicious food and promote your pup’s overall wellness with every meal.",
+          "ingredients": "Brewers Rice, Wheat, Chicken By-Product Meal, Chicken Fat, Wheat Gluten, Pork Meal, Natural Flavors, Dried Plain Beet Pulp, Fish Oil, Vegetable Oil, Sodium Silico Aluminate, Potassium Chloride, Salt, Calcium Carbonate, Fructooligosaccharides, Sodium Tripolyphosphate, Vitamins [DL-Alpha Tocopherol Acetate (Source Of Vitamin E), Niacin Supplement, L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), D-Calcium Pantothenate, Biotin, Pyridoxine Hydrochloride (Vitamin B6), Riboflavin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin A Acetate, Folic Acid, Vitamin B12 Supplement, Vitamin D3 Supplement], Choline Chloride, L-Tyrosine, Glucosamine Hydrochloride, Marigold Extract (Tagetes Erecta L.), Taurine, DL-Methionine, Trace Minerals [Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Calcium Iodate, Sodium Selenite, Copper Proteinate], L-Lysine, Magnesium Oxide, Green Tea Extract, L-Carnitine, Chondroitin Sulfate, Rosemary Extract, Preserved With Mixed Tocopherols and Citric Acid.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|24.0% min|\n|Crude Fat|16.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Eicosapentaenoic Acid (EPA)|0.17% min|\n|Docosahexaenoic Acid (DHA)|0.07% min|\n|L-Carnitine*|70 mg/kg min|\n|Glucosamine*|743 mg/kg min|\n|Chondroitin Sulfate*|8 mg/kg min|\n\n*Not recognized as an essential nutrient by the AAFCO Dog Food Nutrient Profiles.",
+          "feeding_instructions": "|Weight|Medium Activity Daily Feeding (cup)|High Activity Daily Feeding (cup)|\n|---|---|---|\n|17.6 lbs|1 1/2|1 3/4|\n|19.8 lbs|1 5/8|1 7/8|\n|22 lbs|1 3/4|2|\n|24.3 lbs|1 7/8|2 1/8|\n|26.5 lbs|2|2 1/4|\n|30.9 lbs|2 1/4|2 5/8|\n\nThis is only a guide. Optimal feeding amounts may vary according to your dog's temperament, activity level and environment. If you have any questions regarding your pet's health, please contact your veterinarian.",
+          "transition_instructions": "We recommend at least a 7 day transition before you begin feeding the new food exclusively. \n\n|Days|Old Diet|New Diet|\n|---|---|---|\n|Day 1 and 2|75%|25%|\n|Day 3 and 4|50%|50%|\n|Day 5 and 6|25%|75%|\n|Day 7|-|100%|\n\nThis allows your pet’s digestive system to smoothly adapt to the new food.",
+          "calorie_content": "This diet contains 3,844 kilocalories of metabolizable energy (ME) per kilogram or 331 kilocalories ME per cup on an as fed basis (calculated).",
+          "autoship_price": "$94.99",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068efb87-b6de-7366-8000-eedb6bd042ec._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/1618102",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1618102",
+            "source_variant_id": "1618102",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "30-lb bag"
+        },
+        {
+          "source_entry_id": "108952",
+          "source_variant_id": "81123",
+          "sku": "81123",
+          "identifiers": {
+            "upc": "030111457875",
+            "gtin": "030111457875",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "81123",
+            "source_item_id": "81123"
+          },
+          "title": "Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food, 17-lb bag",
+          "price": "$79.99",
+          "compare_at_price": null,
+          "description": "Give your furbaby tasty nutrition tailored just for them with Royal Canin Breed Health Nutrition French Bulldog Adult Dry Dog Food. This food features a customized curved-shaped kibble specially designed for your French bulldog’s short muzzle and jaw shape, making it easy for them to pick up and chew. This complete and balanced recipe provides the nutrition needed to help your best friend thrive. Protein and L-carnitine help support healthy muscles, while exclusive nutrients help support the skin barrier for healthy skin. A combination of highly digestible proteins, precise fiber content, and high-quality carbohydrate sources helps to support your Frenchie’s healthy digestion and decrease flatulence and unpleasant stool odors. Serve up this delicious food and promote your pup’s overall wellness with every meal.",
+          "ingredients": "Brewers Rice, Wheat, Chicken By-Product Meal, Chicken Fat, Wheat Gluten, Pork Meal, Natural Flavors, Dried Plain Beet Pulp, Fish Oil, Vegetable Oil, Sodium Silico Aluminate, Potassium Chloride, Salt, Calcium Carbonate, Fructooligosaccharides, Sodium Tripolyphosphate, Vitamins [DL-Alpha Tocopherol Acetate (Source Of Vitamin E), Niacin Supplement, L-Ascorbyl-2-Polyphosphate (Source Of Vitamin C), D-Calcium Pantothenate, Biotin, Pyridoxine Hydrochloride (Vitamin B6), Riboflavin Supplement, Thiamine Mononitrate (Vitamin B1), Vitamin A Acetate, Folic Acid, Vitamin B12 Supplement, Vitamin D3 Supplement], Choline Chloride, L-Tyrosine, Glucosamine Hydrochloride, Marigold Extract (Tagetes Erecta L.), Taurine, DL-Methionine, Trace Minerals [Zinc Proteinate, Zinc Oxide, Ferrous Sulfate, Manganese Proteinate, Manganous Oxide, Copper Sulfate, Calcium Iodate, Sodium Selenite, Copper Proteinate], L-Lysine, Magnesium Oxide, Green Tea Extract, L-Carnitine, Chondroitin Sulfate, Rosemary Extract, Preserved With Mixed Tocopherols and Citric Acid.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|24.0% min|\n|Crude Fat|16.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Eicosapentaenoic Acid (EPA)|0.17% min|\n|Docosahexaenoic Acid (DHA)|0.07% min|\n|L-Carnitine*|70 mg/kg min|\n|Glucosamine*|743 mg/kg min|\n|Chondroitin Sulfate*|8 mg/kg min|\n\n*Not recognized as an essential nutrient by the AAFCO Dog Food Nutrient Profiles.",
+          "feeding_instructions": "|Weight|Medium Activity Daily Feeding (cup)|High Activity Daily Feeding (cup)|\n|---|---|---|\n|17.6 lbs|1 1/2|1 3/4|\n|19.8 lbs|1 5/8|1 7/8|\n|22 lbs|1 3/4|2|\n|24.3 lbs|1 7/8|2 1/8|\n|26.5 lbs|2|2 1/4|\n|30.9 lbs|2 1/4|2 5/8|\n\nThis is only a guide. Optimal feeding amounts may vary according to your dog's temperament, activity level and environment. If you have any questions regarding your pet's health, please contact your veterinarian.",
+          "transition_instructions": "We recommend at least a 7 day transition before you begin feeding the new food exclusively. \n\n|Days|Old Diet|New Diet|\n|---|---|---|\n|Day 1 and 2|75%|25%|\n|Day 3 and 4|50%|50%|\n|Day 5 and 6|25%|75%|\n|Day 7|-|100%|\n\nThis allows your pet’s digestive system to smoothly adapt to the new food.",
+          "calorie_content": "This diet contains 3,844 kilocalories of metabolizable energy (ME) per kilogram or 331 kilocalories ME per cup on an as fed basis (calculated).",
+          "autoship_price": "$75.99",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/068efb87-b6de-7366-8000-eedb6bd042ec._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/108952",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "108952",
+            "source_variant_id": "81123",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "17-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 3,
+        "image_source": "variant_images",
+        "discriminator": {
+          "lifestage": "Adult"
+        },
+        "group_key": [
+          [
+            "lifestage",
+            "Adult"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    },
+    {
+      "source_group_id": "1018830:lifestage:puppy",
+      "title": "Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food",
+      "flavor": null,
+      "discriminator": {
+        "lifestage": "Puppy"
+      },
+      "brand": "Royal Canin",
+      "handle_slug": "royal-canin-breed-health-nutrition-puppy",
+      "category_path": [],
+      "description": "Delight your French Bulldog every time you open a bag of Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food. This recipe features a customized curved-shaped kibble that is specially designed for your French Bulldog’s short muzzle and jaw shape, making this food easy for your little dog to pick up and chew. Not only that, but this complete and balanced puppy food provides the nutrition to help your best friend thrive. An exclusive mix of antioxidants and vitamin E promotes healthy development of your puppy’s immune system, while exclusive nutrients help support the skin barrier for healthy skin. This food is formulated with high-quality protein and prebiotics to support digestive health and a balanced intestinal flora, contributing to optimal stool quality. Serve your furbaby this tasty food and promote your puppy’s overall wellness with every meal.",
+      "ingredients": "Brewers rice, chicken by-product meal, wheat, chicken fat, chicken meal, wheat gluten, natural flavors, dried plain beet pulp, corn protein meal, vegetable oil, sodium aluminosilicate, monocalcium phosphate, potassium chloride, salt, pea fiber, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), niacin supplement, D-calcium pantothenate, biotin, pyridoxine hydrochloride (vitamin B6), riboflavin supplement, thiamine mononitrate (vitamin B1), vitamin A acetate, vitamin B12 supplement, folic acid, vitamin D3 supplement], fructooligosaccharides, marine microalgae oil, yeast extract, choline chloride, rosemary extract, preserved with mixed tocopherols and citric acid, fish oil, taurine, calcium carbonate, L-threonine, glucosamine hydrochloride, trace minerals[zinc proteinate, zinc oxide, ferrous sulfate, manganese proteinate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], DL-methionine, marigold extract (Tagetes erecta L.), Yucca schidigera extract, L-carnitine, carotene, chondroitin sulfate.",
+      "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|28.0% min|\n|Crude Fat|18.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Vitamin E|420 IU/kg min|\n|Taurine|0.1% min|\n|Ascorbic acid|240 mg/kg min|\n|Lutein|5 mg/kg min|\n|Glucosamine|742 mg/kg min|\n|Chondroitin sulfate|7 mg/kg min|",
+      "feeding_instructions": "|Age of Dog|Adult Weight of 17.6 lbs|Adult Weight of 22 lbs|Adult Weight of 30.9 lbs|\n|---|---|---|---|\n|2 months|1 1/4|1 1/2|1 7/8|\n|3 months|1 1/2|1 3/4|2 1/4|\n|4 months|1 5/8|1 7/8|2 3/8|\n|5 months|1 5/8|1 7/8|2 1/2|\n|6 months|1 5/8|1 7/8|2 1/2|\n|7 months|1 1/2|1 3/4|2 1/4|\n|9 months|1 1/8|1 3/8|1 7/8|\n|11 months|Royal Canin French Bulldog Adult Dry Dog Food|1 3/8|1 3/4|\n|12 months|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|",
+      "transition_instructions": "When switching to Royal Canin from a previous dog food: do not suddenly change dog food, but rather mix in the new dog food over a period of seven to ten days.",
+      "specifications": {},
+      "product_facts": {},
+      "content_sections": {
+        "specifications": {
+          "groups": [
+            {
+              "title": "Specifications",
+              "items": [
+                {
+                  "label": "ProductCategory",
+                  "value": "Food",
+                  "normalized_key": "productcategory"
+                },
+                {
+                  "label": "PetType",
+                  "value": "Dog",
+                  "normalized_key": "pettype"
+                },
+                {
+                  "label": "Brand",
+                  "value": "Royal Canin",
+                  "normalized_key": "brand"
+                },
+                {
+                  "label": "Lifestage",
+                  "value": "Puppy",
+                  "normalized_key": "lifestage"
+                }
+              ]
+            }
+          ],
+          "source_raw": "Generated from Apollo attribute table + defining attributes."
+        }
+      },
+      "storefront_display": {
+        "highlights": []
+      },
+      "metafields_plan": {
+        "custom.primary_flavor": null,
+        "custom.lifestage": "Puppy"
+      },
+      "images": [
+        "https://image.chewy.com/catalog/general/images/moe/0687a864-50f4-7736-8000-00b6b94539e8._AC_SS1800_V1_.jpg"
+      ],
+      "variants": [
+        {
+          "source_entry_id": "1018830",
+          "source_variant_id": "1018830",
+          "sku": "1018830",
+          "identifiers": {
+            "upc": "030111111098",
+            "gtin": "030111111098",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "1018830",
+            "source_item_id": "1018830"
+          },
+          "title": "Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food, 10.5-lb bag",
+          "price": "$69.99",
+          "compare_at_price": null,
+          "description": "Delight your French Bulldog every time you open a bag of Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food. This recipe features a customized curved-shaped kibble that is specially designed for your French Bulldog’s short muzzle and jaw shape, making this food easy for your little dog to pick up and chew. Not only that, but this complete and balanced puppy food provides the nutrition to help your best friend thrive. An exclusive mix of antioxidants and vitamin E promotes healthy development of your puppy’s immune system, while exclusive nutrients help support the skin barrier for healthy skin. This food is formulated with high-quality protein and prebiotics to support digestive health and a balanced intestinal flora, contributing to optimal stool quality. Serve your furbaby this tasty food and promote your puppy’s overall wellness with every meal.",
+          "ingredients": "Brewers rice, chicken by-product meal, wheat, chicken fat, chicken meal, wheat gluten, natural flavors, dried plain beet pulp, corn protein meal, vegetable oil, sodium aluminosilicate, monocalcium phosphate, potassium chloride, salt, pea fiber, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), niacin supplement, D-calcium pantothenate, biotin, pyridoxine hydrochloride (vitamin B6), riboflavin supplement, thiamine mononitrate (vitamin B1), vitamin A acetate, vitamin B12 supplement, folic acid, vitamin D3 supplement], fructooligosaccharides, marine microalgae oil, yeast extract, choline chloride, rosemary extract, preserved with mixed tocopherols and citric acid, fish oil, taurine, calcium carbonate, L-threonine, glucosamine hydrochloride, trace minerals[zinc proteinate, zinc oxide, ferrous sulfate, manganese proteinate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], DL-methionine, marigold extract (Tagetes erecta L.), Yucca schidigera extract, L-carnitine, carotene, chondroitin sulfate.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|28.0% min|\n|Crude Fat|18.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Vitamin E|420 IU/kg min|\n|Taurine|0.1% min|\n|Ascorbic acid|240 mg/kg min|\n|Lutein|5 mg/kg min|\n|Glucosamine|742 mg/kg min|\n|Chondroitin sulfate|7 mg/kg min|",
+          "feeding_instructions": "|Age of Dog|Adult Weight of 17.6 lbs|Adult Weight of 22 lbs|Adult Weight of 30.9 lbs|\n|---|---|---|---|\n|2 months|1 1/4|1 1/2|1 7/8|\n|3 months|1 1/2|1 3/4|2 1/4|\n|4 months|1 5/8|1 7/8|2 3/8|\n|5 months|1 5/8|1 7/8|2 1/2|\n|6 months|1 5/8|1 7/8|2 1/2|\n|7 months|1 1/2|1 3/4|2 1/4|\n|9 months|1 1/8|1 3/8|1 7/8|\n|11 months|Royal Canin French Bulldog Adult Dry Dog Food|1 3/8|1 3/4|\n|12 months|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|",
+          "transition_instructions": "When switching to Royal Canin from a previous dog food: do not suddenly change dog food, but rather mix in the new dog food over a period of seven to ten days.",
+          "calorie_content": "3881 kcal/kg, 373 kcal/cup",
+          "autoship_price": "$66.49",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/0687a864-50f4-7736-8000-00b6b94539e8._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/1018830",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "1018830",
+            "source_variant_id": "1018830",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "10.5-lb bag"
+        },
+        {
+          "source_entry_id": "165937",
+          "source_variant_id": "138982",
+          "sku": "138982",
+          "identifiers": {
+            "upc": "030111111166",
+            "gtin": "030111111166",
+            "ean": null,
+            "mpn": null,
+            "source_sku": "138982",
+            "source_item_id": "138982"
+          },
+          "title": "Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food, 3-lb bag",
+          "price": "$26.99",
+          "compare_at_price": null,
+          "description": "Delight your French Bulldog every time you open a bag of Royal Canin Breed Health Nutrition French Bulldog Puppy Dry Dog Food. This recipe features a customized curved-shaped kibble that is specially designed for your French Bulldog’s short muzzle and jaw shape, making this food easy for your little dog to pick up and chew. Not only that, but this complete and balanced puppy food provides the nutrition to help your best friend thrive. An exclusive mix of antioxidants and vitamin E promotes healthy development of your puppy’s immune system, while exclusive nutrients help support the skin barrier for healthy skin. This food is formulated with high-quality protein and prebiotics to support digestive health and a balanced intestinal flora, contributing to optimal stool quality. Serve your furbaby this tasty food and promote your puppy’s overall wellness with every meal.",
+          "ingredients": "Brewers rice, chicken by-product meal, wheat, chicken fat, chicken meal, wheat gluten, natural flavors, dried plain beet pulp, corn protein meal, vegetable oil, sodium aluminosilicate, monocalcium phosphate, potassium chloride, salt, pea fiber, vitamins[DL-alpha tocopherol acetate (source of vitamin E), L-ascorbyl-2-polyphosphate (source of vitamin C), niacin supplement, D-calcium pantothenate, biotin, pyridoxine hydrochloride (vitamin B6), riboflavin supplement, thiamine mononitrate (vitamin B1), vitamin A acetate, vitamin B12 supplement, folic acid, vitamin D3 supplement], fructooligosaccharides, marine microalgae oil, yeast extract, choline chloride, rosemary extract, preserved with mixed tocopherols and citric acid, fish oil, taurine, calcium carbonate, L-threonine, glucosamine hydrochloride, trace minerals[zinc proteinate, zinc oxide, ferrous sulfate, manganese proteinate, manganous oxide, copper sulfate, sodium selenite, calcium iodate, copper proteinate], DL-methionine, marigold extract (Tagetes erecta L.), Yucca schidigera extract, L-carnitine, carotene, chondroitin sulfate.",
+          "guaranteed_analysis": "|Guaranteed Analysis||\n|---|---:|\n|Crude Protein|28.0% min|\n|Crude Fat|18.0% min|\n|Crude Fiber|3.3% max|\n|Moisture|10.0% max|\n|Vitamin E|420 IU/kg min|\n|Taurine|0.1% min|\n|Ascorbic acid|240 mg/kg min|\n|Lutein|5 mg/kg min|\n|Glucosamine|742 mg/kg min|\n|Chondroitin sulfate|7 mg/kg min|",
+          "feeding_instructions": "|Age of Dog|Adult Weight of 17.6 lbs|Adult Weight of 22 lbs|Adult Weight of 30.9 lbs|\n|---|---|---|---|\n|2 months|1 1/4|1 1/2|1 7/8|\n|3 months|1 1/2|1 3/4|2 1/4|\n|4 months|1 5/8|1 7/8|2 3/8|\n|5 months|1 5/8|1 7/8|2 1/2|\n|6 months|1 5/8|1 7/8|2 1/2|\n|7 months|1 1/2|1 3/4|2 1/4|\n|9 months|1 1/8|1 3/8|1 7/8|\n|11 months|Royal Canin French Bulldog Adult Dry Dog Food|1 3/8|1 3/4|\n|12 months|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|Royal Canin French Bulldog Adult Dry Dog Food|",
+          "transition_instructions": "When switching to Royal Canin from a previous dog food: do not suddenly change dog food, but rather mix in the new dog food over a period of seven to ten days.",
+          "calorie_content": "3881 kcal/kg, 373 kcal/cup",
+          "autoship_price": "$25.64",
+          "availability": "",
+          "in_stock": true,
+          "out_of_stock": false,
+          "stock_reason": "in_stock_signal_true",
+          "shopify_inventory_policy": "continue",
+          "images": [
+            "https://image.chewy.com/catalog/general/images/moe/0687a864-50f4-7736-8000-00b6b94539e8._AC_SS1800_V1_.jpg"
+          ],
+          "variant_url": "https://www.chewy.com/royal-canin-breed-health-nutrition/dp/165937",
+          "content_source": {
+            "type": "apollo_variant_api",
+            "source_entry_id": "165937",
+            "source_variant_id": "138982",
+            "confidence": "high"
+          },
+          "option1_name": "Size",
+          "option1_value": "3-lb bag"
+        }
+      ],
+      "out_of_stock": false,
+      "stock_state": "in_stock",
+      "debug": {
+        "architecture": "apollo",
+        "original_variant_count": 2,
+        "image_source": "variant_images",
+        "discriminator": {
+          "lifestage": "Puppy"
+        },
+        "group_key": [
+          [
+            "lifestage",
+            "Puppy"
+          ]
+        ],
+        "title_source": "longest_variant_with_disc_match",
+        "title_augmentations": [],
+        "parser_warnings": []
+      }
+    }
+  ],
+  "validation": {
+    "is_valid": true,
+    "confidence_score": 91,
+    "missing_required_fields": [],
+    "missing_preferred_fields": [
+      "specifications"
+    ],
+    "warnings": [
+      "Group 0 metafields_plan missing complex fields.",
+      "Group 1 metafields_plan missing complex fields."
+    ],
+    "identifier_coverage": {
+      "total_variants": 5,
+      "variants_with_gtin": 5,
+      "variants_with_upc": 5,
+      "variants_with_ean": 0,
+      "variants_missing_gtin": 0,
+      "gtin_coverage_percent": 100.0
+    }
+  },
+  "enrichment_stats": {
+    "enriched": 5,
+    "failed": 0,
+    "wrong_product_api_rejected": 0,
+    "slug_mismatch": 0,
+    "fields_filled": {
+      "ingredients": 4,
+      "guaranteed_analysis": 4,
+      "feeding_instructions": 4,
+      "transition_instructions": 4,
+      "description": 5,
+      "calorie_content": 4,
+      "images": 0
+    }
+  },
+  "build_id": "chewy-pdp-ui-_reqGyKJ2CuW"
+}

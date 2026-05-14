@@ -358,6 +358,36 @@ def init_db(db_path: str | Path = DB_PATH) -> None:
                 seen_at TEXT NOT NULL,
                 UNIQUE(product_id, url)
             );
+
+            -- Per-product enrichment state for resumability after crash / power loss.
+            -- One row per source_product_id. status='ok' means the latest run completed
+            -- successfully and the product can be skipped on re-run unless force=True.
+            CREATE TABLE IF NOT EXISTS chewy_enrichment_state (
+                product_id TEXT PRIMARY KEY,
+                source_url TEXT,
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending','in_progress','ok','failed','skipped')),
+                mode TEXT,
+                run_label TEXT,
+                last_run_at TEXT,
+                last_started_at TEXT,
+                output_path TEXT,
+                product_count INTEGER NOT NULL DEFAULT 0,
+                variant_count INTEGER NOT NULL DEFAULT 0,
+                enriched_count INTEGER NOT NULL DEFAULT 0,
+                wrong_product_rejected INTEGER NOT NULL DEFAULT 0,
+                slug_mismatch INTEGER NOT NULL DEFAULT 0,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                error_type TEXT,
+                error_message TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_enrichment_state_status
+                ON chewy_enrichment_state(status);
+            CREATE INDEX IF NOT EXISTS idx_enrichment_state_last_run
+                ON chewy_enrichment_state(last_run_at);
             """
         )
         try:
@@ -1201,3 +1231,160 @@ def update_registry_extraction_status(product_id: str, status: str, pdp_job_id: 
             conn.commit()
     except sqlite3.OperationalError:
         pass  # Non-critical: registry update failed due to DB lock, item processing continues
+
+
+# ---------------------------------------------------------------------------
+# Enrichment state — resumable per-product tracking
+# ---------------------------------------------------------------------------
+
+ENRICHMENT_STATUSES = {"pending", "in_progress", "ok", "failed", "skipped"}
+
+
+def get_enrichment_state(product_id: str) -> dict[str, Any] | None:
+    """Fetch the latest enrichment state row for a product. None if never recorded."""
+    if not product_id:
+        return None
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM chewy_enrichment_state WHERE product_id = ?",
+            (str(product_id),),
+        ).fetchone()
+        return row_to_dict(row)
+
+
+def list_enrichment_states(status: str | None = None,
+                           limit: int | None = None) -> list[dict[str, Any]]:
+    sql = "SELECT * FROM chewy_enrichment_state"
+    params: list[Any] = []
+    if status:
+        sql += " WHERE status = ?"
+        params.append(status)
+    sql += " ORDER BY updated_at DESC"
+    if limit:
+        sql += " LIMIT ?"
+        params.append(int(limit))
+    with connect() as conn:
+        return rows_to_dicts(conn.execute(sql, tuple(params)).fetchall())
+
+
+def is_enrichment_done(product_id: str) -> bool:
+    """True if this product was previously enriched successfully (status='ok')."""
+    state = get_enrichment_state(product_id)
+    return bool(state and state.get("status") == "ok")
+
+
+def mark_enrichment_in_progress(product_id: str, *,
+                                source_url: str | None = None,
+                                mode: str | None = None,
+                                run_label: str | None = None) -> None:
+    """Mark the start of an enrichment attempt. Bumps attempt_count."""
+    now = utc_now()
+    with connect() as conn:
+        existing = conn.execute(
+            "SELECT attempt_count FROM chewy_enrichment_state WHERE product_id = ?",
+            (str(product_id),),
+        ).fetchone()
+        next_attempt = (existing["attempt_count"] if existing else 0) + 1
+        conn.execute(
+            """
+            INSERT INTO chewy_enrichment_state
+                (product_id, source_url, status, mode, run_label,
+                 last_started_at, attempt_count, created_at, updated_at)
+            VALUES (?, ?, 'in_progress', ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(product_id) DO UPDATE SET
+                source_url = COALESCE(excluded.source_url, source_url),
+                status = 'in_progress',
+                mode = COALESCE(excluded.mode, mode),
+                run_label = COALESCE(excluded.run_label, run_label),
+                last_started_at = excluded.last_started_at,
+                attempt_count = excluded.attempt_count,
+                updated_at = excluded.updated_at
+            """,
+            (str(product_id), source_url, mode, run_label,
+             now, next_attempt, now, now),
+        )
+        conn.commit()
+
+
+def mark_enrichment_ok(product_id: str, *,
+                       output_path: str | None = None,
+                       product_count: int = 0,
+                       variant_count: int = 0,
+                       enriched_count: int = 0,
+                       wrong_product_rejected: int = 0,
+                       slug_mismatch: int = 0) -> None:
+    """Mark this product as successfully enriched. Clears any previous error."""
+    now = utc_now()
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO chewy_enrichment_state
+                (product_id, status, output_path, product_count, variant_count,
+                 enriched_count, wrong_product_rejected, slug_mismatch,
+                 last_run_at, error_type, error_message, created_at, updated_at)
+            VALUES (?, 'ok', ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+            ON CONFLICT(product_id) DO UPDATE SET
+                status = 'ok',
+                output_path = COALESCE(excluded.output_path, output_path),
+                product_count = excluded.product_count,
+                variant_count = excluded.variant_count,
+                enriched_count = excluded.enriched_count,
+                wrong_product_rejected = excluded.wrong_product_rejected,
+                slug_mismatch = excluded.slug_mismatch,
+                last_run_at = excluded.last_run_at,
+                error_type = NULL,
+                error_message = NULL,
+                updated_at = excluded.updated_at
+            """,
+            (str(product_id), output_path, product_count, variant_count,
+             enriched_count, wrong_product_rejected, slug_mismatch,
+             now, now, now),
+        )
+        conn.commit()
+
+
+def mark_enrichment_failed(product_id: str, *,
+                           error_type: str,
+                           error_message: str | None = None) -> None:
+    """Record a failed enrichment attempt — leaves attempt_count untouched
+    (it was bumped on mark_enrichment_in_progress)."""
+    now = utc_now()
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO chewy_enrichment_state
+                (product_id, status, last_run_at, error_type, error_message,
+                 created_at, updated_at)
+            VALUES (?, 'failed', ?, ?, ?, ?, ?)
+            ON CONFLICT(product_id) DO UPDATE SET
+                status = 'failed',
+                last_run_at = excluded.last_run_at,
+                error_type = excluded.error_type,
+                error_message = excluded.error_message,
+                updated_at = excluded.updated_at
+            """,
+            (str(product_id), now, error_type, error_message, now, now),
+        )
+        conn.commit()
+
+
+def reset_enrichment_state(product_id: str) -> None:
+    """Delete a single product's enrichment state, forcing re-enrichment."""
+    with connect() as conn:
+        conn.execute(
+            "DELETE FROM chewy_enrichment_state WHERE product_id = ?",
+            (str(product_id),),
+        )
+        conn.commit()
+
+
+def enrichment_state_summary() -> dict[str, int]:
+    """Aggregate counts by status — useful for resume status reporting."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) AS n FROM chewy_enrichment_state GROUP BY status"
+        ).fetchall()
+    out = {s: 0 for s in ENRICHMENT_STATUSES}
+    for r in rows:
+        out[r["status"]] = r["n"]
+    return out

@@ -1,0 +1,22 @@
+{
+  "total_source_products": 3115,
+  "total_normalized_products": 3115,
+  "total_variants": 22034,
+  "complete_count": 3114,
+  "needs_variant_api_enrichment_count": 1,
+  "needs_slug_resolution_count": 0,
+  "needs_full_rescrape_count": 0,
+  "needs_manual_review_count": 0,
+  "blocked_bad_public_content_count": 0,
+  "missing_ingredients_count": 1,
+  "missing_guaranteed_analysis_count": 29,
+  "missing_feeding_instructions_count": 31,
+  "missing_calorie_content_count": 2695,
+  "missing_variant_id_count": 0,
+  "missing_price_count": 893,
+  "missing_image_count": 11257,
+  "invalid_gtin_count": 0,
+  "wrong_flavor_content_count": 0,
+  "empty_products_count": 0,
+  "unsupported_architecture_count": 0
+}
