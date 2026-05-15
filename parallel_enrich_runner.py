@@ -36,12 +36,7 @@ console = Console()
 
 
 def _env_profile_id_for_slot(slot_id: str) -> str | None:
-    """Read the profile id from .env / os.environ for this slot.
-
-    Slot ids look like 'CW_1' → reads ADSP_CW_1_PROFILE_ID. Returns None when
-    the env var is missing or empty so the caller can decide whether to fall
-    back to DB or create a new profile.
-    """
+    """Read ADSP_<slot>_PROFILE_ID from .env / os.environ. Returns None when empty."""
     if "_" not in slot_id:
         return None
     prefix, _sep, idx = slot_id.rpartition("_")
@@ -51,85 +46,6 @@ def _env_profile_id_for_slot(slot_id: str) -> str | None:
     return val or None
 
 
-def _get_slot_profile(slot_id: str) -> str | None:
-    """Resolve profile id for slot. .env wins over DB so workers always start
-    on the user-configured profile. DB is only a fallback when .env is empty.
-    """
-    env_id = _env_profile_id_for_slot(slot_id)
-    if env_id:
-        return env_id
-    row = recovery.get_template(slot_id)
-    if not row:
-        return None
-    pid = row.get("adspower_profile_id")
-    return str(pid) if pid else None
-
-
-async def _start_browser_for_slot(p_obj, slot_id: str, worker_id: str):
-    """Start AdsPower profile for this slot and connect Playwright.
-
-    Returns (browser, page, profile_id) on success or (None, None, None) on
-    failure.
-
-    - If the profile is missing AND .env has an explicit ADSP_<slot>_PROFILE_ID,
-      we STOP the worker with a clear error. The user manually configured this
-      profile and we must not silently create a replacement (that's how the
-      proxy-dead-loop bug accumulates orphan profiles).
-    - If .env has no profile id for this slot, we fall back to auto-rebuild
-      (initial-setup case where the worker should provision its own profile).
-    """
-    profile_id = _get_slot_profile(slot_id)
-    if not profile_id:
-        console.print(f"[red][{worker_id}] No profile assigned to {slot_id}[/red]")
-        return None, None, None
-
-    env_id = _env_profile_id_for_slot(slot_id)
-
-    for attempt in range(2):
-        try:
-            profile_data = adspower.start_profile(profile_id)
-            ws_url = adspower.get_ws_endpoint(profile_data)
-            browser = await p_obj.chromium.connect_over_cdp(ws_url)
-            ctx = browser.contexts[0]
-            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
-            console.print(f"[green][{worker_id}] Browser up on {slot_id}/{profile_id}[/green]")
-            return browser, page, profile_id
-        except Exception as e:
-            err = str(e).lower()
-            is_missing = "does not exist" in err or "not exist" in err
-
-            if attempt == 0 and is_missing and not env_id:
-                # No env config → auto-provision is acceptable (initial setup).
-                console.print(
-                    f"[yellow][{worker_id}] Profile {profile_id} missing and .env has no id "
-                    f"for {slot_id} — auto-rebuilding via slot proxy config...[/yellow]"
-                )
-                res = recovery.auto_rebuild_profile(
-                    slot_id, reason=f"profile_missing_{profile_id}",
-                    delay_seconds=0, delete_old_profile=False,
-                )
-                if res.get("success"):
-                    profile_id = res.get("new_profile_id") or _get_slot_profile(slot_id)
-                    continue
-                console.print(f"[red][{worker_id}] Rebuild failed: {res.get('message')}[/red]")
-                return None, None, None
-
-            if is_missing and env_id:
-                # User-managed env profile — DO NOT silently create a new one;
-                # that causes the proxy-dead-loop / orphan-profile cascade.
-                console.print(
-                    f"[bold red][{worker_id}] Profile {env_id} from .env (slot {slot_id}) "
-                    f"does NOT exist in AdsPower. Worker stopping for this slot.\n"
-                    f"      Fix: update ADSP_{slot_id.replace('_','_')}_PROFILE_ID in .env "
-                    f"to a profile that exists, or recreate that profile in AdsPower.[/bold red]"
-                )
-                return None, None, None
-
-            console.print(f"[red][{worker_id}] start_profile/connect failed: {recovery.short_error_message(e)}[/red]")
-            return None, None, profile_id
-    return None, None, profile_id
-
-
 async def _stop_browser(profile_id: str | None, worker_id: str):
     if not profile_id:
         return
@@ -137,6 +53,33 @@ async def _stop_browser(profile_id: str | None, worker_id: str):
         adspower.stop_profile(profile_id)
     except Exception:
         pass
+
+
+async def _open_browser(p_obj, profile_id: str, worker_id: str):
+    """Start an AdsPower profile and connect Playwright. Returns (browser, page)
+    or (None, None) on failure. The caller decides how to recover (create new,
+    fail the worker, etc.)."""
+    try:
+        profile_data = adspower.start_profile(profile_id)
+        ws_url = adspower.get_ws_endpoint(profile_data)
+        browser = await p_obj.chromium.connect_over_cdp(ws_url)
+        ctx = browser.contexts[0]
+        page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+        return browser, page
+    except Exception as e:
+        console.print(f"[red][{worker_id}] open_browser({profile_id}) failed: {recovery.short_error_message(e)}[/red]")
+        return None, None
+
+
+async def _provision_profile(slot_template: dict, worker_id: str, slot_id: str) -> str | None:
+    """Create a brand-new AdsPower profile for this slot (no DB write)."""
+    try:
+        new_id = recovery.create_profile_via_api(slot_template)
+        console.print(f"[green][{worker_id}] Created new profile {new_id} for {slot_id}[/green]")
+        return new_id
+    except Exception as e:
+        console.print(f"[red][{worker_id}] create_profile failed for {slot_id}: {recovery.short_error_message(e)}[/red]")
+        return None
 
 
 async def _worker_coro(*,
@@ -151,57 +94,61 @@ async def _worker_coro(*,
                       counters: dict,
                       counter_lock: asyncio.Lock,
                       max_attempts: int = 5) -> dict:
-    """One worker: claim → process → write → repeat. Handles white-screen rebuild."""
+    """One worker: claim → process → write → repeat.
+
+    Profile management is purely in-memory:
+      - Start: read profile_id from .env (ADSP_<slot>_PROFILE_ID). If missing
+        or doesn't exist in AdsPower, create a fresh profile via the .env proxy.
+      - White-screen / HTTP 429: delete the current profile, create a new one
+        with the .env proxy, restart browser. profile_id is local state — never
+        written back to .env or DB.
+      - Proxy-dead (ERR_CONNECTION_CLOSED etc.): switch SAME profile to
+        no_proxy via AdsPower update API, restart browser. Profile is not
+        deleted.
+    """
     console.print(f"[cyan][{worker_id}] starting on {slot_id}[/cyan]")
     processed = 0
     enrich_errors = 0
 
-    # .env is the source of truth for slot profile id. If set, sync it into
-    # the DB so the recovery / UI flows stay aligned with what the worker is
-    # about to start. If .env is empty, fall back to DB or create a new
-    # profile via AdsPower API.
-    env_profile_id = _env_profile_id_for_slot(slot_id)
-    if env_profile_id:
-        console.print(f"[cyan][{worker_id}] Slot {slot_id}: using profile {env_profile_id} from .env[/cyan]")
-        try:
-            recovery.map_slot_to_profile_id(
-                slot_id, env_profile_id,
-                notes=f"Loaded from .env on worker start ({worker_id})",
-            )
-        except Exception as e:
-            console.print(f"[yellow][{worker_id}] map_slot_to_profile_id failed: {e}[/yellow]")
-    else:
-        console.print(f"[yellow][{worker_id}] Slot {slot_id}: no profile id in .env — checking DB / creating new[/yellow]")
-        ensure = recovery.ensure_slot_profile(slot_id, delay_seconds=0)
-        if not ensure.get("success"):
-            console.print(f"[red][{worker_id}] Slot {slot_id} unavailable: {ensure.get('message')}[/red]")
-            return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
-                    "status": "slot_unavailable"}
-
-    browser, page, profile_id = await _start_browser_for_slot(p_obj, slot_id, worker_id)
-    if not browser:
+    # Parse the slot template once. It carries the .env proxy config we need
+    # whenever we create or restore a profile.
+    try:
+        slot_template = recovery.template_for_slot(slot_id)
+    except ValueError as e:
+        console.print(f"[red][{worker_id}] {slot_id} not configured in .env: {e}[/red]")
         return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
-                "status": "browser_start_failed"}
+                "status": "slot_not_in_env"}
+
+    # Resolve initial profile_id from .env. If missing, create one now.
+    profile_id = _env_profile_id_for_slot(slot_id)
+    if profile_id:
+        console.print(f"[cyan][{worker_id}] {slot_id}: using profile {profile_id} from .env[/cyan]")
+    else:
+        console.print(f"[yellow][{worker_id}] {slot_id}: no profile id in .env — provisioning a new one[/yellow]")
+        profile_id = await _provision_profile(slot_template, worker_id, slot_id)
+        if not profile_id:
+            return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
+                    "status": "provision_failed"}
+
+    # Open browser. If the .env profile no longer exists in AdsPower (e.g. was
+    # deleted by a previous run's white-screen handler), create a new one and
+    # continue — we don't try to revive a dead profile id.
+    browser, page = await _open_browser(p_obj, profile_id, worker_id)
+    if not browser:
+        console.print(f"[yellow][{worker_id}] {slot_id} profile {profile_id} unusable — creating a fresh one[/yellow]")
+        new_id = await _provision_profile(slot_template, worker_id, slot_id)
+        if not new_id:
+            return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
+                    "status": "browser_start_failed"}
+        profile_id = new_id
+        browser, page = await _open_browser(p_obj, profile_id, worker_id)
+        if not browser:
+            return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
+                    "status": "browser_start_failed"}
+    console.print(f"[green][{worker_id}] Browser up on {slot_id}/{profile_id}[/green]")
 
     try:
         while True:
-            # Check if slot was disabled / requires rebuild mid-run
-            slot = recovery.get_template(slot_id)
-            if not slot or slot.get("status") in {"disabled", "rebuild_failed"}:
-                console.print(f"[red][{worker_id}] Slot {slot_id} stopped: {slot.get('status') if slot else 'missing'}[/red]")
-                break
-            if slot.get("status") == "rebuilding" or recovery.consume_rebuild_request(slot_id):
-                console.print(f"[yellow][{worker_id}] Slot {slot_id} marked rebuilding — applying[/yellow]")
-                await _stop_browser(profile_id, worker_id)
-                res = recovery.auto_rebuild_profile(slot_id, reason="slot_marked_rebuilding", delay_seconds=0)
-                if not res.get("success"):
-                    console.print(f"[red][{worker_id}] Rebuild failed: {res.get('message')}[/red]")
-                    break
-                browser, page, profile_id = await _start_browser_for_slot(p_obj, slot_id, worker_id)
-                if not browser:
-                    break
-                continue
-
             # Claim next pid atomically
             item = job_store.claim_next_enrichment_pid(
                 worker_id=worker_id, profile_slot_id=slot_id,
@@ -223,39 +170,47 @@ async def _worker_coro(*,
 
             try:
                 grouped = await chewy_enrich.process_product(pid, normalized_dir, page, counters, mode)
-            except chewy_enrich.WhiteScreenException:
-                console.print(f"[bold red][{worker_id}] WHITE SCREEN on {pid} — releasing claim, rebuilding profile[/bold red]")
+            except chewy_enrich.WhiteScreenException as e:
+                # Chewy blocked this profile (page white-screen or HTTP 429/403/503).
+                # Delete the profile and create a brand-new one with .env proxy.
+                # Pure AdsPower API calls — no DB writes.
+                err_msg = recovery.short_error_message(e)
+                console.print(
+                    f"[bold red][{worker_id}] WHITE SCREEN / THROTTLE on {pid} ({err_msg}) "
+                    f"— deleting profile {profile_id} and creating a new one[/bold red]"
+                )
                 job_store.release_enrichment_claim(pid, reset_to="pending")
                 await _stop_browser(profile_id, worker_id)
-                # Mark white-screen on template + trigger rebuild
-                recovery.mark_template_white_screen(slot_id, profile_id, "white_screen_in_enrich")
-                res = recovery.auto_rebuild_profile(
-                    slot_id, reason="white_screen_in_enrich",
-                    delay_seconds=0, delete_old_profile=True,
-                )
-                if not res.get("success"):
-                    console.print(f"[red][{worker_id}] Rebuild after white-screen failed: {res.get('message')}[/red]")
+                recovery.delete_profile_via_api(profile_id)
+                new_id = await _provision_profile(slot_template, worker_id, slot_id)
+                if not new_id:
+                    console.print(f"[red][{worker_id}] Could not create replacement profile — stopping worker[/red]")
                     break
-                browser, page, profile_id = await _start_browser_for_slot(p_obj, slot_id, worker_id)
+                profile_id = new_id
+                browser, page = await _open_browser(p_obj, profile_id, worker_id)
                 if not browser:
+                    console.print(f"[red][{worker_id}] New profile {profile_id} would not open — stopping worker[/red]")
                     break
+                console.print(f"[green][{worker_id}] {slot_id} resumed on fresh profile {profile_id}[/green]")
                 continue
             except Exception as e:
                 if recovery.is_proxy_connection_error(e):
+                    # Proxy is dead. Toggle the SAME profile to no_proxy (mạng local)
+                    # so it can keep working. Keep profile_id — only white-screen
+                    # deletes the profile.
                     err_token = recovery.short_error_message(e)
                     console.print(
-                        f"[bold yellow][{worker_id}] PROXY DEAD on {pid} ({err_token}) — "
-                        f"switching {slot_id}/{profile_id} to Local/no_proxy and restarting (no delete)[/bold yellow]"
+                        f"[bold yellow][{worker_id}] PROXY DEAD on {pid} ({err_token}) "
+                        f"— switching profile {profile_id} to Local/no_proxy (no delete)[/bold yellow]"
                     )
                     job_store.release_enrichment_claim(pid, reset_to="pending")
                     await _stop_browser(profile_id, worker_id)
-                    res = recovery.switch_slot_to_local_runtime(
-                        slot_id, profile_id=profile_id, reason=err_token,
-                    )
-                    if not res.get("success"):
-                        console.print(f"[red][{worker_id}] Local switch failed: {res.get('message')}[/red]")
+                    try:
+                        recovery.switch_profile_to_local_via_api(profile_id)
+                    except Exception as swap_err:
+                        console.print(f"[red][{worker_id}] Local switch failed: {recovery.short_error_message(swap_err)}[/red]")
                         break
-                    browser, page, profile_id = await _start_browser_for_slot(p_obj, slot_id, worker_id)
+                    browser, page = await _open_browser(p_obj, profile_id, worker_id)
                     if not browser:
                         console.print(f"[red][{worker_id}] Could not restart browser after Local switch[/red]")
                         break
@@ -378,23 +333,25 @@ async def run_parallel_enrichment(*,
     seeded = job_store.seed_enrichment_state(candidates, source_urls=source_urls)
     console.print(f"[cyan]Seeded {seeded} new pending row(s); queue size = {job_store.count_pending_enrichment()}[/cyan]")
 
-    # Ensure profiles + rebuild if .env proxies changed (mirrors parallel_resumable_runner)
+    # Reload .env so any edits to ADSP_<slot>_PROFILE_ID since process start
+    # are picked up.
     if hasattr(config, "reload_from_env_file"):
         config.reload_from_env_file(override=True)
-    rebuilt = recovery.rebuild_slots_with_env_proxy_changes(delay_seconds=0)
-    if rebuilt.get("rebuilt_count"):
-        console.print(f"[yellow]Rebuilt {rebuilt['rebuilt_count']} slot(s) for .env proxy changes[/yellow]")
-    recovery.sync_profile_templates_to_db()
-    recovery.restore_runtime_local_slots_from_env(delay_seconds=0)
-    recovery.release_stale_template_slots()
 
-    # Pick the first N CW slots
+    # Pick the first N CW slots that are actually configured in .env. We don't
+    # touch the DB at all for profile management — each worker reads its own
+    # ADSP_<slot>_PROFILE_ID and proxy config from .env on entry.
     workers = max(1, min(workers, recovery.MAX_TEMPLATE_SLOTS))
-    slots = recovery.get_worker_slot_status(workers)
-    runnable = [s for s in slots if s.get("status") != "disabled"]
+    runnable = []
+    for slot_id in recovery.get_template_slots()[:workers]:
+        try:
+            recovery.template_for_slot(slot_id)
+            runnable.append({"slot_id": slot_id})
+        except ValueError as e:
+            console.print(f"[yellow]Slot {slot_id} not in .env: {e} — skipping[/yellow]")
     if not runnable:
-        console.print("[red]No runnable CW slots — aborting[/red]")
-        return {"products_processed": 0, "error": "no_runnable_slots"}
+        console.print("[red]No CW slots configured in .env — aborting[/red]")
+        return {"products_processed": 0, "error": "no_slots_in_env"}
 
     # Open shared JSONL
     output_dir.mkdir(parents=True, exist_ok=True)

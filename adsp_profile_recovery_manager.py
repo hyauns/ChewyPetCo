@@ -679,6 +679,70 @@ def _post_adspower_once(path: str, payload: dict[str, Any], timeout: float = 60)
     return data
 
 
+# ---------------------------------------------------------------------------
+# Lightweight DB-free AdsPower helpers
+# ---------------------------------------------------------------------------
+# These wrap the existing _create_adspower_profile / _delete_adspower_profile /
+# _post_adspower primitives in a clean public surface that DOES NOT touch
+# scraper_jobs.db. Use them from worker code that holds profile_id state in
+# memory and doesn't want DB persistence.
+
+def template_for_slot(slot_id: str) -> dict[str, Any]:
+    """Return the parsed slot template from .env (alias for _template_by_slot).
+    No DB read. Raises ValueError if the slot is not configured in .env."""
+    return _template_by_slot(slot_id)
+
+
+def create_profile_via_api(slot_template: dict[str, Any], *, use_local_network: bool = False) -> str:
+    """Create a new AdsPower profile from a slot template (parsed from .env).
+    Returns the new profile_id. No DB write."""
+    return _create_adspower_profile(slot_template, use_local_network=use_local_network)
+
+
+def delete_profile_via_api(profile_id: str) -> str | None:
+    """Best-effort delete of an AdsPower profile. Returns a warning string when
+    AdsPower complained (e.g. 'not found') but the call did not raise. No DB write."""
+    if not profile_id:
+        return None
+    try:
+        return _delete_adspower_profile(str(profile_id))
+    except Exception as exc:
+        return str(exc)
+
+
+def switch_profile_to_local_via_api(profile_id: str) -> None:
+    """Toggle the AdsPower profile's user_proxy_config to no_proxy. No DB write."""
+    if not profile_id:
+        return
+    _post_adspower(
+        "/api/v1/user/update",
+        {"user_id": str(profile_id), "user_proxy_config": {"proxy_soft": "no_proxy"}},
+        timeout=60,
+    )
+
+
+def switch_profile_to_env_proxy_via_api(profile_id: str, slot_template: dict[str, Any]) -> None:
+    """Toggle the AdsPower profile's user_proxy_config back to the .env-configured
+    proxy. No DB write."""
+    if not profile_id:
+        return
+    _post_adspower(
+        "/api/v1/user/update",
+        {
+            "user_id": str(profile_id),
+            "user_proxy_config": {
+                "proxy_soft": "other",
+                "proxy_type": slot_template["proxy_type"],
+                "proxy_host": slot_template["proxy_host"],
+                "proxy_port": slot_template["proxy_port"],
+                "proxy_user": slot_template.get("proxy_username") or "",
+                "proxy_password": slot_template.get("proxy_password") or "",
+            },
+        },
+        timeout=60,
+    )
+
+
 def _post_adspower(path: str, payload: dict[str, Any], timeout: float = 60) -> dict[str, Any]:
     """POST to AdsPower with serialized mutation calls and rate-limit backoff."""
     attempts = _ADSPOWER_MUTATION_MAX_RETRIES if path.startswith("/api/v1/user/") else 1
