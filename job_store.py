@@ -1436,29 +1436,36 @@ def seed_enrichment_state(product_ids: list, source_urls: dict | None = None) ->
 def claim_next_enrichment_pid(*,
                               worker_id: str,
                               profile_slot_id: str | None = None,
-                              retry_failed: bool = True) -> dict | None:
+                              retry_failed: bool = True,
+                              max_attempts: int = 5) -> dict | None:
     """Atomically claim one unfinished enrichment pid.
 
     Mirror of claim_next_item but for chewy_enrichment_state. Uses BEGIN IMMEDIATE
-    so two workers cannot grab the same pid. Returns the claimed row as a dict
-    (with worker_id / status='in_progress' already applied), or None when nothing
-    is available.
+    so two workers cannot grab the same pid.
+
+    A pid is claimable when status is 'pending', OR ('failed' AND attempt_count
+    < max_attempts) so a stuck bug cannot trap workers in an infinite retry loop.
+    Pass max_attempts=0 to disable the cap.
     """
     init_db()
     now = utc_now()
-    statuses = ["'pending'"]
+    where_parts = ["status = 'pending'"]
     if retry_failed:
-        statuses.append("'failed'")
-    status_clause = ",".join(statuses)
+        if max_attempts and max_attempts > 0:
+            where_parts.append(f"(status = 'failed' AND attempt_count < {int(max_attempts)})")
+        else:
+            where_parts.append("status = 'failed'")
+    where_clause = " OR ".join(where_parts)
     with connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
             f"""
             SELECT product_id, source_url, attempt_count
             FROM chewy_enrichment_state
-            WHERE status IN ({status_clause})
+            WHERE {where_clause}
             ORDER BY
                 CASE status WHEN 'pending' THEN 0 ELSE 1 END,
+                attempt_count ASC,
                 product_id ASC
             LIMIT 1
             """

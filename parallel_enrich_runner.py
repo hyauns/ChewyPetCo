@@ -19,6 +19,7 @@ import os
 import random
 import sys
 import traceback
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -101,7 +102,8 @@ async def _worker_coro(*,
                       jsonl_lock: asyncio.Lock,
                       jsonl_path: Path,
                       counters: dict,
-                      counter_lock: asyncio.Lock) -> dict:
+                      counter_lock: asyncio.Lock,
+                      max_attempts: int = 5) -> dict:
     """One worker: claim → process → write → repeat. Handles white-screen rebuild."""
     console.print(f"[cyan][{worker_id}] starting on {slot_id}[/cyan]")
     processed = 0
@@ -140,7 +142,8 @@ async def _worker_coro(*,
 
             # Claim next pid atomically
             item = job_store.claim_next_enrichment_pid(
-                worker_id=worker_id, profile_slot_id=slot_id, retry_failed=True
+                worker_id=worker_id, profile_slot_id=slot_id,
+                retry_failed=True, max_attempts=max_attempts,
             )
             if not item:
                 console.print(f"[cyan][{worker_id}] No more pids to claim — exiting[/cyan]")
@@ -255,7 +258,8 @@ async def run_parallel_enrichment(*,
                                   label: str,
                                   workers: int = 3,
                                   source_urls: dict | None = None,
-                                  force_reenrich: bool = False) -> dict:
+                                  force_reenrich: bool = False,
+                                  max_attempts: int = 5) -> dict:
     """Run enrichment across N workers.
 
     Each worker is bound to one CW slot (CW_1, CW_2, CW_3 — first `workers` of them).
@@ -319,12 +323,21 @@ async def run_parallel_enrichment(*,
     console.print(f"[cyan]JSONL -> {jsonl_path}[/cyan]")
     console.print(f"[cyan]Report -> {report_path}[/cyan]")
 
-    counters = {k: 0 for k in [
-        "products_processed", "variants_enriched", "wrong_product_api_rejected",
-        "slug_mismatch", "variants_price_recovered", "variants_image_recovered",
+    # defaultdict(int) so any key process_product touches works even if not
+    # pre-listed here (e.g. variants_missing_price_before).
+    counters: dict = defaultdict(int)
+    # Seed canonical keys so the final report always shows them (even at 0).
+    for k in (
+        "products_processed", "total_flavor_groups", "total_variants",
+        "variants_enriched", "wrong_product_api_rejected", "slug_mismatch",
+        "variants_missing_price_before", "variants_price_recovered",
+        "variants_missing_image_before", "variants_image_recovered",
         "flavor_mismatch_count", "public_content_unsafe_count",
         "rejected_content_leaked_count",
-    ]}
+        "import_ready_count", "safe_with_warnings_count",
+        "needs_manual_review_count", "blocked_count",
+    ):
+        counters[k] = 0
     counter_lock = asyncio.Lock()
 
     async with async_playwright() as p_obj:
@@ -338,6 +351,7 @@ async def run_parallel_enrichment(*,
                 mode=mode, normalized_dir=normalized_dir,
                 jsonl_file=jsonl_file, jsonl_lock=jsonl_lock, jsonl_path=jsonl_path,
                 counters=counters, counter_lock=counter_lock,
+                max_attempts=max_attempts,
             ))
             tasks.append(t)
 

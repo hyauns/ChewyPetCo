@@ -708,6 +708,8 @@ def parse_args():
                     help="Run with multiple workers (one per CW slot) via parallel_enrich_runner")
     ap.add_argument("--workers", type=int, default=3,
                     help="Number of parallel workers when --parallel is set (max = MAX_TEMPLATE_SLOTS)")
+    ap.add_argument("--max-attempts", type=int, default=5,
+                    help="Max retries per pid before workers stop claiming it (parallel mode). 0 = unlimited")
     return ap.parse_args()
 
 
@@ -773,6 +775,7 @@ async def main():
             workers=args.workers,
             source_urls=source_urls,
             force_reenrich=args.force_reenrich,
+            max_attempts=args.max_attempts,
         )
     else:
         await run_pipeline(product_ids, normalized_dir, out_dir, mode, label,
