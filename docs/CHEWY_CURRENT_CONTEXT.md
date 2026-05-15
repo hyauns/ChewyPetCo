@@ -1,6 +1,6 @@
 # Chewy Scraper — Current Context
 
-**Updated:** 2026-05-15 (session ending at commit `fadbcbd`)
+**Updated:** 2026-05-15 (session ending at commit `d8c184f`)
 **Repo:** https://github.com/hyauns/ChewyPetCo
 **Purpose of this file:** Single source of truth for a future Claude session to pick up where this one left off, without re-reading the full chat. Read this first.
 
@@ -296,27 +296,29 @@ SQLite WAL + `busy_timeout=60s` + `BEGIN IMMEDIATE` serializes. No duplicate cla
 - (i) HTML body looks like a block page on `page.goto` — detected by `adsp_profile_pool_manager.detect_white_screen_block` inside `chewy_enrich.get_build_id`.
 - (ii) Any variant `/_next/data/.../dp/{X}.json` call returns HTTP 429/403/503 — `fetch_next_data_json` raises `WhiteScreenException` (added in `fadbcbd`). Statuses in `chewy_next_json_extractor.PROFILE_BLOCKED_STATUSES`.
 
-Both paths raise the same `WhiteScreenException` (canonical home: `chewy_next_json_extractor.py`; re-exported from `chewy_enrich.py`). Worker flow:
+Both paths raise the same `WhiteScreenException` (canonical home: `chewy_next_json_extractor.py`; re-exported from `chewy_enrich.py`).
 
+**Worker flow (since `d8c184f`, pure AdsPower API, no DB):**
 1. Worker catches `WhiteScreenException` from `chewy_enrich.process_product`.
 2. `release_enrichment_claim(pid, reset_to='pending')` — pid back to queue.
 3. `_stop_browser(profile_id)`.
-4. `recovery.mark_template_white_screen(slot_id, profile_id, ...)` — records event.
-5. `recovery.auto_rebuild_profile(slot_id, reason="white_screen_in_enrich", delete_old_profile=True)` — **DELETES the AdsPower profile and CREATES a new one with `.env` proxy.** The new profile_id is stored in the DB template row.
-6. **CAVEAT:** With env-first resolution, the worker on next iteration reads `ADSP_<slot>_PROFILE_ID` from `.env` -> that pointer now points at a deleted profile. `_start_browser_for_slot` then refuses to silently auto-rebuild (since `d6f7273`) and stops the worker for that slot. **User must either**: edit `.env` to point at the new profile_id (look at AdsPower UI) OR delete the env var so the next run uses the DB-stored new id.
+4. `recovery.delete_profile_via_api(profile_id)` — best-effort delete on AdsPower.
+5. `recovery.create_profile_via_api(slot_template)` — creates a fresh profile with `.env` proxy. Returns new profile_id.
+6. Worker updates its in-memory `profile_id` to the new value. Opens browser. Continues claiming.
+7. `.env` is NOT modified. Next CLI invocation starts again from the .env profile_id; if that profile doesn't exist (because the previous run rebuilt past it), the worker creates a new one on the fly via the same `_provision_profile` path. No accumulated state.
 
 ### C. Proxy dead (`ERR_CONNECTION_CLOSED`, `ERR_SOCKS_*`, `ERR_TUNNEL_*`)
 1. Worker catches the error, detected via `recovery.is_proxy_connection_error(e)`.
 2. `release_enrichment_claim(pid, reset_to='pending')` — pid back to queue.
 3. `_stop_browser(profile_id)`.
-4. `recovery.switch_slot_to_local_runtime(slot_id, profile_id=...)` — calls AdsPower `/api/v1/user/update` with `user_proxy_config={"proxy_soft": "no_proxy"}` on the **SAME** profile_id. **No delete, no create.**
-5. Worker restarts the same profile (now using host's network directly) and continues.
-6. Slot is marked with the `runtime_local_fallback` note for tracking.
-7. On the **next CLI start**, `restore_runtime_local_slots_from_env` toggles `proxy_soft` back to the configured `.env` proxy on the SAME profile (also no delete/create). If proxy is still dead, worker falls back to Local again — but no profile churn.
+4. `recovery.switch_profile_to_local_via_api(profile_id)` — calls AdsPower `/api/v1/user/update` with `user_proxy_config={"proxy_soft": "no_proxy"}` on the **SAME** profile_id. **No delete, no create. No DB write.**
+5. Worker restarts the SAME profile (now using host's network directly) and continues.
+6. **No persistence:** the in-memory profile_id tracks the local state. Next CLI invocation reads .env again and starts fresh. If the proxy is back, normal flow resumes; if still dead, the same swap-to-local happens during this run.
 
 ### D. Profile missing (`does not exist` from AdsPower)
-- If `.env` has `ADSP_<slot>_PROFILE_ID` set: worker STOPS with a clear message asking user to update `.env`. (Prevents the orphan-profile cascade.)
-- If `.env` is empty for that slot: auto-rebuild creates a new profile.
+Since `d8c184f` (DB-free profile management):
+- Worker tries the `.env` profile_id. If AdsPower says it doesn't exist, the worker **automatically creates a new one** via `_provision_profile` using the .env proxy config and continues. No DB read, no error stop.
+- This handles the case where a previous run's white-screen handler deleted the .env profile — the worker just rebuilds and keeps going on the new id (in-memory).
 
 ---
 
@@ -374,6 +376,7 @@ python chewy_enrich.py --sample test_runs/.../selected_products.json --category 
 
 | Commit | What | Why |
 |---|---|---|
+| `d8c184f` | Strip DB profile tracking — worker holds profile_id in memory only | User wanted simpler model. New helpers `template_for_slot`, `create_profile_via_api`, `delete_profile_via_api`, `switch_profile_to_local_via_api`, `switch_profile_to_env_proxy_via_api` — pure AdsPower API, no DB. `_worker_coro` rewritten: parse template once, init profile_id from .env (or create new), on white-screen delete+create new, on proxy-dead switch SAME profile to no_proxy. All in-memory; .env never modified. Removed startup DB syncs (sync_profile_templates_to_db, restore_runtime_local_slots_from_env, rebuild_slots_with_env_proxy_changes, release_stale_template_slots, get_worker_slot_status, get_template, consume_rebuild_request, mark_template_white_screen, ensure_slot_profile). Scrape pipeline's DB profile pool is unchanged. |
 | `fadbcbd` | Escalate HTTP 429/403/503 to WhiteScreenException | Worker was hammering throttled profile because variant API errors returned None instead of raising. Now `fetch_next_data_json` raises on `PROFILE_BLOCKED_STATUSES`; `enrich_variants_from_api` + `recover_*_for_variant` re-raise (was being swallowed by generic `except Exception`). Worker's existing white-screen handler then rebuilds the profile. |
 | `d10fbef` | Fix SQL: load proxy creds from `.env` not DB | `restore_runtime_local_slots_from_env` tried to SELECT non-existent columns (`proxy_username`, `proxy_password`). |
 | `d6f7273` | Backfill new fields in enrich + fix proxy-dead orphan-profile loop | OLD normalized files had no `source_entry_id` / `out_of_stock` / `transition_instructions`. Enrich now follows Chewy's 301 from partNumber URL, matches by partNumber, backfills canonical entry_id + stock fields + content. Also fixed `restore_runtime_local_slots_from_env` to toggle `proxy_soft` instead of delete+create (was leaking orphan profiles every CLI start). And `_start_browser_for_slot` no longer silently rebuilds env-managed profiles when "does not exist". |
