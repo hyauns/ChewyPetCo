@@ -7,6 +7,7 @@ scraper_jobs.db
 *.html
 .DS_Store
 urls.txt
+tools/urls_*.txt
 .env
 .claude/
 .venv/
