@@ -1,6 +1,6 @@
 # Chewy Scraper — Current Context
 
-**Updated:** 2026-05-15 (session ending at commit `d10fbef`)
+**Updated:** 2026-05-15 (session ending at commit `fadbcbd`)
 **Repo:** https://github.com/hyauns/ChewyPetCo
 **Purpose of this file:** Single source of truth for a future Claude session to pick up where this one left off, without re-reading the full chat. Read this first.
 
@@ -291,7 +291,13 @@ SQLite WAL + `busy_timeout=60s` + `BEGIN IMMEDIATE` serializes. No duplicate cla
 - On next CLI start: `recover_stale_enrichment_states(stale_minutes=30)` resets pids whose `last_started_at` > 30 min ago back to `pending`.
 - Re-claimed by any worker.
 
-### B. White-screen on a pid (Akamai bot detection)
+### B. White-screen on a pid (Akamai bot detection OR HTTP 429/403/503 throttle)
+**Two trigger sources, same handler:**
+- (i) HTML body looks like a block page on `page.goto` — detected by `adsp_profile_pool_manager.detect_white_screen_block` inside `chewy_enrich.get_build_id`.
+- (ii) Any variant `/_next/data/.../dp/{X}.json` call returns HTTP 429/403/503 — `fetch_next_data_json` raises `WhiteScreenException` (added in `fadbcbd`). Statuses in `chewy_next_json_extractor.PROFILE_BLOCKED_STATUSES`.
+
+Both paths raise the same `WhiteScreenException` (canonical home: `chewy_next_json_extractor.py`; re-exported from `chewy_enrich.py`). Worker flow:
+
 1. Worker catches `WhiteScreenException` from `chewy_enrich.process_product`.
 2. `release_enrichment_claim(pid, reset_to='pending')` — pid back to queue.
 3. `_stop_browser(profile_id)`.
@@ -368,6 +374,7 @@ python chewy_enrich.py --sample test_runs/.../selected_products.json --category 
 
 | Commit | What | Why |
 |---|---|---|
+| `fadbcbd` | Escalate HTTP 429/403/503 to WhiteScreenException | Worker was hammering throttled profile because variant API errors returned None instead of raising. Now `fetch_next_data_json` raises on `PROFILE_BLOCKED_STATUSES`; `enrich_variants_from_api` + `recover_*_for_variant` re-raise (was being swallowed by generic `except Exception`). Worker's existing white-screen handler then rebuilds the profile. |
 | `d10fbef` | Fix SQL: load proxy creds from `.env` not DB | `restore_runtime_local_slots_from_env` tried to SELECT non-existent columns (`proxy_username`, `proxy_password`). |
 | `d6f7273` | Backfill new fields in enrich + fix proxy-dead orphan-profile loop | OLD normalized files had no `source_entry_id` / `out_of_stock` / `transition_instructions`. Enrich now follows Chewy's 301 from partNumber URL, matches by partNumber, backfills canonical entry_id + stock fields + content. Also fixed `restore_runtime_local_slots_from_env` to toggle `proxy_soft` instead of delete+create (was leaking orphan profiles every CLI start). And `_start_browser_for_slot` no longer silently rebuilds env-managed profiles when "does not exist". |
 | `6b8b23e` | Proxy-dead recovery + env-first profile resolution (made by a parallel agent session) | Detect proxy errors, swap slot to no_proxy via `switch_slot_to_local_runtime` (no delete). Workers resolve profile from `.env` first, DB fallback. Compact error logs (no full traceback per page). |
