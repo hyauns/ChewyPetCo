@@ -43,15 +43,13 @@ from chewy_next_json_extractor import (
     enrich_variants_from_api,
     split_product_by_flavor,
     validate_normalized_product,
+    WhiteScreenException,  # canonical home is the extractor module
 )
 from adsp_profile_pool_manager import detect_white_screen_block, mark_profile_in_use
 import adsp_profile_recovery_manager
 import job_store
 
 console = Console()
-
-class WhiteScreenException(Exception):
-    pass
 
 # ── Shared Constants ────────────────────────────────────────────────
 
@@ -236,6 +234,9 @@ async def recover_price_for_variant(variant, page, build_id):
                     "autoship_price": str(autoship) if autoship else None,
                     "reason": None}
         return {**fail, "reason": "api_response_has_no_price"}
+    except WhiteScreenException:
+        # Profile blocked (HTTP 429/403/503). Bubble up so the worker rebuilds.
+        raise
     except Exception as e:
         return {**fail, "reason": f"exception: {e}"}
 
@@ -265,6 +266,9 @@ async def recover_images_for_variant(variant, page, build_id):
         if v_info.get("images"):
             return {"recovered": True, "images": v_info["images"], "reason": None}
         return {**fail, "reason": "api_response_has_no_images"}
+    except WhiteScreenException:
+        # Profile blocked (HTTP 429/403/503). Bubble up so the worker rebuilds.
+        raise
     except Exception as e:
         return {**fail, "reason": f"exception: {e}"}
 

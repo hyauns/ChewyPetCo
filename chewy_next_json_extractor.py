@@ -17,6 +17,26 @@ CACHE_DIR = OUT_DIR / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
+class WhiteScreenException(Exception):
+    """Raised when Chewy blocks the current profile.
+
+    Covers two signal classes:
+      1. Page-load white-screen (empty body / block page) detected by
+         adsp_profile_pool_manager.detect_white_screen_block.
+      2. HTTP 429 / 403 / 503 on any Chewy /_next/data/ variant API call —
+         strong signal that this profile is rate-limited or shadow-banned.
+
+    Workers catch this and trigger auto_rebuild_profile (delete + recreate
+    via .env proxy). The pid being processed is released back to 'pending'.
+    """
+    pass
+
+
+# HTTP status codes that mean "Chewy refused to serve this profile" — they
+# should be escalated the same way as a page-load white screen.
+PROFILE_BLOCKED_STATUSES = frozenset({429, 403, 503})
+
+
 # Chewy Apollo identity helpers
 # -----------------------------
 # - Apollo Item key encodes the entryID via base64: "Item:SXRlbToxMDE2MTA=" -> entryID 101610
@@ -364,6 +384,11 @@ async def enrich_variants_from_api(normalized_product: dict, page, build_id: str
 
         try:
             var_data = await fetch_next_data_json(next_url, page, build_id, entry_id_in_url)
+        except WhiteScreenException:
+            # Profile blocked — bubble up so the worker can rebuild the profile.
+            # Do not mark this variant as failed; the pid will be released and
+            # retried on the new profile.
+            raise
         except Exception as e:
             console.print(f"[red]Variant enrichment exception for {entry_id_in_url}: {e}[/red]")
             stats["failed"] += 1
@@ -531,7 +556,7 @@ async def fetch_next_data_json(url: str, page, build_id: str, variant_id: str) -
     if cache_path.exists():
         with open(cache_path, "r", encoding="utf-8") as f:
             return json.load(f)
-            
+
     console.print(f"Fetching JSON from next data url: {url}")
     response = await page.request.get(url)
     if response.status == 200:
@@ -539,9 +564,19 @@ async def fetch_next_data_json(url: str, page, build_id: str, variant_id: str) -
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         return data
-    else:
-        console.print(f"[red]Failed to fetch JSON for {variant_id}, status: {response.status}[/]")
-        return None
+
+    if response.status in PROFILE_BLOCKED_STATUSES:
+        # 429 / 403 / 503 → Chewy is rate-limiting / blocking THIS profile.
+        # Escalate to WhiteScreenException so the worker rebuilds the profile
+        # via auto_rebuild_profile (delete + recreate with .env proxy). Without
+        # this, the worker would keep hammering the throttled profile and burn
+        # the rest of the queue with the same error.
+        msg = f"HTTP {response.status} on /dp/{variant_id} - profile throttled"
+        console.print(f"[bold red]{msg} — triggering profile rebuild[/bold red]")
+        raise WhiteScreenException(msg)
+
+    console.print(f"[red]Failed to fetch JSON for {variant_id}, status: {response.status}[/]")
+    return None
 
 def detect_chewy_architecture(next_data: dict) -> str:
     props = next_data.get("props", {}).get("pageProps", {})
