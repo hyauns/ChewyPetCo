@@ -745,9 +745,24 @@ async def main():
         if not input_dir.is_absolute():
             input_dir = base_dir / input_dir
         product_ids = []
+        skipped_compounded = 0
         for f in sorted(input_dir.glob("chewy_*.json")):
             pid = f.stem.replace("chewy_", "")
+            # Chewy-exclusive compounded medications are not sold on Shopify.
+            try:
+                with open(f, "r", encoding="utf-8") as fh:
+                    src_url = json.load(fh).get("source_url") or ""
+            except Exception:
+                src_url = ""
+            if "compounded" in src_url.lower():
+                skipped_compounded += 1
+                continue
             product_ids.append(pid)
+        if skipped_compounded:
+            console.print(
+                f"[yellow]Filter: excluded {skipped_compounded} compounded products "
+                f"from input ({len(product_ids)} remain).[/yellow]"
+            )
         mode = args.mode
         label = f"batch_{mode}"
         out_dir = Path(args.output_dir) if args.output_dir else (
