@@ -1,51 +1,85 @@
 # Chewy Scraper — Current Context
 
-**Updated:** 2026-05-15 (session ending at commit `d8c184f`)
+**Updated:** 2026-05-15 (session 2 — ending at commit `9aa09cb`)
 **Repo:** https://github.com/hyauns/ChewyPetCo
 **Purpose of this file:** Single source of truth for a future Claude session to pick up where this one left off, without re-reading the full chat. Read this first.
+
+> **🚨 BIG ARCHITECTURAL CHANGE THIS SESSION:** The two-pass pipeline (scrape → enrich) was merged into a **single-pass scraper**. `chewy_enrich.py` is now DEPRECATED. Per-product enrichment now runs inline inside `chewy_product_scraper.py`, writing `normalized + grouped + validation` files per pid. Final aggregation is `tools/build_shopify_jsonl.py` (dedupe across pages → Shopify JSONL). The decision to re-scrape from scratch was driven by the discovery that ~25–50% of legacy 5-digit variant IDs in the original 3115 dataset had been delisted from Chewy and return 404.
 
 ---
 
 ## 1. TL;DR
 
-This project scrapes Chewy.com product pages and enriches the resulting JSON to be import-ready for Shopify. The dataset is ~3,115 products already scraped under `output/normalized_products/chewy_{pid}.json` (NOT in git, must be rsynced to VPS). Enrichment runs on top of these files and writes a stream of Shopify-shaped products to a JSONL file.
+This project scrapes Chewy.com product pages **and enriches them in a single pass** into Shopify-import-ready files. The historical dataset of ~3,115 normalized files is being re-scraped from scratch (variant IDs aged out). New canonical output is per-pid `output/{normalized,grouped,validation}_products/chewy_*.json`; final Shopify-ready feed is the aggregated JSONL from `tools/build_shopify_jsonl.py`.
 
-**Current state of the code:**
-- Pipeline refactored: per-variant API fetch, entryID-aware URLs, generalized split by defining attributes, out-of-stock detection, transition-instructions, cross-page dedupe, title augmentation, `moe/` images treated as real.
-- Output is streaming JSONL — each enriched product is flushed + fsynced before the next is attempted (crash-safe).
-- DB-backed resume via `chewy_enrichment_state` table.
-- Multi-worker (`--parallel --workers N`) with atomic DB claim (BEGIN IMMEDIATE), one CW slot per worker.
-- Proxy-dead recovery toggles `proxy_soft` to `no_proxy` on the SAME profile (no delete+create). Only white-screen triggers full profile rebuild.
-- OLD normalized files (pre-refactor) get upgraded on-the-fly during enrich via redirect-follow + backfill of `source_entry_id` / `out_of_stock` / `stock_reason` / `shopify_inventory_policy` / `transition_instructions`.
+**Current state of the code (after session 2):**
+- **Single-pass pipeline.** `chewy_product_scraper.scrape_single_product` does: fetch HTML → parse Apollo → normalize → `enrich_variants_from_api` (variant-API content + entry_id backfill + stock fields) → `split_product_by_flavor` → `validate_normalized_product` → `sanitize_product`. Three files written per pid: normalized, grouped (Shopify-shaped, with `validation` embedded), validation.
+- **`chewy_enrich.py` is DEPRECATED** (kept as a thin module re-exporting helpers for backward compat; its CLI still works on old-format normalized files but is no longer the canonical flow).
+- **Scraper helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) moved into `chewy_next_json_extractor.py`** — one source of truth. `chewy_enrich.py` re-exports for any caller that imports `chewy_enrich.X`.
+- **Subprocess wiring fixed.** `resumable_scraper_runner.py` used to spawn `test_single_product.py`, which was deleted in commit `f3abfb7` months ago. Symptom: scraper "completed" in seconds without doing work, because `existing_json_output_ok` short-circuited before the subprocess ever ran. Now spawns `chewy_product_scraper.py --url <url>`, reusing the runner's already-open browser via `ADSP_BROWSER_WS_URL`.
+- **Proxy-dead → profile rebuild.** When `page.goto` raises `ERR_CONNECTION_CLOSED/RESET/REFUSED/ABORTED/PROXY/TUNNEL/SOCKS/TIMED_OUT/NETWORK_CHANGED`, or `scrape_single_product` raises `WhiteScreenException`, the scraper emits the existing `[WHITE_SCREEN_RESULT]` marker line. The runner already knows how to handle it: quarantine profile, mark item pending, rebuild slot, retry. Same exit code = item failed without quarantine — that was the old behavior that left bad profiles stuck.
+- **BOM-safe URL ingestion.** `read_urls_file` now reads with `utf-8-sig` so a PowerShell `Set-Content -Encoding utf8` (utf-8-with-BOM) file doesn't leak `﻿` into the first URL.
+- **Compounded products filtered out** from the input list (`chewy_enrich.py` for the old path; the URL list emitted by `tools/prepare_rescrape.py` is unfiltered because all-product compounded URLs still scrape fine — the filter only mattered for the deprecated enrich path; the user does not sell Chewy-exclusive compounded meds on Shopify).
+
+**Pipeline runtime sanity (verified on local demo this session):**
+- 10 URLs × 3 workers: 9/10 succeed, ~3.9 minutes. The one failure (`pid 607894 Nulo Freestyle Turkey`) was a legitimate "no title" parse — the product appears delisted on Chewy.
+- All Shopify-critical fields populate correctly on a re-scrape: `source_entry_id`, `out_of_stock`, `stock_state`, `stock_reason`, `shopify_inventory_policy`, **`transition_instructions`** (which was empty across the old enrichment runs), ingredients/GA/feeding per variant.
+- Resume verified end-to-end: cancel job mid-flight → resume picks up only the pending/failed items, skipping done ones via `existing_json_output_ok`.
 
 **What's running on VPS** (`C:\Users\Administrator\Downloads\ChewyPetCo`):
-- Latest commit: `d10fbef`.
-- User runs: `python chewy_enrich.py --input output/normalized_products --mode all --parallel --workers 3 --limit 20 --force-reenrich` (test batch first).
+- Latest commit: `9aa09cb`.
+- Workflow now: `prepare_rescrape.py` → `resumable_scraper_runner.py create --urls urls_all.txt` → `start --workers 3` → `tools/build_shopify_jsonl.py`. See §12.
 - Profile IDs and proxies live in `.env` only (never in git).
 
 ---
 
-## 2. Pipeline (high level)
+## 2. Pipeline (high level) — single-pass since session 2
 
 ```
-Source pages (URLs)
+tools/urls_all.txt  (generated by tools/prepare_rescrape.py from source_url
+                     fields in any pre-existing normalized files)
   |
-  v  chewy_product_scraper.py / category_scraper.py (already done for 3,115)
-output/normalized_products/chewy_{pid}.json   <- source of truth, DO NOT MODIFY
+  v  resumable_scraper_runner.py create --urls urls_all.txt
+     (seeds scrape_jobs / scrape_job_items in scraper_jobs.db)
   |
-  v  chewy_enrich.py  (--parallel --workers N --input output/normalized_products)
-       |
-       +- parse_apollo_product  (per page, if rescraping)
-       +- enrich_variants_from_api  (1 fetch per variant entryID)
-       |     +- follow Chewy 301 (partNumber URL -> canonical /dp/{entryID})
-       |     +- backfill: source_entry_id, variant_url, stock fields, transition
-       |     +- fill: description, ingredients, GA, feeding, calorie, images
-       +- split_product_by_flavor  (renamed semantics: split by all non-size defining attrs)
-       +- JSONL streaming write + chewy_enrichment_state UPSERT
+  v  resumable_scraper_runner.py start --workers N
+     -> parallel_resumable_runner._worker_loop (one CW slot per worker)
+        -> claim_next_item (BEGIN IMMEDIATE)
+        -> process_single_item -> spawn chewy_product_scraper.py --url <url>
+           subprocess env: ADSP_BROWSER_WS_URL=<worker's open browser>,
+                           ADSPOWER_PROFILE_ID=<worker's profile>
   |
-  v  result_batch_all_{ts}.jsonl  <- one Shopify product per line
-       (optionally) dedupe_products_across_pages -> final Shopify import set
+  v  chewy_product_scraper.scrape_single_product (one PID, in-process)
+       +- fetch_initial_html (+ retries, white-screen detection)
+       +- extract_next_data_from_html / detect_next_build_id
+       +- parse_apollo_product   (Apollo state → raw product dict)
+       +- normalize_chewy_product  (canonical schema)
+       +- enrich_variants_from_api  (one /_next/data/.../dp/{entry_id}.json
+            per variant — fills description, ingredients, GA, feeding,
+            calorie, transition, images, AND derives stock_state /
+            out_of_stock / stock_reason / shopify_inventory_policy)
+       +- split_product_by_flavor  (split by every non-size defining attr)
+       +- validate_normalized_product  (confidence_score, gtin coverage, …)
+       +- sanitize_product (per Shopify product: flavor_mismatch check,
+            import_ready / import_mode flags)
+  |
+  v  THREE files written atomically per pid:
+       output/normalized_products/chewy_{pid}.json           (canonical product + enriched variants)
+       output/grouped_products/chewy_grouped_by_flavor_{pid}.json  (Shopify-shaped, has 'validation' embedded)
+       output/validation/chewy_validation_{pid}.json         (just the validation dict)
+  |
+  v  tools/build_shopify_jsonl.py  (run once after the job finishes)
+       +- read every grouped_products/*.json
+       +- dedupe_products_across_pages (collapse multi-landing-page
+            duplicates — e.g. Wysong Archetype Chicken/Quail/Rabbit
+            all share the same 3 variant entry_ids)
+       +- write output/shopify_import_{ts}.jsonl
+            + output/shopify_import_dedupe_log_{ts}.json
 ```
+
+### What `existing_json_output_ok` guards
+
+Before spawning the scraper subprocess, the runner checks both the grouped file (valid products + variants + titles) and the validation file (confidence ≥ threshold, not marked invalid). If both pass, the item is marked `done` without scraping. This is what makes resume cheap — already-done pids are O(file existence check). To force re-scrape, pass `--reprocess-existing`.
 
 ---
 
@@ -54,19 +88,26 @@ output/normalized_products/chewy_{pid}.json   <- source of truth, DO NOT MODIFY
 ### Production code (commit, run on VPS)
 | File | Role |
 |---|---|
-| `chewy_next_json_extractor.py` (~1900 LoC) | Core extractor. Parses Apollo, runs enrich, splits, dedupes. Most logic lives here. |
-| `chewy_enrich.py` | CLI entry. Single-worker `run_pipeline()` + dispatches to `parallel_enrich_runner` on `--parallel`. |
-| `parallel_enrich_runner.py` | Multi-worker async runner. N coroutines, atomic claim, shared JSONL, white-screen + proxy-dead handling. |
-| `chewy_product_scraper.py` | Scrape single product (or batch via `--job-id`). |
-| `resumable_scraper_runner.py` | Production scrape runner — used by `chewy_product_scraper.py --job-id`. |
-| `parallel_resumable_runner.py` | Multi-worker SCRAPE runner (sister of parallel_enrich_runner, for the scrape phase). |
-| `category_scraper.py` / `category_discovery*.py` | Discover product URLs by category. |
-| `adspower.py` | AdsPower local API client (start/stop/get_ws_endpoint). |
-| `adsp_profile_pool_manager.py` | Profile pool + white-screen detection. |
-| `adsp_profile_recovery_manager.py` | Slot template management + auto_rebuild_profile + switch_slot_to_local_runtime + restore_runtime_local_slots_from_env. |
-| `job_store.py` | SQLite layer. Schema, init, all helpers. Includes `chewy_enrichment_state` table + claim primitives. |
-| `config.py` | Reads `.env`. Defines `ADSPOWER_PROFILE_ID`, `ADSP_PROFILE_POOL_IDS`, slot config, timeouts. |
-| `job_exporter.py` | Export normalized -> grouped products (legacy, may need update for new schema). |
+| `chewy_next_json_extractor.py` (~2265 LoC) | Core extractor. Parses Apollo, normalizes, enriches via variant API, splits by discriminator, validates, sanitizes, dedupes. **All Shopify-shaping helpers live here since session 2** (was previously split with `chewy_enrich.py`). |
+| `chewy_product_scraper.py` | **Single-pass scrape+enrich CLI.** `scrape_single_product` runs the full pipeline in-process; `main()` writes normalized + grouped + validation. Subprocess entry for `resumable_scraper_runner`. Reuses runner's browser via `ADSP_BROWSER_WS_URL` env var. Emits `[WHITE_SCREEN_RESULT]` markers on proxy errors so the runner rebuilds the bad profile. |
+| `resumable_scraper_runner.py` | Production scrape runner. Per-URL DB state, subprocess spawn, white-screen parsing. `create / start / resume / pause / cancel / status / retry-failed / skip-current` subcommands. Reads URL files with `utf-8-sig` (BOM-safe). |
+| `parallel_resumable_runner.py` | Multi-worker scrape runner. Each worker owns one CW slot, keeps an AdsPower browser open across items, atomically claims via `job_store.claim_next_item`. White-screen / throttle → slot status flips to `rebuilding` → loop rebuilds + restarts browser. |
+| `chewy_enrich.py` | **DEPRECATED.** Re-exports helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) from the extractor for backward compatibility. The CLI still works for re-enriching legacy normalized files, but the canonical flow no longer uses it. |
+| `parallel_enrich_runner.py` | **DEPRECATED** (paired with `chewy_enrich.py`). Still importable, no role in the new flow. |
+| `category_scraper.py` / `category_discovery*.py` | Discover product URLs by category. Not used in this session's re-scrape (URLs come from existing normalized files via `prepare_rescrape.py`). |
+| `adspower.py` | AdsPower local API client. |
+| `adsp_profile_pool_manager.py` | Profile pool + white-screen detection (used by both scrape and old enrich runners). |
+| `adsp_profile_recovery_manager.py` | Slot template management, `auto_rebuild_profile`, proxy-soft-toggle helpers, `.env` config sync. |
+| `job_store.py` | SQLite layer. `scrape_jobs / scrape_job_items` + `chewy_enrichment_state` (legacy, unused by new flow) + claim primitives + orphan reset helpers. |
+| `config.py` | Reads `.env`. `ADSPOWER_PROFILE_ID`, `ADSP_CW_{1,2,3}_PROFILE_ID`, proxy URLs, slot count, timeouts. |
+| `job_exporter.py` | Export normalized → grouped products (legacy, superseded by single-pass scraper writing both). |
+
+### Tooling (added this session)
+| Path | Role |
+|---|---|
+| `tools/prepare_rescrape.py` | Reads existing `output/normalized_products/chewy_*.json` files, extracts the deduped `source_url` set into `tools/urls_all.txt` (3115 lines) and a deterministic 20-URL pilot sample (`seed=42`) into `tools/urls_pilot.txt`. |
+| `tools/build_shopify_jsonl.py` | Reads every `output/grouped_products/*.json` after a scrape job, runs `dedupe_products_across_pages`, emits `output/shopify_import_{ts}.jsonl` + a dedupe log. This is the final Shopify-ready feed. |
+| `tools/urls_*.txt` | Gitignored. Re-generate on demand. |
 
 ### Audit / one-off
 | File | Notes |
@@ -291,6 +332,12 @@ SQLite WAL + `busy_timeout=60s` + `BEGIN IMMEDIATE` serializes. No duplicate cla
 - On next CLI start: `recover_stale_enrichment_states(stale_minutes=30)` resets pids whose `last_started_at` > 30 min ago back to `pending`.
 - Re-claimed by any worker.
 
+> **NOTE — sections B, C, D below describe the OLD enrich-worker flow (`parallel_enrich_runner`).** The new scrape-subprocess flow has a different shape:
+> - **White-screen / proxy-dead detection** happens inside the `chewy_product_scraper.py` subprocess. It emits a `[WHITE_SCREEN_RESULT] {json}` line and exits non-zero.
+> - **Profile quarantine + slot rebuild** happens in `resumable_scraper_runner.process_single_item` (parses the marker) and `parallel_resumable_runner._worker_loop` (sees `slot.status='rebuilding'` next iteration, calls `auto_rebuild_profile`, restarts browser, retries the item — DB-backed, the slot template stays under management).
+> - **Item state** is `scrape_job_items.status` in the DB, not `chewy_enrichment_state`. Reset via `mark_orphan_running_items` / `mark_stale_running_items` on resume.
+> The legacy text below is still accurate for anyone running the deprecated `chewy_enrich.py --parallel`. Treat it as historical.
+
 ### B. White-screen on a pid (Akamai bot detection OR HTTP 429/403/503 throttle)
 **Two trigger sources, same handler:**
 - (i) HTML body looks like a block page on `page.goto` — detected by `adsp_profile_pool_manager.detect_white_screen_block` inside `chewy_enrich.get_build_id`.
@@ -324,29 +371,48 @@ Since `d8c184f` (DB-free profile management):
 
 ## 8. CLI
 
-```bash
-# Single-worker (no parallel)
-python chewy_enrich.py --input output/normalized_products --mode all
+### Canonical flow (session 2 onward)
 
-# Multi-worker (recommended for 3,115 products)
-python chewy_enrich.py --input output/normalized_products \
-    --mode all \
-    --parallel --workers 3 \
-    --limit 20 \
-    --force-reenrich \
-    --max-attempts 5
+```powershell
+# 1. Generate URL list from existing normalized files
+python tools\prepare_rescrape.py
 
-# Sample mode (legacy, reads selected_products.json by category A/B/C)
-python chewy_enrich.py --sample test_runs/.../selected_products.json --category A
+# 2. Seed a job
+python resumable_scraper_runner.py create --name <name> --urls tools\urls_all.txt
+
+# 3. Run it
+python resumable_scraper_runner.py start --job-id <job_id> --workers 3
+
+# 4. Resume after a crash / Ctrl+C / pause
+python resumable_scraper_runner.py resume --job-id <job_id> --workers 3
+
+# 5. Aggregate into Shopify JSONL
+python tools\build_shopify_jsonl.py
 ```
 
-**Flags:**
-- `--mode {content,price,image,all}` — what to enrich; `all` recommended.
-- `--limit N` — first N pids alphabetically.
-- `--force-reenrich` — `reset_enrichment_state` for each input pid before processing (clears prior `ok`/`failed`).
-- `--parallel` — use `parallel_enrich_runner`.
-- `--workers N` — number of CW slots to use (capped by `MAX_TEMPLATE_SLOTS`).
-- `--max-attempts N` — drop pids that hit N failures (default 5; 0 = unlimited).
+**`resumable_scraper_runner.py` subcommands** (see `--help`):
+- `create --name NAME --urls FILE [--mode ...] [--confidence-threshold N] [--max-attempts N]`
+- `start | resume --job-id ID --workers N [--retry-failed] [--reprocess-existing] [--force-retry] [--reset-profile-attempts] [--stale-minutes N] [--max-items N]`
+- `status --job-id ID` — JSON summary (counts, success rate, worker results)
+- `pause | cancel --job-id ID`
+- `retry-failed --job-id ID [--force] [--no-start] [--max-items N]`
+- `skip-current --job-id ID`
+
+**Key flags:**
+- `--reprocess-existing` — bypass `existing_json_output_ok` check, scrape every URL even if its 3 output files exist. Use when re-running with code changes that should change the output.
+- `--retry-failed` — pick `failed` items whose `attempts < max_attempts`. Default-on for `resume`, default-off for `start`.
+- `--force-retry` — pick `failed` items even past `max_attempts`. Use sparingly.
+- `--reset-profile-attempts` (resume only) — clear `profile_attempts_json` and `white_screen_count` for pending/failed/paused items; release all quarantined profiles. Use after fixing a proxy issue at the .env level.
+
+### Legacy CLI (deprecated — for reference only)
+
+```powershell
+# These still run; they operate on the chewy_enrichment_state table and read
+# existing normalized files. They will NOT scrape from scratch — for that,
+# use the canonical flow above.
+python chewy_enrich.py --input output/normalized_products --mode all
+python chewy_enrich.py --input output/normalized_products --mode all --parallel --workers 3 --limit 20 --force-reenrich
+```
 
 ---
 
@@ -374,6 +440,17 @@ python chewy_enrich.py --sample test_runs/.../selected_products.json --category 
 
 (Newest first.)
 
+### Session 2 (2026-05-15 afternoon) — Pipeline merge
+
+| Commit | What | Why |
+|---|---|---|
+| `9aa09cb` | Emit white-screen marker on proxy errors; strip BOM from URL files | Two issues surfaced by local 10-URL demo: (1) `page.goto` raising `ERR_CONNECTION_CLOSED` killed subprocess with a generic non-zero exit — runner marked the item failed without quarantining the dead profile, so every retry hit the same proxy. Scraper now catches these errors (and `WhiteScreenException` from the inner pipeline) and emits the `[WHITE_SCREEN_RESULT]` marker line the runner already knows how to handle: quarantine + slot rebuild + retry. (2) PowerShell `Set-Content -Encoding utf8` writes utf-8-with-BOM — the BOM leaked into URLs and crashed the runner on cp1252 console. `read_urls_file` now uses `utf-8-sig` to silently strip the BOM. Demo result after the fix: **9/10 success rate** on the same input. |
+| `a5cb64e` | Merge variant-API enrichment into scraper; restore subprocess entry | The historical two-pass flow (`scrape → enrich`) was collapsed into a single pass inside `chewy_product_scraper.scrape_single_product`. Per-product helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) moved from `chewy_enrich.py` to `chewy_next_json_extractor.py`; `chewy_enrich.py` re-exports for backward compatibility. Scraper now writes `normalized + grouped + validation` per pid. **Also fixed a latent bug**: `resumable_scraper_runner.py` was still spawning `test_single_product.py` (deleted in commit `f3abfb7` months ago) — the runner appeared to work only because `existing_json_output_ok` was short-circuiting before the subprocess ever ran. Now it spawns `chewy_product_scraper.py --url`, with `ADSP_BROWSER_WS_URL` to reuse the worker's open browser. New aggregation step: `tools/build_shopify_jsonl.py` does `dedupe_products_across_pages` and emits the final Shopify JSONL. |
+| `90ec3ff` | Add `tools/prepare_rescrape.py` helper for URL extraction | Generate `tools/urls_all.txt` (3115 deduped URLs from existing normalized files) + `tools/urls_pilot.txt` (deterministic 20-URL random sample, seed=42). Generated URL files are gitignored. Motivation: we needed a clean URL list to seed the re-scrape job after discovering that legacy 5-digit variant IDs in the existing normalized files had been delisted from Chewy. |
+| `9182991` | Filter out Chewy-exclusive compounded products from enrich input | The previous test batch of 20 happened to be all compounded capsules (215 such products in the dataset). The user doesn't sell Chewy-exclusive compounded meds on Shopify. The filter was added to the now-deprecated `chewy_enrich.py` CLI; it does not apply to the new scraper flow (no harm in re-scraping them — they just won't be used). |
+
+### Session 1 (2026-05-15 morning) — Pipeline refactor & multi-worker
+
 | Commit | What | Why |
 |---|---|---|
 | `d8c184f` | Strip DB profile tracking — worker holds profile_id in memory only | User wanted simpler model. New helpers `template_for_slot`, `create_profile_via_api`, `delete_profile_via_api`, `switch_profile_to_local_via_api`, `switch_profile_to_env_proxy_via_api` — pure AdsPower API, no DB. `_worker_coro` rewritten: parse template once, init profile_id from .env (or create new), on white-screen delete+create new, on proxy-dead switch SAME profile to no_proxy. All in-memory; .env never modified. Removed startup DB syncs (sync_profile_templates_to_db, restore_runtime_local_slots_from_env, rebuild_slots_with_env_proxy_changes, release_stale_template_slots, get_worker_slot_status, get_template, consume_rebuild_request, mark_template_white_screen, ensure_slot_profile). Scrape pipeline's DB profile pool is unchanged. |
@@ -390,31 +467,102 @@ python chewy_enrich.py --sample test_runs/.../selected_products.json --category 
 
 ## 11. Open Questions / Pending Work
 
-1. **Test 20-product batch on VPS** — user is running `--limit 20 --force-reenrich`. Verify output has `source_entry_id`, `out_of_stock`, `transition_instructions` populated. (Smoke command provided in chat history.)
-2. **White-screen `.env` mismatch:** when `auto_rebuild_profile` creates a new profile_id, `.env` still points at the old (deleted) id. Currently the worker stops with a clear error and asks user to update `.env`. **A nicer UX would be**: either (a) auto-write the new id back to `.env`, or (b) revert to DB-first resolution after white-screen rebuilds. Decision pending.
-3. **Shopify export step (CSV/JSON):** JSONL is produced but Shopify import format conversion is not yet wired. Likely a separate `chewy_to_shopify.py` script that reads the JSONL + applies `dedupe_products_across_pages` + emits Shopify CSV.
-4. **Stale orphan profiles on AdsPower** from the pre-fix loop. User may have N orphan profiles per slot. Manual cleanup via AdsPower UI may be needed. (Not destructive — they just exist unused.)
-5. **`output/scraper_jobs.db`** (separate file from root `scraper_jobs.db`) — 8.1 MB, untouched by us. Possibly older backup. User should verify before purging.
+1. **Run full 3115 re-scrape on VPS.** User has the commands (§12). Pilot of 20 verified shape; local 10-URL smoke verified runtime behavior including resume after cancel. Expected outcome: ~95–98% success rate, a small number of delisted-product fails (acceptable). After it finishes: run `tools/build_shopify_jsonl.py` to get the Shopify-import JSONL.
+2. **Shopify CSV/JSON import format.** `build_shopify_jsonl.py` produces the deduped *grouped* JSON-lines, but the actual Shopify-import CSV (or whichever flavor the store uses) is not wired yet. Likely a separate `chewy_to_shopify_csv.py` that reads `shopify_import_*.jsonl` and emits Shopify product CSV (handles, variants, metafields). Decide schema with the user before writing.
+3. **White-screen `.env` mismatch (carryover).** `auto_rebuild_profile` creates a new profile_id but `.env` still points at the old one. Worker auto-creates a fresh profile on each run (since `d8c184f`), so this is not blocking — but `.env` drifts away from reality. Decide: (a) auto-write new id back, (b) accept the drift and document.
+4. **`chewy_enrich.py` and `parallel_enrich_runner.py` are formally deprecated.** Decide when to delete them outright vs. keep as compatibility shims. The helpers they re-export now live in `chewy_next_json_extractor.py`. Leaving them in for now buys backward compatibility for any in-flight scripts.
+5. **Stale orphan profiles on AdsPower** from earlier sessions — user has many unused profiles in AdsPower UI. Not destructive; manual cleanup whenever convenient.
+6. **`output/scraper_jobs.db`** (separate file from root `scraper_jobs.db`) — 8.1 MB, untouched. Possibly older backup. Verify before purging.
 
 ---
 
 ## 12. Operational Runbook (VPS)
 
-### Fresh install
+### Run order — full re-scrape (3115 URLs)
+
+```powershell
+# 1. Pull latest (4 commits from session 2: 9182991, 90ec3ff, a5cb64e, 9aa09cb)
+git pull origin main
+
+# 2. Generate URL list FROM existing normalized files (must run BEFORE deleting them)
+python tools\prepare_rescrape.py
+# Writes tools/urls_all.txt (3115) + tools/urls_pilot.txt (20, seed=42).
+
+# 3. Backup output + DB (3 output folders + sqlite)
+$ts = Get-Date -Format "yyyyMMdd_HHmmss"
+Compress-Archive `
+    -Path output\normalized_products\*,output\grouped_products\*,output\validation\* `
+    -DestinationPath "output\backup_pre_full_rescrape_$ts.zip" -Force
+Copy-Item scraper_jobs.db "scraper_jobs.db.bak_$ts"
+
+# 4. Clean output (must delete ALL THREE — runner's existing_json_output_ok
+#    checks grouped + validation; deleting only normalized doesn't force re-scrape)
+Remove-Item output\normalized_products\*.json -Force
+Remove-Item output\grouped_products\*.json -Force
+Remove-Item output\validation\*.json -Force
+
+# 5. Create the job and note the job_id from the output
+python resumable_scraper_runner.py create --name fullrescrape_3115 --urls tools\urls_all.txt
+# {"job_id": "job_YYYYMMDD_HHMMSS_xxxx", "total_urls": 3115}
+
+# 6. Start scraping (replace <job_id>)
+python resumable_scraper_runner.py start --job-id <job_id> --workers 3
+
+# 7. After the job finishes, aggregate into the final Shopify JSONL
+python tools\build_shopify_jsonl.py
+# -> output\shopify_import_<ts>.jsonl + output\shopify_import_dedupe_log_<ts>.json
+```
+
+### Smoke check on the resulting data
+
+```powershell
+# Job summary
+python resumable_scraper_runner.py status --job-id <job_id>
+
+# Status counts directly from DB
+python -c "import sqlite3; c=sqlite3.connect('scraper_jobs.db'); r=c.execute(\"SELECT status, COUNT(*) FROM scrape_job_items WHERE job_id='<job_id>' GROUP BY status\").fetchall(); print(dict(r))"
+
+# Files on disk
+Get-ChildItem output\grouped_products\*.json | Measure-Object | Select-Object Count
+
+# Inspect a representative product (any food pid is a good probe)
+Get-ChildItem output\grouped_products\chewy_grouped_*.json | Select-Object -First 1 | ForEach-Object {
+  python -c "import json; d=json.load(open(r'$($_.FullName)',encoding='utf-8')); p=d['products'][0]; v=p['variants'][0]; print('title:',p['title'][:60]); print('entry_id:',v.get('source_entry_id')); print('inv_policy:',v.get('shopify_inventory_policy')); print('transition:',bool(p.get('transition_instructions'))); print('GA:',bool(p.get('guaranteed_analysis'))); print('feeding:',bool(p.get('feeding_instructions')))"
+}
+```
+
+### Crash / Ctrl+C recovery
+
+```powershell
+python resumable_scraper_runner.py resume --job-id <job_id> --workers 3
+```
+
+Resume auto-handles:
+- `running` items orphaned by the previous run → reset to `pending` (`mark_orphan_running_items`)
+- `done` items with all 3 output files → skipped via `existing_json_output_ok` (no subprocess)
+- `failed` items → retried if `attempts < max_attempts` (default 3)
+- Multi-worker safe via `BEGIN IMMEDIATE` atomic claim
+
+Verified end-to-end on local 10-URL demo this session.
+
+### Fresh install (first time on a new machine)
+
 ```powershell
 git clone https://github.com/hyauns/ChewyPetCo.git
 cd ChewyPetCo
 pip install -r requirements.txt
 playwright install chromium
+# create .env with ADSP_CW_{1,2,3}_PROFILE_ID + ADSP_CW_{1,2,3}_PROXY_URL
+python -c "import job_store; job_store.init_db()"
 ```
 
-### `.env` template (fill in)
+### `.env` template
+
 ```env
 ADSPOWER_API_BASE=http://127.0.0.1:50325
 ADSPOWER_PROFILE_ID=<fallback_profile>          # used by single-worker mode
 ADSP_PROFILE_RECOVERY_ENABLED=true
 
-# 3 CW slot profiles + their proxies (socks5h example)
 ADSP_CW_1_PROFILE_ID=<profile_id_1>
 ADSP_CW_1_PROXY_URL=socks5h://USER:PASS@host:port
 ADSP_CW_2_PROFILE_ID=<profile_id_2>
@@ -423,69 +571,23 @@ ADSP_CW_3_PROFILE_ID=<profile_id_3>
 ADSP_CW_3_PROXY_URL=socks5h://USER:PASS@host:port
 ```
 
-### Data sync from old machine
-```powershell
-# From old machine — these are NOT in git
-rsync (or scp) output/normalized_products/  ->  VPS:output/normalized_products/
-rsync (or scp) output/cache/  ->  VPS:output/cache/             # optional, speeds up enrich
-# Initialize fresh scraper_jobs.db on VPS (or transfer)
-python -c "import job_store; job_store.init_db()"
-```
-
-### Run order (typical)
-```powershell
-# 1. Pull latest
-git pull origin main
-
-# 2. (Optional) clear enrichment state from any prior run
-python -c "import sqlite3; c=sqlite3.connect('scraper_jobs.db'); n=c.execute('DELETE FROM chewy_enrichment_state').rowcount; c.commit(); c.close(); print(f'cleared {n} rows')"
-
-# 3. Test 20 products
-python chewy_enrich.py --input output/normalized_products --mode all --parallel --workers 3 --limit 20 --force-reenrich
-
-# 4. Verify (smoke check the latest JSONL)
-$jsonl = Get-ChildItem output/enrichment_runs/result_batch_all_*.jsonl | Sort-Object LastWriteTime | Select-Object -Last 1
-python -c "import json; d=json.loads(open(r'$($jsonl.FullName)','r',encoding='utf-8').readline()); v=d['products'][0]['variants'][0]; print('entry_id:',v.get('source_entry_id')); print('out_of_stock:',v.get('out_of_stock')); print('inv_policy:',v.get('shopify_inventory_policy'))"
-
-# 5. Full run (remove --limit)
-python chewy_enrich.py --input output/normalized_products --mode all --parallel --workers 3
-```
-
-### Crash recovery
-Just re-run the same command — DB state ensures `ok` pids are skipped. Stale `in_progress` pids (worker crashed) are reset on startup.
-
-### Updating `.env` after white-screen rebuild
-```powershell
-# 1. Find the new profile id in AdsPower UI (look for the most recent CW_X profile)
-# 2. Edit .env, replace ADSP_CW_X_PROFILE_ID with the new id
-# 3. Restart the run
-```
-
-### Common quick checks
-```powershell
-# Queue status
-python -c "import job_store; print(job_store.enrichment_state_summary())"
-
-# How many products in latest JSONL?
-(Get-Content (Get-ChildItem output/enrichment_runs/result_batch_all_*.jsonl | Sort LastWriteTime | Select -Last 1)).Count
-
-# Slot status
-python -c "import adsp_profile_recovery_manager as r; r.sync_profile_templates_to_db(); print([r.get_template(s) for s in ['CW_1','CW_2','CW_3']])"
-```
-
 ---
 
 ## 13. Quick-reference: where to look up what
 
 | Question | Where to look |
 |---|---|
+| **Where's the canonical scrape→Shopify pipeline?** | `chewy_product_scraper.scrape_single_product` (in-process; all phases inline). |
+| **How does the runner invoke the scraper?** | `resumable_scraper_runner.process_single_item` → `subprocess.Popen([..., 'chewy_product_scraper.py', '--url', url], env=ADSP_BROWSER_WS_URL+ADSPOWER_PROFILE_ID)`. |
 | How does a variant URL get built? | `chewy_next_json_extractor.parse_apollo_product` ("variant_url"). Uses entry_id. |
-| How does enrich decide a variant is OOS? | `derive_stock_fields()` in `chewy_next_json_extractor.py`. Multiple signals. |
-| How do workers claim work? | `job_store.claim_next_enrichment_pid` — BEGIN IMMEDIATE. |
-| How does white-screen rebuild a profile? | `adsp_profile_recovery_manager.auto_rebuild_profile(delete_old_profile=True)`. |
-| How does proxy-dead switch to local? | `adsp_profile_recovery_manager.switch_slot_to_local_runtime` — no delete. |
-| How does proxy come back from local? | `adsp_profile_recovery_manager.restore_runtime_local_slots_from_env` — toggle proxy_soft. |
+| How is a variant decided OOS? | `derive_stock_fields()` in `chewy_next_json_extractor.py`. Multiple signals. |
+| How do scrape workers claim work? | `job_store.claim_next_item` — BEGIN IMMEDIATE. (Old `claim_next_enrichment_pid` is for the deprecated `chewy_enrichment_state` table.) |
+| How does white-screen rebuild a profile? | Scraper emits `[WHITE_SCREEN_RESULT]` marker → `resumable_scraper_runner.process_single_item` (~line 720) parses it, calls `quarantine_profile` + `mark_template_white_screen`, marks item pending → `parallel_resumable_runner._worker_loop` sees `slot.status == 'rebuilding'` next iteration → `auto_rebuild_profile`. |
+| How does the scraper recognize proxy-dead errors? | `chewy_product_scraper.main()` — `PROXY_DEAD_TOKENS` set (ERR_CONNECTION_*, SOCKS, TUNNEL, TIMED_OUT, NETWORK_CHANGED) caught around `page.goto` and `scrape_single_product`. Emits the same white-screen marker. |
+| How does proxy come back from local? | `adsp_profile_recovery_manager.restore_runtime_local_slots_from_env` — toggle `proxy_soft`. |
 | Where is `.env` parsed? | `config.py` `_load_local_env()`. Templates re-parse via `load_profile_templates_from_config()`. |
-| Where is the JSONL line written? | `parallel_enrich_runner._worker_coro` "Stream to JSONL" block (or `chewy_enrich.run_pipeline` single-worker path). |
+| Where are output files written? | `chewy_product_scraper.main()` — three files per pid: `output/normalized_products/`, `output/grouped_products/`, `output/validation/`. |
 | How is split-by-attribute done? | `split_product_by_flavor` (function name kept for backward compat). Uses `is_variant_axis_attr` to classify each defining attribute. |
-| How is cross-page dedupe done? | `dedupe_products_across_pages` — fingerprint by sorted variant entry_ids. |
+| How is cross-page dedupe done? | `dedupe_products_across_pages` — fingerprint by sorted variant entry_ids. Invoked from `tools/build_shopify_jsonl.py`. |
+| How does resume skip done items? | `resumable_scraper_runner.existing_json_output_ok` checks grouped + validation files. If both pass quality, item marked done without spawning subprocess. |
+| Where does the Shopify-import feed come from? | `python tools/build_shopify_jsonl.py` after the scrape job finishes. Reads grouped, dedupes, writes `output/shopify_import_{ts}.jsonl`. |
