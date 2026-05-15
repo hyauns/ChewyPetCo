@@ -1184,8 +1184,7 @@ def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str,
         rows = job_store.rows_to_dicts(
             conn.execute(
                 """
-                SELECT slot_id, adspower_profile_id, proxy_type, proxy_host, proxy_port,
-                       proxy_username, proxy_password
+                SELECT slot_id, adspower_profile_id
                 FROM adsp_profile_templates
                 WHERE notes LIKE ?
                   AND status NOT IN ('in_use','rebuilding')
@@ -1207,6 +1206,15 @@ def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str,
                             "message": "No profile id on slot."})
             continue
 
+        # Real proxy credentials live only in .env, not in the DB (DB only stores
+        # proxy_username_masked). Reload the parsed template from .env each time.
+        try:
+            template = _template_by_slot(slot_id)
+        except ValueError as exc:
+            results.append({"slot_id": slot_id, "profile_id": profile_id,
+                            "success": False, "message": str(exc)})
+            continue
+
         # Stop the profile so AdsPower accepts the proxy_soft change.
         try:
             adspower.stop_profile(str(profile_id))
@@ -1220,11 +1228,11 @@ def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str,
                     "user_id": str(profile_id),
                     "user_proxy_config": {
                         "proxy_soft": "other",
-                        "proxy_type": row["proxy_type"],
-                        "proxy_host": row["proxy_host"],
-                        "proxy_port": row["proxy_port"],
-                        "proxy_user": row.get("proxy_username") or "",
-                        "proxy_password": row.get("proxy_password") or "",
+                        "proxy_type": template["proxy_type"],
+                        "proxy_host": template["proxy_host"],
+                        "proxy_port": template["proxy_port"],
+                        "proxy_user": template.get("proxy_username") or "",
+                        "proxy_password": template.get("proxy_password") or "",
                     },
                 },
                 timeout=60,
