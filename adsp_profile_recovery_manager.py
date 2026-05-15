@@ -1167,13 +1167,25 @@ def rebuild_slots_with_env_proxy_changes(*, delay_seconds: int = 0) -> dict[str,
 
 
 def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str, Any]:
-    """On a fresh Start/Resume, replace runtime Local/no_proxy profiles with configured proxy profiles."""
+    """Restore the .env proxy on slots currently in runtime Local/no_proxy fallback.
+
+    IMPORTANT: this does NOT delete the AdsPower profile. It toggles the existing
+    profile's `proxy_soft` config from `no_proxy` back to the slot's .env proxy
+    via `/api/v1/user/update`, then clears the runtime_local_fallback marker.
+    This avoids the orphan-profile cascade that happens when a dead proxy keeps
+    triggering delete-then-create cycles.
+
+    If the .env proxy is still dead, the next page load will hit
+    ERR_CONNECTION_CLOSED and the worker will switch the same profile back to
+    Local via switch_slot_to_local_runtime. No profile is created or destroyed.
+    """
     sync_profile_templates_to_db()
     with job_store.connect() as conn:
         rows = job_store.rows_to_dicts(
             conn.execute(
                 """
-                SELECT slot_id
+                SELECT slot_id, adspower_profile_id, proxy_type, proxy_host, proxy_port,
+                       proxy_username, proxy_password
                 FROM adsp_profile_templates
                 WHERE notes LIKE ?
                   AND status NOT IN ('in_use','rebuilding')
@@ -1183,18 +1195,81 @@ def restore_runtime_local_slots_from_env(*, delay_seconds: int = 0) -> dict[str,
             ).fetchall()
         )
 
+    if delay_seconds and delay_seconds > 0:
+        time.sleep(delay_seconds)
+
     results = []
-    all_ok = True
     for row in rows:
-        result = auto_rebuild_profile(
-            row["slot_id"],
-            reason="resume_reload_proxy_from_env_after_runtime_local_fallback",
-            delay_seconds=delay_seconds,
+        slot_id = row["slot_id"]
+        profile_id = row.get("adspower_profile_id")
+        if not profile_id:
+            results.append({"slot_id": slot_id, "success": False,
+                            "message": "No profile id on slot."})
+            continue
+
+        # Stop the profile so AdsPower accepts the proxy_soft change.
+        try:
+            adspower.stop_profile(str(profile_id))
+        except Exception:
+            pass
+
+        try:
+            _post_adspower(
+                "/api/v1/user/update",
+                {
+                    "user_id": str(profile_id),
+                    "user_proxy_config": {
+                        "proxy_soft": "other",
+                        "proxy_type": row["proxy_type"],
+                        "proxy_host": row["proxy_host"],
+                        "proxy_port": row["proxy_port"],
+                        "proxy_user": row.get("proxy_username") or "",
+                        "proxy_password": row.get("proxy_password") or "",
+                    },
+                },
+                timeout=60,
+            )
+        except Exception as exc:
+            message = short_error_message(exc)
+            record_profile_rebuild_event(
+                slot_id, "env_proxy_restore_failed",
+                old_profile_id=profile_id,
+                message=message,
+            )
+            results.append({"slot_id": slot_id, "profile_id": profile_id,
+                            "success": False, "message": message})
+            continue
+
+        now = utc_now()
+        with job_store.connect() as conn:
+            conn.execute(
+                """
+                UPDATE adsp_profile_templates
+                SET status = 'available',
+                    notes = ?,
+                    updated_at = ?
+                WHERE slot_id = ?
+                """,
+                (
+                    f".env proxy restored on profile {profile_id} (toggled proxy_soft, profile kept).",
+                    now,
+                    slot_id,
+                ),
+            )
+            conn.commit()
+        record_profile_rebuild_event(
+            slot_id, "env_proxy_restored",
+            old_profile_id=profile_id,
+            message=f"Profile {profile_id}: toggled proxy_soft back to .env proxy (no rebuild).",
+            metadata={"runtime_local_fallback_cleared": True},
         )
-        results.append(result)
-        if not result.get("success"):
-            all_ok = False
-    return {"success": all_ok, "restored_count": len([r for r in results if r.get("success")]), "slots": results}
+        results.append({"slot_id": slot_id, "profile_id": profile_id, "success": True})
+
+    return {
+        "success": all(r["success"] for r in results) if results else True,
+        "restored_count": sum(1 for r in results if r.get("success")),
+        "slots": results,
+    }
 
 
 def ensure_slot_profile(slot_id: str, *, delay_seconds: int = 0) -> dict[str, Any]:

@@ -69,13 +69,21 @@ async def _start_browser_for_slot(p_obj, slot_id: str, worker_id: str):
     """Start AdsPower profile for this slot and connect Playwright.
 
     Returns (browser, page, profile_id) on success or (None, None, None) on
-    failure. If the profile is missing, attempts an auto-rebuild via the
-    recovery manager (which honours .env proxy config).
+    failure.
+
+    - If the profile is missing AND .env has an explicit ADSP_<slot>_PROFILE_ID,
+      we STOP the worker with a clear error. The user manually configured this
+      profile and we must not silently create a replacement (that's how the
+      proxy-dead-loop bug accumulates orphan profiles).
+    - If .env has no profile id for this slot, we fall back to auto-rebuild
+      (initial-setup case where the worker should provision its own profile).
     """
     profile_id = _get_slot_profile(slot_id)
     if not profile_id:
         console.print(f"[red][{worker_id}] No profile assigned to {slot_id}[/red]")
         return None, None, None
+
+    env_id = _env_profile_id_for_slot(slot_id)
 
     for attempt in range(2):
         try:
@@ -88,8 +96,14 @@ async def _start_browser_for_slot(p_obj, slot_id: str, worker_id: str):
             return browser, page, profile_id
         except Exception as e:
             err = str(e).lower()
-            if attempt == 0 and ("does not exist" in err or "not exist" in err):
-                console.print(f"[yellow][{worker_id}] Profile {profile_id} missing — rebuilding via .env proxy...[/yellow]")
+            is_missing = "does not exist" in err or "not exist" in err
+
+            if attempt == 0 and is_missing and not env_id:
+                # No env config → auto-provision is acceptable (initial setup).
+                console.print(
+                    f"[yellow][{worker_id}] Profile {profile_id} missing and .env has no id "
+                    f"for {slot_id} — auto-rebuilding via slot proxy config...[/yellow]"
+                )
                 res = recovery.auto_rebuild_profile(
                     slot_id, reason=f"profile_missing_{profile_id}",
                     delay_seconds=0, delete_old_profile=False,
@@ -99,7 +113,19 @@ async def _start_browser_for_slot(p_obj, slot_id: str, worker_id: str):
                     continue
                 console.print(f"[red][{worker_id}] Rebuild failed: {res.get('message')}[/red]")
                 return None, None, None
-            console.print(f"[red][{worker_id}] start_profile/connect failed: {e}[/red]")
+
+            if is_missing and env_id:
+                # User-managed env profile — DO NOT silently create a new one;
+                # that causes the proxy-dead-loop / orphan-profile cascade.
+                console.print(
+                    f"[bold red][{worker_id}] Profile {env_id} from .env (slot {slot_id}) "
+                    f"does NOT exist in AdsPower. Worker stopping for this slot.\n"
+                    f"      Fix: update ADSP_{slot_id.replace('_','_')}_PROFILE_ID in .env "
+                    f"to a profile that exists, or recreate that profile in AdsPower.[/bold red]"
+                )
+                return None, None, None
+
+            console.print(f"[red][{worker_id}] start_profile/connect failed: {recovery.short_error_message(e)}[/red]")
             return None, None, profile_id
     return None, None, profile_id
 

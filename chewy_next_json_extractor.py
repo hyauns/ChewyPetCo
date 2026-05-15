@@ -56,6 +56,67 @@ def is_variant_axis_attr(name: str) -> bool:
         return False
     return all(t in VARIANT_AXIS_KEYWORDS for t in tokens)
 
+
+_OOS_STATUS_STRINGS = frozenset({
+    "OUT_OF_STOCK", "UNAVAILABLE", "DISCONTINUED",
+    "TEMPORARILY_UNAVAILABLE", "TEMPORARILY_OUT_OF_STOCK",
+    "PERMANENTLY_DISCONTINUED",
+})
+
+
+def derive_stock_fields(item_node: dict) -> dict:
+    """Derive Shopify-friendly stock fields from a Chewy Apollo Item node.
+
+    Reads multiple stock signals (inStock, isInStock, availabilityStatus,
+    isUnavailable, isDiscontinued, isPermanentlyDiscontinued) and returns:
+        in_stock: True/False/None
+        out_of_stock: True/False (None → False)
+        stock_reason: which signal made the decision
+        shopify_inventory_policy: 'deny' if OOS else 'continue'
+        availability: raw availabilityStatus / availability string
+    """
+    if not isinstance(item_node, dict):
+        return {"in_stock": None, "out_of_stock": False,
+                "stock_reason": "no_item_node",
+                "shopify_inventory_policy": "continue", "availability": ""}
+
+    avail_status = item_node.get("availabilityStatus") or item_node.get("availability") or ""
+    avail_upper = str(avail_status).upper()
+    in_stock_signals = [item_node.get("inStock"), item_node.get("isInStock")]
+    unavailable_flags = [
+        item_node.get("isUnavailable"),
+        item_node.get("isDiscontinued"),
+        item_node.get("isPermanentlyDiscontinued"),
+    ]
+
+    if any(f is True for f in unavailable_flags):
+        in_stock = False
+        stock_reason = "explicit_unavailable_flag"
+    elif avail_upper in _OOS_STATUS_STRINGS:
+        in_stock = False
+        stock_reason = f"availability_status:{avail_upper}"
+    elif any(s is True for s in in_stock_signals):
+        in_stock = True
+        stock_reason = "in_stock_signal_true"
+    elif avail_upper in ("AVAILABLE", "IN_STOCK"):
+        in_stock = True
+        stock_reason = f"availability_status:{avail_upper}"
+    elif any(s is False for s in in_stock_signals):
+        in_stock = False
+        stock_reason = "in_stock_signal_false"
+    else:
+        in_stock = None
+        stock_reason = "unknown_no_signal"
+
+    out_of_stock = (in_stock is False)
+    return {
+        "in_stock": in_stock,
+        "out_of_stock": out_of_stock,
+        "stock_reason": stock_reason,
+        "shopify_inventory_policy": "deny" if out_of_stock else "continue",
+        "availability": avail_status,
+    }
+
 def find_json_paths(data, target_keywords, current_path="", results=None):
     if results is None:
         results = []
@@ -284,10 +345,15 @@ async def enrich_variants_from_api(normalized_product: dict, page, build_id: str
     }
 
     for v in variants:
-        entry_id = v.get("source_entry_id") or v.get("source_variant_id")
         part_number = v.get("source_variant_id")
+        # OLD normalized files don't have source_entry_id. In that case we
+        # ask the API by partNumber URL (Chewy redirects to the canonical
+        # entryID); we then backfill source_entry_id from the matched Apollo
+        # Item key for future runs.
+        entry_id_known = bool(v.get("source_entry_id"))
+        entry_id_in_url = v.get("source_entry_id") or part_number
         v_url = v.get("variant_url")
-        if not entry_id or not v_url:
+        if not entry_id_in_url or not v_url:
             stats["failed"] += 1
             continue
 
@@ -297,9 +363,9 @@ async def enrich_variants_from_api(normalized_product: dict, page, build_id: str
             continue
 
         try:
-            var_data = await fetch_next_data_json(next_url, page, build_id, entry_id)
+            var_data = await fetch_next_data_json(next_url, page, build_id, entry_id_in_url)
         except Exception as e:
-            console.print(f"[red]Variant enrichment exception for {entry_id}: {e}[/red]")
+            console.print(f"[red]Variant enrichment exception for {entry_id_in_url}: {e}[/red]")
             stats["failed"] += 1
             continue
 
@@ -307,36 +373,100 @@ async def enrich_variants_from_api(normalized_product: dict, page, build_id: str
             stats["slug_mismatch"] += 1
             v.setdefault("warnings", []).append("api_enrichment_failed")
             v["content_source"] = {"type": "apollo_variant_api",
-                                   "source_entry_id": entry_id,
+                                   "source_entry_id": v.get("source_entry_id"),
                                    "source_variant_id": part_number,
                                    "confidence": "missing",
                                    "reason": "api_404_or_null"}
             continue
 
-        # Validate: matching item must exist with entryID AND partNumber both matching
+        # Follow Next.js redirect once. OLD normalized files have variant_url
+        # built from partNumber; Chewy 301-redirects those to the canonical
+        # /dp/{entryID} URL. The first response has only __N_REDIRECT and no
+        # Apollo state, so we extract the canonical entry_id from the redirect
+        # target and refetch.
+        pp = var_data.get("pageProps", {}) or {}
+        if "__N_REDIRECT" in pp and "__APOLLO_STATE__" not in pp:
+            redirect_to = pp.get("__N_REDIRECT", "")
+            dp_match = re.search(r"/dp/(\d+)(?:[/?#]|$)", redirect_to)
+            if dp_match:
+                redirected_entry_id = dp_match.group(1)
+                if redirected_entry_id != str(entry_id_in_url):
+                    redirected_url = (
+                        redirect_to if redirect_to.startswith("http")
+                        else f"https://www.chewy.com{redirect_to}"
+                    )
+                    redirected_next_url = build_next_data_url(redirected_url, build_id)
+                    if redirected_next_url:
+                        try:
+                            followed = await fetch_next_data_json(
+                                redirected_next_url, page, build_id, redirected_entry_id
+                            )
+                        except Exception:
+                            followed = None
+                        if followed and "__APOLLO_STATE__" in (followed.get("pageProps") or {}):
+                            var_data = followed
+                            v_url = redirected_url
+                            entry_id_in_url = redirected_entry_id
+            else:
+                # Redirect target isn't a product page (e.g. category). Variant is gone.
+                stats["wrong_product_api_rejected"] += 1
+                v.setdefault("warnings", []).append("variant_redirect_to_non_product")
+                v["content_source"] = {"type": "apollo_variant_api",
+                                       "source_entry_id": v.get("source_entry_id"),
+                                       "source_variant_id": part_number,
+                                       "confidence": "missing",
+                                       "reason": f"redirect_to_non_product:{redirect_to[:120]}"}
+                continue
+
+        # Locate the canonical Item in the response.
+        # Strict mode (entry_id known from new schema): both entry_id + partNumber must match.
+        # Lenient mode (OLD normalized files): match by partNumber only and backfill entry_id.
         apollo_resp = var_data.get("pageProps", {}).get("__APOLLO_STATE__", {})
-        response_valid = False
+        matched_key = None
+        matched_node = None
         for rk, rv in apollo_resp.items():
-            if rk.startswith("Item:") and isinstance(rv, dict):
-                eid_decoded = decode_apollo_entry_id(rk)
-                if str(eid_decoded) == str(entry_id) and str(rv.get("partNumber", "")) == str(part_number):
-                    response_valid = True
-                    break
-        if not response_valid:
+            if not (rk.startswith("Item:") and isinstance(rv, dict)):
+                continue
+            if str(rv.get("partNumber", "")) != str(part_number):
+                continue
+            eid_decoded = decode_apollo_entry_id(rk)
+            if entry_id_known and str(eid_decoded) != str(entry_id_in_url):
+                continue
+            matched_key = rk
+            matched_node = rv
+            break
+
+        if not matched_node:
             stats["wrong_product_api_rejected"] += 1
             v.setdefault("warnings", []).append("api_enrichment_failed")
             v["content_source"] = {"type": "apollo_variant_api",
-                                   "source_entry_id": entry_id,
+                                   "source_entry_id": v.get("source_entry_id"),
                                    "source_variant_id": part_number,
                                    "confidence": "missing",
                                    "reason": "wrong_product_api_response"}
             continue
 
+        # Backfill canonical entry_id + variant_url (upgrades OLD files).
+        canonical_entry_id = decode_apollo_entry_id(matched_key) or entry_id_in_url
+        v["source_entry_id"] = canonical_entry_id
+        slug_match = re.search(r"chewy\.com/(.*?)/dp/", v_url)
+        if slug_match:
+            v["variant_url"] = f"https://www.chewy.com/{slug_match.group(1)}/dp/{canonical_entry_id}"
+
+        # Backfill stock fields from the matched Item node.
+        stock = derive_stock_fields(matched_node)
+        v["in_stock"] = stock["in_stock"]
+        v["out_of_stock"] = stock["out_of_stock"]
+        v["stock_reason"] = stock["stock_reason"]
+        v["shopify_inventory_policy"] = stock["shopify_inventory_policy"]
+        v["availability"] = stock["availability"]
+
         v_info = extract_variant_info_from_apollo(
-            var_data, target_variant_id=part_number, target_entry_id=entry_id
+            var_data, target_variant_id=part_number, target_entry_id=canonical_entry_id
         )
 
-        # Apply to THIS variant only (per-variant content)
+        # Apply per-variant content (only fill empty fields so we don't overwrite
+        # any human-curated content already on the variant).
         filled_any = False
         for field in ("ingredients", "guaranteed_analysis", "description",
                       "feeding_instructions", "transition_instructions",
@@ -346,7 +476,7 @@ async def enrich_variants_from_api(normalized_product: dict, page, build_id: str
                 stats["fields_filled"][field] += 1
                 filled_any = True
         if v_info.get("images"):
-            # moe/ URLs are real variant images per Chewy CDN; always treat as valid
+            # moe/ URLs are real variant-specific images; treat all as valid.
             if not v.get("images"):
                 v["images"] = v_info["images"]
                 stats["fields_filled"]["images"] += 1
@@ -355,12 +485,13 @@ async def enrich_variants_from_api(normalized_product: dict, page, build_id: str
         if filled_any:
             stats["enriched"] += 1
             v["content_source"] = {"type": "apollo_variant_api",
-                                   "source_entry_id": entry_id,
+                                   "source_entry_id": canonical_entry_id,
                                    "source_variant_id": part_number,
-                                   "confidence": "high"}
+                                   "confidence": "high",
+                                   "entry_id_backfilled": not entry_id_known}
         else:
             v["content_source"] = {"type": "apollo_variant_api",
-                                   "source_entry_id": entry_id,
+                                   "source_entry_id": canonical_entry_id,
                                    "source_variant_id": part_number,
                                    "confidence": "low",
                                    "reason": "api_response_had_no_new_content"}
@@ -631,36 +762,11 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
         if isinstance(price, dict):
             price = price.get("salePrice") or price.get("price")
 
-        # Stock detection — multiple signals from Chewy's Apollo state:
-        #   inStock, isInStock (boolean), availability/availabilityStatus (enum strings),
-        #   isUnavailable, isDiscontinued, isPermanentlyDiscontinued.
-        avail_status = v.get("availabilityStatus") or v.get("availability") or ""
-        avail_upper = str(avail_status).upper()
-        in_stock_signals = [v.get("inStock"), v.get("isInStock")]
-        unavailable_flags = [v.get("isUnavailable"), v.get("isDiscontinued"),
-                             v.get("isPermanentlyDiscontinued")]
-        oos_status_strings = {"OUT_OF_STOCK", "UNAVAILABLE", "DISCONTINUED",
-                              "TEMPORARILY_UNAVAILABLE", "TEMPORARILY_OUT_OF_STOCK",
-                              "PERMANENTLY_DISCONTINUED"}
-        if any(f is True for f in unavailable_flags):
-            in_stock = False
-            stock_reason = "explicit_unavailable_flag"
-        elif avail_upper in oos_status_strings:
-            in_stock = False
-            stock_reason = f"availability_status:{avail_upper}"
-        elif any(s is True for s in in_stock_signals):
-            in_stock = True
-            stock_reason = "in_stock_signal_true"
-        elif avail_upper == "AVAILABLE" or avail_upper == "IN_STOCK":
-            in_stock = True
-            stock_reason = f"availability_status:{avail_upper}"
-        elif any(s is False for s in in_stock_signals):
-            in_stock = False
-            stock_reason = "in_stock_signal_false"
-        else:
-            in_stock = None
-            stock_reason = "unknown_no_signal"
-        out_of_stock = (in_stock is False)
+        stock_fields = derive_stock_fields(v)
+        in_stock = stock_fields["in_stock"]
+        out_of_stock = stock_fields["out_of_stock"]
+        stock_reason = stock_fields["stock_reason"]
+        avail_status = stock_fields["availability"]
 
         v_images = []
         full_img = v.get("fullImage", {})
