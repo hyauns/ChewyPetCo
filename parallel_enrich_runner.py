@@ -18,7 +18,6 @@ import json
 import os
 import random
 import sys
-import traceback
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -36,7 +35,29 @@ import chewy_enrich
 console = Console()
 
 
+def _env_profile_id_for_slot(slot_id: str) -> str | None:
+    """Read the profile id from .env / os.environ for this slot.
+
+    Slot ids look like 'CW_1' → reads ADSP_CW_1_PROFILE_ID. Returns None when
+    the env var is missing or empty so the caller can decide whether to fall
+    back to DB or create a new profile.
+    """
+    if "_" not in slot_id:
+        return None
+    prefix, _sep, idx = slot_id.rpartition("_")
+    if not idx.isdigit():
+        return None
+    val = os.environ.get(f"ADSP_{prefix}_{idx}_PROFILE_ID", "").strip()
+    return val or None
+
+
 def _get_slot_profile(slot_id: str) -> str | None:
+    """Resolve profile id for slot. .env wins over DB so workers always start
+    on the user-configured profile. DB is only a fallback when .env is empty.
+    """
+    env_id = _env_profile_id_for_slot(slot_id)
+    if env_id:
+        return env_id
     row = recovery.get_template(slot_id)
     if not row:
         return None
@@ -109,12 +130,27 @@ async def _worker_coro(*,
     processed = 0
     enrich_errors = 0
 
-    # Ensure slot has a profile (auto-rebuild via .env if missing)
-    ensure = recovery.ensure_slot_profile(slot_id, delay_seconds=0)
-    if not ensure.get("success"):
-        console.print(f"[red][{worker_id}] Slot {slot_id} unavailable: {ensure.get('message')}[/red]")
-        return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
-                "status": "slot_unavailable"}
+    # .env is the source of truth for slot profile id. If set, sync it into
+    # the DB so the recovery / UI flows stay aligned with what the worker is
+    # about to start. If .env is empty, fall back to DB or create a new
+    # profile via AdsPower API.
+    env_profile_id = _env_profile_id_for_slot(slot_id)
+    if env_profile_id:
+        console.print(f"[cyan][{worker_id}] Slot {slot_id}: using profile {env_profile_id} from .env[/cyan]")
+        try:
+            recovery.map_slot_to_profile_id(
+                slot_id, env_profile_id,
+                notes=f"Loaded from .env on worker start ({worker_id})",
+            )
+        except Exception as e:
+            console.print(f"[yellow][{worker_id}] map_slot_to_profile_id failed: {e}[/yellow]")
+    else:
+        console.print(f"[yellow][{worker_id}] Slot {slot_id}: no profile id in .env — checking DB / creating new[/yellow]")
+        ensure = recovery.ensure_slot_profile(slot_id, delay_seconds=0)
+        if not ensure.get("success"):
+            console.print(f"[red][{worker_id}] Slot {slot_id} unavailable: {ensure.get('message')}[/red]")
+            return {"worker_id": worker_id, "slot_id": slot_id, "processed": 0,
+                    "status": "slot_unavailable"}
 
     browser, page, profile_id = await _start_browser_for_slot(p_obj, slot_id, worker_id)
     if not browser:
@@ -179,10 +215,31 @@ async def _worker_coro(*,
                     break
                 continue
             except Exception as e:
-                console.print(f"[red][{worker_id}] Error on {pid}: {e}[/red]")
-                traceback.print_exc()
+                if recovery.is_proxy_connection_error(e):
+                    err_token = recovery.short_error_message(e)
+                    console.print(
+                        f"[bold yellow][{worker_id}] PROXY DEAD on {pid} ({err_token}) — "
+                        f"switching {slot_id}/{profile_id} to Local/no_proxy and restarting (no delete)[/bold yellow]"
+                    )
+                    job_store.release_enrichment_claim(pid, reset_to="pending")
+                    await _stop_browser(profile_id, worker_id)
+                    res = recovery.switch_slot_to_local_runtime(
+                        slot_id, profile_id=profile_id, reason=err_token,
+                    )
+                    if not res.get("success"):
+                        console.print(f"[red][{worker_id}] Local switch failed: {res.get('message')}[/red]")
+                        break
+                    browser, page, profile_id = await _start_browser_for_slot(p_obj, slot_id, worker_id)
+                    if not browser:
+                        console.print(f"[red][{worker_id}] Could not restart browser after Local switch[/red]")
+                        break
+                    console.print(f"[green][{worker_id}] {slot_id} resumed on Local/no_proxy[/green]")
+                    continue
+                err_type = type(e).__name__
+                err_msg = recovery.short_error_message(e)
+                console.print(f"[red][{worker_id}] Error on {pid}: {err_type}: {err_msg}[/red]")
                 job_store.mark_enrichment_failed(
-                    pid, error_type=type(e).__name__, error_message=str(e)[:1000]
+                    pid, error_type=err_type, error_message=str(e)[:1000]
                 )
                 enrich_errors += 1
                 continue

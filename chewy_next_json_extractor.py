@@ -131,10 +131,14 @@ async def fetch_initial_html(url: str, page) -> str:
     try:
         await page.goto(url, timeout=config.PAGE_LOAD_TIMEOUT, wait_until="domcontentloaded")
     except Exception as exc:
+        # Compact log: drop Playwright's verbose "Call log:" tail. The worker
+        # decides whether this is a proxy death (→ swap to Local) or a real
+        # failure (→ mark pid failed) based on the error tokens in `exc`.
+        msg = str(exc).split("\nCall log:", 1)[0].split("\n", 1)[0].strip()
         if "Timeout" in str(exc):
-            console.print(f"[red]Page load timeout ({config.PAGE_LOAD_TIMEOUT}ms). Proxy có thể bị chậm hoặc kết nối bị treo.[/red]")
+            console.print(f"[red]Page load timeout ({config.PAGE_LOAD_TIMEOUT}ms): {msg}[/red]")
         else:
-            console.print(f"[red]Lỗi khi tải trang: {str(exc)}[/red]")
+            console.print(f"[red]Page load failed: {msg}[/red]")
         raise
     await asyncio.sleep(4)
     return await read_page_content_with_retry(page)

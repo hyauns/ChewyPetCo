@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import threading
 import time
 import uuid
@@ -39,6 +40,47 @@ _ADSPOWER_TRANSIENT_TOKENS = (
     "browser is starting",
     "please try again",
 )
+
+# Net errors that almost always mean the proxy/SOCKS tunnel itself died,
+# not that the destination is broken. We swap the slot to Local/no_proxy
+# (without deleting the profile) and let the worker keep going.
+PROXY_DEAD_NET_ERRORS = (
+    "ERR_CONNECTION_CLOSED",
+    "ERR_CONNECTION_RESET",
+    "ERR_CONNECTION_REFUSED",
+    "ERR_CONNECTION_FAILED",
+    "ERR_TUNNEL_CONNECTION_FAILED",
+    "ERR_SOCKS_CONNECTION_FAILED",
+    "ERR_PROXY_CONNECTION_FAILED",
+    "ERR_TIMED_OUT",
+    "ERR_EMPTY_RESPONSE",
+    "ERR_ADDRESS_UNREACHABLE",
+    "ERR_NAME_NOT_RESOLVED",
+)
+
+
+def is_proxy_connection_error(exc: Exception | str) -> bool:
+    msg = str(exc).upper()
+    return any(token in msg for token in PROXY_DEAD_NET_ERRORS)
+
+
+def short_error_message(exc: Exception | str, *, max_len: int = 240) -> str:
+    """Compact one-line summary suitable for logs.
+
+    - Drops Playwright's `Call log:` tail and any subsequent lines.
+    - Extracts the `net::ERR_*` token if present (most useful signal).
+    - Truncates to max_len.
+    """
+    raw = str(exc)
+    head = raw.split("\nCall log:", 1)[0].split("\n", 1)[0].strip()
+    m = re.search(r"net::(ERR_[A-Z_]+)", raw)
+    if m:
+        token = m.group(1)
+        if token not in head:
+            head = f"{token} :: {head}"
+    if len(head) > max_len:
+        head = head[: max_len - 3] + "..."
+    return head
 
 
 def utc_now() -> str:
@@ -794,6 +836,88 @@ def switch_profile_to_local(
         "profile_id": profile_id,
         "slot_id": slot_id,
         "message": "AdsPower profile switched to Local/no_proxy.",
+    }
+
+
+def switch_slot_to_local_runtime(
+    slot_id: str,
+    *,
+    profile_id: str | None = None,
+    reason: str = "proxy_connection_failed",
+) -> dict[str, Any]:
+    """Swap a slot's AdsPower profile to Local/no_proxy without deleting it.
+
+    Called mid-run when the configured SOCKS/HTTP proxy stops responding. The
+    profile is stopped, updated to no_proxy via AdsPower's user/update API,
+    and the slot is marked with the runtime_local_fallback note so the next
+    Start/Resume restores the configured proxy via
+    restore_runtime_local_slots_from_env. The slot stays available so the
+    worker can immediately restart the same profile and keep going.
+    """
+    sync_profile_templates_to_db()
+    row = get_template(slot_id)
+    if not row:
+        return {"success": False, "slot_id": slot_id, "message": "Unknown slot."}
+    profile_id = profile_id or row.get("adspower_profile_id")
+    if not profile_id:
+        return {"success": False, "slot_id": slot_id, "message": "Slot has no mapped AdsPower profile."}
+
+    # Best-effort stop so AdsPower will accept the proxy_soft change.
+    for stop_attempt in range(3):
+        try:
+            stopped = adspower.stop_profile(str(profile_id))
+            if stopped:
+                break
+        except Exception:
+            pass
+        time.sleep(2 * (stop_attempt + 1))
+
+    try:
+        _post_adspower(
+            "/api/v1/user/update",
+            {"user_id": str(profile_id), "user_proxy_config": {"proxy_soft": "no_proxy"}},
+            timeout=60,
+        )
+    except Exception as exc:
+        message = short_error_message(exc)
+        record_profile_rebuild_event(
+            slot_id,
+            "runtime_local_switch_failed",
+            old_profile_id=profile_id,
+            message=message,
+            metadata={"reason": reason},
+        )
+        return {"success": False, "slot_id": slot_id, "profile_id": profile_id, "message": message}
+
+    now = utc_now()
+    notes = _runtime_local_note(
+        f"proxy died, switched profile {profile_id} to Local until next Start/Resume; reason={reason}"
+    )
+    with job_store.connect() as conn:
+        conn.execute(
+            """
+            UPDATE adsp_profile_templates
+            SET status = 'available',
+                notes = ?,
+                updated_at = ?
+            WHERE slot_id = ?
+            """,
+            (notes, now, slot_id),
+        )
+        conn.commit()
+    record_profile_rebuild_event(
+        slot_id,
+        "runtime_local_switch_success",
+        old_profile_id=profile_id,
+        message=f"Profile {profile_id} switched to Local/no_proxy at runtime; slot remains active.",
+        metadata={"reason": reason, "runtime_local_fallback": True},
+    )
+    return {
+        "success": True,
+        "slot_id": slot_id,
+        "profile_id": profile_id,
+        "message": "Switched to Local/no_proxy at runtime; slot remains active.",
+        "runtime_local_fallback": True,
     }
 
 
