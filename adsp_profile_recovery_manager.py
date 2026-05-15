@@ -779,6 +779,41 @@ def _delete_adspower_profile(profile_id: str) -> str | None:
     return None
 
 
+def _list_adspower_profile_ids_by_name(display_name: str) -> list[str]:
+    """Return AdsPower user_ids whose `name` exactly equals `display_name`.
+
+    Retries on AdsPower's per-second rate-limit (code=-1, "Too many request
+    per second"). Without the retry, calling this right after another
+    AdsPower API hit returns empty silently and the orphan cleanup is a
+    no-op — that's the exact bug that caused profiles to accumulate to the
+    plan limit.
+    """
+    if not display_name:
+        return []
+    import requests
+    url = f"{config.ADSPOWER_API_BASE.rstrip('/')}/api/v1/user/list"
+    last_err = None
+    for attempt in range(1, 6):
+        try:
+            resp = requests.get(url, params={"page_size": 100}, timeout=15)
+            data = resp.json()
+            code = data.get("code")
+            msg = (data.get("msg") or "").lower()
+            if code == 0:
+                profiles = (data.get("data") or {}).get("list") or []
+                return [str(p.get("user_id")) for p in profiles
+                        if p.get("name") == display_name and p.get("user_id")]
+            if "too many" in msg or code == -1:
+                time.sleep(_ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS * attempt)
+                continue
+            last_err = f"code={code} msg={msg!r}"
+            break
+        except Exception as exc:
+            last_err = str(exc)
+            time.sleep(_ADSPOWER_MUTATION_MIN_INTERVAL_SECONDS)
+    return []
+
+
 def _create_adspower_profile(template: dict[str, Any], *, use_local_network: bool = False) -> str:
     proxy_config = (
         {"proxy_soft": "no_proxy"}
@@ -1048,22 +1083,43 @@ def auto_rebuild_profile(
         time.sleep(delay)
 
     delete_warning = None
+    deleted_orphan_ids: list[str] = []
     try:
-        if old_profile_id and delete_old_profile:
-            try:
-                delete_warning = _delete_adspower_profile(str(old_profile_id))
-            except Exception as exc:
-                delete_warning = _sanitize_message(str(exc), template)
-                lower_warning = delete_warning.lower()
-                best_effort_delete_errors = (
-                    "not found",
-                    "not exist",
-                    "does not exist",
-                    "being used",
-                    "cannot be deleted",
+        if delete_old_profile:
+            # Build the full set of stale ids to clean up: the one the DB
+            # template currently points at PLUS every AdsPower profile that
+            # shares this slot's display_name. The latter catches orphans
+            # left behind in past sessions when the DB id went stale and
+            # delete-by-id silently no-oped.
+            stale_ids: list[str] = []
+            if old_profile_id:
+                stale_ids.append(str(old_profile_id))
+            display_name = template.get("display_name") if isinstance(template, dict) else None
+            for orphan_id in _list_adspower_profile_ids_by_name(display_name or ""):
+                if orphan_id not in stale_ids:
+                    stale_ids.append(orphan_id)
+
+            for pid in stale_ids:
+                try:
+                    _delete_adspower_profile(pid)
+                    deleted_orphan_ids.append(pid)
+                except Exception as exc:
+                    msg = _sanitize_message(str(exc), template)
+                    lower = msg.lower()
+                    best_effort_delete_errors = (
+                        "not found",
+                        "not exist",
+                        "does not exist",
+                        "being used",
+                        "cannot be deleted",
+                    )
+                    if not any(token in lower for token in best_effort_delete_errors):
+                        raise RuntimeError(f"Could not delete AdsPower profile {pid}: {msg}")
+                    delete_warning = msg
+            if deleted_orphan_ids:
+                delete_warning = (
+                    f"Deleted {len(deleted_orphan_ids)} profile(s): {deleted_orphan_ids}"
                 )
-                if not any(token in lower_warning for token in best_effort_delete_errors):
-                    raise RuntimeError(f"Could not delete old AdsPower profile {old_profile_id}: {delete_warning}")
         elif old_profile_id and not delete_old_profile:
             delete_warning = f"Skipped deleting old AdsPower profile {old_profile_id}"
 
