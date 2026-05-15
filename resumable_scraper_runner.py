@@ -88,7 +88,10 @@ def now_iso() -> str:
 
 
 def read_urls_file(path: str | Path) -> list[str]:
-    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+    # utf-8-sig transparently strips a BOM if the file was saved by PowerShell's
+    # default Set-Content -Encoding utf8 (utf-8-with-BOM). Without this, a BOM
+    # gets stuck on the first URL and surfaces as UnicodeEncodeError later.
+    with open(path, "r", encoding="utf-8-sig", errors="replace") as handle:
         return [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
 
 

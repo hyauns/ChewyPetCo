@@ -177,6 +177,22 @@ async def main():
         ws_url = adspower.get_ws_endpoint(profile_data)
         profile_started = True
 
+    # Network errors that mean the proxy / network for this profile is dead.
+    # Surface them as a white-screen marker so the resumable runner quarantines
+    # the profile and rebuilds the slot instead of just marking the item failed.
+    PROXY_DEAD_TOKENS = (
+        "ERR_CONNECTION_CLOSED", "ERR_CONNECTION_RESET", "ERR_CONNECTION_REFUSED",
+        "ERR_CONNECTION_ABORTED", "ERR_PROXY_CONNECTION_FAILED",
+        "ERR_TUNNEL_CONNECTION_FAILED", "ERR_SOCKS_CONNECTION_FAILED",
+        "ERR_TIMED_OUT", "ERR_NETWORK_CHANGED",
+    )
+
+    def _emit_white_screen(reason: str, error: str) -> None:
+        payload = {"is_white_screen": True, "reason": reason, "error": error[:300]}
+        # The marker line is parsed verbatim by resumable_scraper_runner.
+        print(f"[WHITE_SCREEN_RESULT] {json.dumps(payload, ensure_ascii=False)}",
+              flush=True)
+
     try:
         async with async_playwright() as p:
             browser = await p.chromium.connect_over_cdp(ws_url)
@@ -184,11 +200,28 @@ async def main():
             page = (context.pages[0] if context.pages
                     else await context.new_page())
 
-            await page.goto(args.url, timeout=config.PAGE_LOAD_TIMEOUT,
-                            wait_until="domcontentloaded")
+            try:
+                await page.goto(args.url, timeout=config.PAGE_LOAD_TIMEOUT,
+                                wait_until="domcontentloaded")
+            except Exception as e:
+                err = str(e)
+                if any(tok in err for tok in PROXY_DEAD_TOKENS):
+                    _emit_white_screen("proxy_connection_error", err)
+                    sys.exit(1)
+                raise
             await asyncio.sleep(random.uniform(3, 5))
 
-            result = await scrape_single_product(args.url, page)
+            try:
+                result = await scrape_single_product(args.url, page)
+            except WhiteScreenException as e:
+                _emit_white_screen("white_screen_exception", str(e))
+                sys.exit(1)
+            except Exception as e:
+                err = str(e)
+                if any(tok in err for tok in PROXY_DEAD_TOKENS):
+                    _emit_white_screen("proxy_connection_error", err)
+                    sys.exit(1)
+                raise
 
             if result:
                 normalized = result["normalized"]
