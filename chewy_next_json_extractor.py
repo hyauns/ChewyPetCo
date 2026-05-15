@@ -2105,6 +2105,150 @@ def validate_normalized_product(normalized_product: dict, grouped_product: dict)
     }
 
 
+# ── Shopify import sanitization ────────────────────────────────────────
+# Previously in chewy_enrich.py. Moved here so the unified scraper can run
+# them inline; chewy_enrich.py still re-exports for backward compatibility.
+
+FLAVOR_KEYWORDS = [
+    "duck", "chicken", "beef", "lamb", "salmon", "turkey", "venison",
+    "pork", "catfish", "trout", "whitefish", "goat", "kangaroo", "rabbit",
+    "bison", "tuna", "herring", "mackerel", "sardine", "cod", "pollock",
+    "quail", "pheasant", "elk", "boar", "guinea fowl", "anchovy",
+]
+
+
+def has_real_images(img_list: list) -> bool:
+    # Chewy CDN `moe/` URLs are real variant-specific images, not placeholders.
+    if not img_list:
+        return False
+    return any(isinstance(i, str) and i.strip() for i in img_list)
+
+
+def detect_flavor_mismatch(product: dict) -> dict:
+    """Primary-protein-aware mismatch detection."""
+    flavor = (product.get("flavor") or "").strip()
+    if not flavor or flavor == "Default":
+        return {"mismatch": False, "declared_flavor": flavor,
+                "detected_flavors_in_text": [], "fields_with_mismatch": []}
+
+    declared_lower = flavor.lower()
+    allowed = {kw for kw in FLAVOR_KEYWORDS if kw in declared_lower}
+    if not allowed:
+        return {"mismatch": False, "declared_flavor": flavor,
+                "detected_flavors_in_text": [], "fields_with_mismatch": []}
+
+    desc = (product.get("description") or "").lower()
+    ingr = (product.get("ingredients") or "").lower()
+    if not desc.strip() and not ingr.strip():
+        return {"mismatch": False, "declared_flavor": flavor,
+                "detected_flavors_in_text": [], "fields_with_mismatch": []}
+
+    def _find_primary(text):
+        best, earliest = None, len(text) + 1
+        for kw in FLAVOR_KEYWORDS:
+            m = re.search(r'\b' + re.escape(kw) + r'\b', text)
+            if m and m.start() < earliest:
+                earliest, best = m.start(), kw
+        return best
+
+    primary_desc = _find_primary(desc)
+    primary_ingr = _find_primary(ingr)
+
+    if primary_desc in allowed:
+        return {"mismatch": False, "declared_flavor": flavor,
+                "detected_flavors_in_text": [], "fields_with_mismatch": []}
+    if not primary_desc and primary_ingr in allowed:
+        return {"mismatch": False, "declared_flavor": flavor,
+                "detected_flavors_in_text": [], "fields_with_mismatch": []}
+    if not primary_desc and not primary_ingr:
+        return {"mismatch": False, "declared_flavor": flavor,
+                "detected_flavors_in_text": [], "fields_with_mismatch": []}
+
+    detected, fields_hit = set(), []
+    for fn in ["description", "ingredients", "guaranteed_analysis",
+               "feeding_instructions"]:
+        text = (product.get(fn) or "").lower()
+        if not text:
+            continue
+        for kw in FLAVOR_KEYWORDS:
+            if kw in allowed:
+                continue
+            if re.search(r'\b' + re.escape(kw) + r'\b', text):
+                detected.add(kw)
+                if fn not in fields_hit:
+                    fields_hit.append(fn)
+
+    return {"mismatch": len(detected) > 0, "declared_flavor": flavor,
+            "detected_flavors_in_text": sorted(detected),
+            "fields_with_mismatch": fields_hit,
+            "primary_in_desc": primary_desc, "primary_in_ingr": primary_ingr}
+
+
+def sanitize_product(product: dict, counters: dict | None = None) -> None:
+    """Final sanitizer: flavor mismatch check + import status assignment.
+
+    Mutates product in place. `counters` (optional) collects cross-product
+    totals; pass None when sanitizing a single product.
+    """
+    if counters is None:
+        counters = {}
+    counters.setdefault("flavor_mismatch_count", 0)
+    counters.setdefault("public_content_unsafe_count", 0)
+
+    fm = detect_flavor_mismatch(product)
+    if fm["mismatch"]:
+        counters["flavor_mismatch_count"] += 1
+        counters["public_content_unsafe_count"] += 1
+        rejected = {}
+        for field in fm["fields_with_mismatch"]:
+            if product.get(field):
+                rejected[field] = product[field]
+                product[field] = ""
+        product.setdefault("debug", {})["rejected_content"] = rejected
+        product["debug"].setdefault("parser_warnings", []).append(
+            "public_content_flavor_mismatch")
+        product.setdefault("warnings", []).append(
+            "public_content_flavor_mismatch")
+        product["public_content_safe"] = False
+        product["import_ready"] = False
+        product["import_mode"] = "blocked"
+        product["flavor_mismatch_detail"] = fm
+    else:
+        product["public_content_safe"] = True
+
+    p_vars = product.get("variants", [])
+    has_price = [v for v in p_vars if v.get("price")]
+    no_price = [v for v in p_vars if not v.get("price")]
+    for v in no_price:
+        if "missing_price_unresolved" not in v.get("warnings", []):
+            v.setdefault("warnings", []).append("missing_price_unresolved")
+        v["variant_export_ready"] = False
+    for v in has_price:
+        v.setdefault("variant_export_ready", True)
+
+    has_p_imgs = has_real_images(product.get("images", []))
+    has_v_imgs = any(has_real_images(v.get("images", [])) for v in p_vars)
+    has_any_img = has_p_imgs or has_v_imgs
+    if not has_any_img:
+        product.setdefault("warnings", []).append("missing_image_unresolved")
+
+    if product.get("public_content_safe") is False:
+        product["import_ready"] = False
+        product["import_mode"] = "blocked"
+    elif not has_price:
+        product["import_ready"] = False
+        product["import_mode"] = "needs_manual_review"
+    elif not has_any_img:
+        product["import_ready"] = False
+        product["import_mode"] = "needs_manual_review"
+    elif no_price:
+        product["import_ready"] = True
+        product["import_mode"] = "safe_with_warnings"
+    else:
+        product["import_ready"] = True
+        product["import_mode"] = "safe_to_import"
+
+
 async def extract_chewy_product(url: str):
     console.print(f"\n[bold cyan]Phase 3A Extraction for: {url}[/]")
     

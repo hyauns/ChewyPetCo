@@ -1,10 +1,14 @@
 """Resumable job runner for long Chewy PDP scraping lists.
 
-This module intentionally wraps the existing CLI entry point:
-    python test_single_product.py "<url>"
+Wraps the unified scraper CLI:
+    python chewy_product_scraper.py --url "<url>"
 
-It does not import or alter extraction, normalization, grouping, or fallback
-logic. State is persisted after every URL in scraper_jobs.db.
+(Previously delegated to test_single_product.py, which was removed in the
+pipeline refactor. The single scraper now runs scrape + variant-API enrich +
+split + validate + sanitize in one pass, writing normalized + grouped +
+validation files.)
+
+State is persisted after every URL in scraper_jobs.db.
 """
 
 from __future__ import annotations
@@ -680,7 +684,7 @@ def process_single_item(
     
     started_at = time.time()
     started_iso = job_store.utc_now()
-    command = [sys.executable, "-u", "test_single_product.py", url]
+    command = [sys.executable, "-u", "chewy_product_scraper.py", "--url", url]
     env = build_env(mode, threshold, bool(job["save_grouped_output"]), profile_id, browser_ws_url=browser_ws_url)
     lines: list[str] = []
 

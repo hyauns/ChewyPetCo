@@ -17,6 +17,7 @@ Usage:
 import argparse
 import asyncio
 import json
+import os
 import re
 import random
 import sys
@@ -38,15 +39,32 @@ from chewy_next_json_extractor import (
     parse_apollo_product,
     parse_redux_product,
     normalize_chewy_product,
+    enrich_variants_from_api,
     split_product_by_flavor,
     validate_normalized_product,
+    sanitize_product,
+    WhiteScreenException,
 )
 
 console = Console()
 
 
 async def scrape_single_product(url: str, page) -> dict | None:
-    """Scrape one Chewy product page and return normalized data."""
+    """Scrape one Chewy product page, enrich variants, and return all 3 artifacts.
+
+    Single-pass pipeline (replaces the legacy scrape→enrich two-step):
+      1. Fetch HTML + Apollo state
+      2. Parse + normalize
+      3. Per-variant API enrichment (description, ingredients, GA, feeding,
+         calorie, transition, stock fields, source_entry_id backfill)
+      4. Split by discriminator → Shopify-shaped grouped products
+      5. Validate + sanitize each product (flavor mismatch, import_ready)
+
+    Returns a dict with three artifacts ready for disk:
+        {"normalized": ..., "grouped": ..., "validation": ...}
+    or None on unrecoverable failure. WhiteScreenException propagates so the
+    runner can rebuild the profile.
+    """
     console.print(f"[cyan]Scraping: {url}[/cyan]")
 
     html = await fetch_initial_html(url, page)
@@ -82,7 +100,36 @@ async def scrape_single_product(url: str, page) -> dict | None:
     normalized = normalize_chewy_product(parsed)
     console.print(f"[green]OK: {normalized.get('title', '')[:80]}[/green]")
     console.print(f"  Variants: {len(normalized.get('variants', []))}")
-    return normalized
+
+    # Per-variant API enrichment — fills description/GA/feeding/calorie/
+    # transition per variant + backfills source_entry_id + stock fields.
+    if build_id:
+        try:
+            stats = await enrich_variants_from_api(normalized, page, build_id)
+            console.print(
+                f"  Enriched variants: {stats.get('enriched', 0)} "
+                f"(wrong_product={stats.get('wrong_product_api_rejected', 0)}, "
+                f"slug_mm={stats.get('slug_mismatch', 0)})"
+            )
+        except WhiteScreenException:
+            raise
+        except Exception as e:
+            console.print(f"[yellow]  Variant enrichment soft-failed: {e}[/yellow]")
+    else:
+        console.print("[yellow]  No build_id — skipping variant enrichment[/yellow]")
+
+    # Shopify-shaped grouped products + per-product validation + sanitize.
+    grouped = split_product_by_flavor(normalized)
+    validation = validate_normalized_product(normalized, grouped)
+    grouped["validation"] = validation
+    for product in grouped.get("products", []):
+        sanitize_product(product)
+
+    return {
+        "normalized": normalized,
+        "grouped": grouped,
+        "validation": validation,
+    }
 
 
 async def main():
@@ -98,8 +145,11 @@ async def main():
     args = ap.parse_args()
 
     base_dir = Path(__file__).parent
-    out_dir = base_dir / "output" / "normalized_products"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    norm_dir = base_dir / "output" / "normalized_products"
+    grp_dir = base_dir / "output" / "grouped_products"
+    val_dir = base_dir / "output" / "validation"
+    for d in (norm_dir, grp_dir, val_dir):
+        d.mkdir(parents=True, exist_ok=True)
 
     if args.job_id:
         # Delegate to the existing resumable runner for batch mode
@@ -114,9 +164,18 @@ async def main():
         subprocess.run(cmd)
         return
 
-    # Single product mode
-    profile_data = adspower.start_profile(config.ADSPOWER_PROFILE_ID)
-    ws_url = adspower.get_ws_endpoint(profile_data)
+    # Single product mode. When invoked as a subprocess by the resumable
+    # runner, ADSP_BROWSER_WS_URL is set — reuse that browser (the runner
+    # keeps it alive across items). Otherwise start an AdsPower profile.
+    reused_ws = os.environ.get("ADSP_BROWSER_WS_URL")
+    profile_id = os.environ.get("ADSPOWER_PROFILE_ID") or config.ADSPOWER_PROFILE_ID
+    profile_started = False
+    ws_url = reused_ws
+
+    if not ws_url:
+        profile_data = adspower.start_profile(profile_id)
+        ws_url = adspower.get_ws_endpoint(profile_data)
+        profile_started = True
 
     try:
         async with async_playwright() as p:
@@ -129,19 +188,27 @@ async def main():
                             wait_until="domcontentloaded")
             await asyncio.sleep(random.uniform(3, 5))
 
-            normalized = await scrape_single_product(args.url, page)
+            result = await scrape_single_product(args.url, page)
 
-            if normalized:
+            if result:
+                normalized = result["normalized"]
+                grouped = result["grouped"]
+                validation = result["validation"]
                 pid = normalized.get("source_product_id", "unknown")
-                path = out_dir / f"chewy_{pid}.json"
-                with open(path, "w", encoding="utf-8") as f:
+                with open(norm_dir / f"chewy_{pid}.json", "w", encoding="utf-8") as f:
                     json.dump(normalized, f, indent=2, ensure_ascii=False)
-                console.print(f"[green]Saved: {path}[/green]")
+                with open(grp_dir / f"chewy_grouped_by_flavor_{pid}.json", "w", encoding="utf-8") as f:
+                    json.dump(grouped, f, indent=2, ensure_ascii=False)
+                with open(val_dir / f"chewy_validation_{pid}.json", "w", encoding="utf-8") as f:
+                    json.dump(validation, f, indent=2, ensure_ascii=False)
+                console.print(f"[green]Saved pid={pid}: normalized + grouped + validation[/green]")
             else:
                 console.print("[red]Scrape failed[/red]")
                 sys.exit(1)
     finally:
-        adspower.stop_profile(config.ADSPOWER_PROFILE_ID)
+        # Only stop the profile if THIS process started it.
+        if profile_started:
+            adspower.stop_profile(profile_id)
 
 
 if __name__ == "__main__":

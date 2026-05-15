@@ -1,19 +1,15 @@
 """
-Chewy Product Enrichment Pipeline
-==================================
-Unified enrichment tool for content, price, and image recovery.
+Chewy Product Enrichment Pipeline (DEPRECATED)
+==============================================
 
-Usage:
-  # Sample mode (regression tests)
-  python chewy_enrich.py --sample selected_products.json --category A
-  python chewy_enrich.py --sample selected_products.json --category B
-  python chewy_enrich.py --sample selected_products.json --category C
-
-  # Batch mode
-  python chewy_enrich.py --input output/normalized_products --mode content --limit 50
-  python chewy_enrich.py --input output/normalized_products --mode price --limit 50
-  python chewy_enrich.py --input output/normalized_products --mode image --limit 50
-  python chewy_enrich.py --input output/normalized_products --mode all --limit 50
+DEPRECATED: As of the unified scraper merge, chewy_product_scraper.py now
+runs variant-API enrichment, split, validation, and sanitize inline. The
+per-product helpers (FLAVOR_KEYWORDS, has_real_images, detect_flavor_mismatch,
+sanitize_product) live in chewy_next_json_extractor.py; this module re-exports
+them for any caller that still imports `chewy_enrich.X`. The CLI is retained
+for the rare case of re-running enrichment over an existing normalized dataset
+without re-scraping — for fresh data, use chewy_product_scraper.py + the
+final tools/build_shopify_jsonl.py dedupe step instead.
 """
 
 import argparse
@@ -44,6 +40,11 @@ from chewy_next_json_extractor import (
     split_product_by_flavor,
     validate_normalized_product,
     WhiteScreenException,  # canonical home is the extractor module
+    # Re-exported for backward compatibility — canonical home is the extractor.
+    FLAVOR_KEYWORDS,
+    has_real_images,
+    detect_flavor_mismatch,
+    sanitize_product,
 )
 from adsp_profile_pool_manager import detect_white_screen_block, mark_profile_in_use
 import adsp_profile_recovery_manager
@@ -51,150 +52,11 @@ import job_store
 
 console = Console()
 
-# ── Shared Constants ────────────────────────────────────────────────
-
-FLAVOR_KEYWORDS = [
-    "duck", "chicken", "beef", "lamb", "salmon", "turkey", "venison",
-    "pork", "catfish", "trout", "whitefish", "goat", "kangaroo", "rabbit",
-    "bison", "tuna", "herring", "mackerel", "sardine", "cod", "pollock",
-    "quail", "pheasant", "elk", "boar", "guinea fowl", "anchovy",
-]
-
 SAMPLE_CATEGORY_MAP = {
     "A": "needs_variant_api_enrichment",
     "B": "missing_price_test",
     "C": "missing_image_test",
 }
-
-# ── Shared Helpers ──────────────────────────────────────────────────
-
-def has_real_images(img_list: list) -> bool:
-    # Chewy CDN `moe/` URLs are real variant-specific images, not placeholders.
-    # Any non-empty image URL counts as real.
-    if not img_list:
-        return False
-    return any(isinstance(i, str) and i.strip() for i in img_list)
-
-
-def detect_flavor_mismatch(product: dict) -> dict:
-    """Primary-protein-aware mismatch detection."""
-    flavor = (product.get("flavor") or "").strip()
-    if not flavor or flavor == "Default":
-        return {"mismatch": False, "declared_flavor": flavor,
-                "detected_flavors_in_text": [], "fields_with_mismatch": []}
-
-    declared_lower = flavor.lower()
-    allowed = {kw for kw in FLAVOR_KEYWORDS if kw in declared_lower}
-    if not allowed:
-        return {"mismatch": False, "declared_flavor": flavor,
-                "detected_flavors_in_text": [], "fields_with_mismatch": []}
-
-    desc = (product.get("description") or "").lower()
-    ingr = (product.get("ingredients") or "").lower()
-    if not desc.strip() and not ingr.strip():
-        return {"mismatch": False, "declared_flavor": flavor,
-                "detected_flavors_in_text": [], "fields_with_mismatch": []}
-
-    def _find_primary(text):
-        best, earliest = None, len(text) + 1
-        for kw in FLAVOR_KEYWORDS:
-            m = re.search(r'\b' + re.escape(kw) + r'\b', text)
-            if m and m.start() < earliest:
-                earliest, best = m.start(), kw
-        return best
-
-    primary_desc = _find_primary(desc)
-    primary_ingr = _find_primary(ingr)
-
-    if primary_desc in allowed:
-        return {"mismatch": False, "declared_flavor": flavor,
-                "detected_flavors_in_text": [], "fields_with_mismatch": []}
-    if not primary_desc and primary_ingr in allowed:
-        return {"mismatch": False, "declared_flavor": flavor,
-                "detected_flavors_in_text": [], "fields_with_mismatch": []}
-    if not primary_desc and not primary_ingr:
-        return {"mismatch": False, "declared_flavor": flavor,
-                "detected_flavors_in_text": [], "fields_with_mismatch": []}
-
-    detected, fields_hit = set(), []
-    for fn in ["description", "ingredients", "guaranteed_analysis",
-               "feeding_instructions"]:
-        text = (product.get(fn) or "").lower()
-        if not text:
-            continue
-        for kw in FLAVOR_KEYWORDS:
-            if kw in allowed:
-                continue
-            if re.search(r'\b' + re.escape(kw) + r'\b', text):
-                detected.add(kw)
-                if fn not in fields_hit:
-                    fields_hit.append(fn)
-
-    return {"mismatch": len(detected) > 0, "declared_flavor": flavor,
-            "detected_flavors_in_text": sorted(detected),
-            "fields_with_mismatch": fields_hit,
-            "primary_in_desc": primary_desc, "primary_in_ingr": primary_ingr}
-
-
-def sanitize_product(product: dict, counters: dict):
-    """Final sanitizer: flavor mismatch check + import status assignment."""
-    fm = detect_flavor_mismatch(product)
-    if fm["mismatch"]:
-        counters["flavor_mismatch_count"] += 1
-        counters["public_content_unsafe_count"] += 1
-        rejected = {}
-        for field in fm["fields_with_mismatch"]:
-            if product.get(field):
-                rejected[field] = product[field]
-                product[field] = ""
-        product.setdefault("debug", {})["rejected_content"] = rejected
-        product["debug"].setdefault("parser_warnings", []).append(
-            "public_content_flavor_mismatch")
-        product.setdefault("warnings", []).append(
-            "public_content_flavor_mismatch")
-        product["public_content_safe"] = False
-        product["import_ready"] = False
-        product["import_mode"] = "blocked"
-        product["flavor_mismatch_detail"] = fm
-        console.print(
-            f"[red]  MISMATCH: {product.get('source_group_id')} "
-            f"flavor={fm['declared_flavor']} → {fm['detected_flavors_in_text']}[/red]")
-    else:
-        product["public_content_safe"] = True
-
-    # Variant-level status
-    p_vars = product.get("variants", [])
-    has_price = [v for v in p_vars if v.get("price")]
-    no_price = [v for v in p_vars if not v.get("price")]
-    for v in no_price:
-        if "missing_price_unresolved" not in v.get("warnings", []):
-            v.setdefault("warnings", []).append("missing_price_unresolved")
-        v["variant_export_ready"] = False
-    for v in has_price:
-        v.setdefault("variant_export_ready", True)
-
-    has_p_imgs = has_real_images(product.get("images", []))
-    has_v_imgs = any(has_real_images(v.get("images", [])) for v in p_vars)
-    has_any_img = has_p_imgs or has_v_imgs
-    if not has_any_img:
-        product.setdefault("warnings", []).append("missing_image_unresolved")
-
-    # Final import mode
-    if product.get("public_content_safe") is False:
-        product["import_ready"] = False
-        product["import_mode"] = "blocked"
-    elif not has_price:
-        product["import_ready"] = False
-        product["import_mode"] = "needs_manual_review"
-    elif not has_any_img:
-        product["import_ready"] = False
-        product["import_mode"] = "needs_manual_review"
-    elif no_price:
-        product["import_ready"] = True
-        product["import_mode"] = "safe_with_warnings"
-    else:
-        product["import_ready"] = True
-        product["import_mode"] = "safe_to_import"
 
 
 # ── Mode-specific recovery ─────────────────────────────────────────
