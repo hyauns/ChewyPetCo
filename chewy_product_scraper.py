@@ -29,6 +29,7 @@ from playwright.async_api import async_playwright
 sys.path.insert(0, str(Path(__file__).parent))
 import config
 import adspower
+from adsp_profile_pool_manager import detect_white_screen_block
 from chewy_next_json_extractor import (
     fetch_initial_html,
     extract_next_data_from_html,
@@ -68,6 +69,18 @@ async def scrape_single_product(url: str, page) -> dict | None:
     console.print(f"[cyan]Scraping: {url}[/cyan]")
 
     html = await fetch_initial_html(url, page)
+
+    # Explicit white-screen / block-page detection. Chewy via Akamai sometimes
+    # responds with HTTP 200 + a challenge page that has no Apollo state. The
+    # symptom looks like "Failed to extract __NEXT_DATA__" on every URL once
+    # the profile is flagged. Raise WhiteScreenException so main() emits the
+    # marker the runner uses to quarantine the profile and rebuild the slot.
+    detection = await detect_white_screen_block(page, url)
+    if detection.get("is_white_screen"):
+        raise WhiteScreenException(
+            f"White screen on {url}: {detection.get('reason') or 'detected'}"
+        )
+
     next_data = extract_next_data_from_html(html)
     build_id = detect_next_build_id(next_data, html)
 
@@ -81,8 +94,12 @@ async def scrape_single_product(url: str, page) -> dict | None:
                     next_url, page, build_id, sid)
 
     if not next_data:
-        console.print("[red]Failed to extract __NEXT_DATA__[/red]")
-        return None
+        # Page loaded but Apollo state is missing — on Chewy PDPs this is
+        # almost always an undetected white-screen / soft block. Escalate so
+        # the runner rebuilds the profile instead of looping on dead URLs.
+        raise WhiteScreenException(
+            f"No __NEXT_DATA__ for {url} (treating as soft white-screen)"
+        )
 
     arch = detect_chewy_architecture(next_data)
     if arch == "apollo":
