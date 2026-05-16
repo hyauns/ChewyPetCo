@@ -24,6 +24,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import re
@@ -33,6 +34,23 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
+
+def _force_unlink(path: str, retries: int = 6, delay: float = 0.5) -> bool:
+    """Delete file with retry — Windows holds sqlite3 file handles briefly
+    after Python closes the connection."""
+    if not os.path.exists(path):
+        return True
+    for _ in range(retries):
+        try:
+            os.unlink(path)
+            return True
+        except PermissionError:
+            gc.collect()
+            time.sleep(delay)
+        except FileNotFoundError:
+            return True
+    return not os.path.exists(path)
 
 
 def integrity_check(db_path: str) -> tuple[bool, list[str]]:
@@ -47,21 +65,36 @@ def integrity_check(db_path: str) -> tuple[bool, list[str]]:
 
 
 def try_cli_recover(src: str, dst: str) -> bool:
-    """Try sqlite3 CLI `.recover` (most thorough). Returns True on success."""
+    """Try sqlite3 CLI `.recover` (most thorough). Returns True on success.
+
+    The `.recover` is a meta-command, not SQL. It can't be passed as a
+    positional arg (sqlite3 would parse it as SQL and fail). Pipe it as
+    stdin instead.
+    """
     cli = shutil.which("sqlite3")
     if not cli:
+        print("[recover] sqlite3 CLI not found in PATH, skipping")
         return False
     sql_path = dst + ".recover.sql"
+    _force_unlink(dst)
+    _force_unlink(sql_path)
+    new = None
     try:
         with open(sql_path, "w", encoding="utf-8") as f:
             r = subprocess.run(
-                [cli, src, ".recover"], stdout=f, stderr=subprocess.PIPE, timeout=300
+                [cli, src],
+                input=".recover\n.exit\n",
+                text=True,
+                stdout=f,
+                stderr=subprocess.PIPE,
+                timeout=300,
             )
-            if r.returncode != 0:
-                print(f"[recover] sqlite3 .recover stderr: {r.stderr.decode('utf-8', 'replace')[:500]}")
-                return False
+        if r.returncode != 0 or os.path.getsize(sql_path) < 100:
+            err = (r.stderr or "")[:500]
+            print(f"[recover] sqlite3 .recover stderr: {err}")
+            return False
 
-        # Patch the SQL: make CREATE idempotent, INSERT non-fatal
+        # Patch the SQL: idempotent CREATE, non-fatal INSERT
         with open(sql_path, "r", encoding="utf-8") as f:
             sql = f.read()
         sql = sql.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ")
@@ -71,23 +104,33 @@ def try_cli_recover(src: str, dst: str) -> bool:
         with open(sql_path, "w", encoding="utf-8") as f:
             f.write(sql)
 
-        Path(dst).unlink(missing_ok=True)
         new = sqlite3.connect(dst)
         new.executescript(sql)
         new.close()
-        Path(sql_path).unlink(missing_ok=True)
+        new = None
+        _force_unlink(sql_path)
         return True
     except Exception as e:
         print(f"[recover] CLI .recover failed: {e}")
         return False
+    finally:
+        if new is not None:
+            try:
+                new.close()
+            except Exception:
+                pass
+            gc.collect()
 
 
 def try_python_iterdump(src: str, dst: str) -> bool:
     """Python iterdump → patch INSERTs → replay. Handles duplicate rows."""
     sql_path = dst + ".iterdump.sql"
+    _force_unlink(dst)
+    _force_unlink(sql_path)
+    src_conn = None
+    new = None
     try:
         src_conn = sqlite3.connect(src, timeout=30)
-        # Reading from a corrupt DB sometimes works in read-only mode
         with open(sql_path, "w", encoding="utf-8") as f:
             for line in src_conn.iterdump():
                 line = line.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ")
@@ -97,98 +140,117 @@ def try_python_iterdump(src: str, dst: str) -> bool:
                     line = "INSERT OR IGNORE INTO" + line[len("INSERT INTO"):]
                 f.write(line + "\n")
         src_conn.close()
+        src_conn = None
 
-        Path(dst).unlink(missing_ok=True)
         new = sqlite3.connect(dst)
         with open(sql_path, "r", encoding="utf-8") as f:
             new.executescript(f.read())
         new.close()
-        Path(sql_path).unlink(missing_ok=True)
+        new = None
+        _force_unlink(sql_path)
         return True
     except Exception as e:
         print(f"[recover] Python iterdump failed: {e}")
         return False
+    finally:
+        for c in (src_conn, new):
+            if c is not None:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+        gc.collect()
 
 
 def try_per_table_copy(src: str, dst: str) -> bool:
     """Last resort: open src read-only, copy each table row-by-row, skip errors."""
-    Path(dst).unlink(missing_ok=True)
-    # Get schema from src (best effort)
+    _force_unlink(dst)
+    sc = None
+    dc = None
     try:
+        # Get schema from src (best effort)
         sc = sqlite3.connect(src, timeout=30)
         sc.execute("PRAGMA writable_schema=ON")
-        # Collect CREATE statements
         schema_rows = sc.execute(
             "SELECT type, name, sql FROM sqlite_master "
             "WHERE sql IS NOT NULL ORDER BY CASE type "
             "WHEN 'table' THEN 1 WHEN 'index' THEN 2 ELSE 3 END"
         ).fetchall()
         tables = [r[1] for r in schema_rows if r[0] == "table"]
-    except Exception as e:
-        print(f"[recover] cannot read schema: {e}")
-        return False
 
-    dc = sqlite3.connect(dst)
-    # Create tables first, indexes after data
-    for typ, name, sql in schema_rows:
-        if typ != "table":
-            continue
-        try:
-            sql_idem = sql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
-            dc.execute(sql_idem)
-        except Exception as e:
-            print(f"[recover] skip table {name}: {e}")
-
-    total_kept = 0
-    total_dropped = 0
-    for tbl in tables:
-        try:
-            cols = [c[1] for c in sc.execute(f"PRAGMA table_info({tbl})").fetchall()]
-        except Exception:
-            continue
-        if not cols:
-            continue
-        cur = sc.execute(f"SELECT rowid, * FROM {tbl}")
-        placeholders = ",".join(["?"] * len(cols))
-        col_list = ",".join(cols)
-        kept = 0
-        dropped = 0
-        while True:
-            try:
-                row = cur.fetchone()
-            except sqlite3.DatabaseError as e:
-                dropped += 1
+        dc = sqlite3.connect(dst)
+        # Create tables first, indexes after data
+        for typ, name, sql in schema_rows:
+            if typ != "table":
                 continue
-            if row is None:
-                break
-            # row[0] is rowid; row[1:] are columns
             try:
-                dc.execute(
-                    f"INSERT OR IGNORE INTO {tbl} ({col_list}) VALUES ({placeholders})",
-                    row[1:],
-                )
-                kept += 1
-            except sqlite3.DatabaseError as e:
-                dropped += 1
-        dc.commit()
-        total_kept += kept
-        total_dropped += dropped
-        print(f"[recover] table {tbl}: kept={kept} dropped={dropped}")
+                sql_idem = sql.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
+                dc.execute(sql_idem)
+            except Exception as e:
+                print(f"[recover] skip table {name}: {e}")
 
-    # Re-create indexes
-    for typ, name, sql in schema_rows:
-        if typ != "index":
-            continue
-        try:
-            sql_idem = sql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS")
-            sql_idem = sql_idem.replace("CREATE UNIQUE INDEX", "CREATE UNIQUE INDEX IF NOT EXISTS")
-            dc.execute(sql_idem)
-        except Exception as e:
-            print(f"[recover] index {name} failed: {e}")
-    dc.close()
-    sc.close()
-    print(f"[recover] per-table: kept={total_kept} dropped={total_dropped}")
-    return total_kept > 0
+        total_kept = 0
+        total_dropped = 0
+        for tbl in tables:
+            try:
+                cols = [c[1] for c in sc.execute(f"PRAGMA table_info({tbl})").fetchall()]
+            except Exception:
+                continue
+            if not cols:
+                continue
+            try:
+                cur = sc.execute(f"SELECT rowid, * FROM {tbl}")
+            except sqlite3.DatabaseError as e:
+                print(f"[recover] cannot read table {tbl}: {e}")
+                continue
+            placeholders = ",".join(["?"] * len(cols))
+            col_list = ",".join(cols)
+            kept = 0
+            dropped = 0
+            while True:
+                try:
+                    row = cur.fetchone()
+                except sqlite3.DatabaseError:
+                    dropped += 1
+                    continue
+                if row is None:
+                    break
+                try:
+                    dc.execute(
+                        f"INSERT OR IGNORE INTO {tbl} ({col_list}) VALUES ({placeholders})",
+                        row[1:],
+                    )
+                    kept += 1
+                except sqlite3.DatabaseError:
+                    dropped += 1
+            dc.commit()
+            total_kept += kept
+            total_dropped += dropped
+            print(f"[recover] table {tbl}: kept={kept} dropped={dropped}")
+
+        # Re-create indexes
+        for typ, name, sql in schema_rows:
+            if typ != "index":
+                continue
+            try:
+                sql_idem = sql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS")
+                sql_idem = sql_idem.replace("CREATE UNIQUE INDEX", "CREATE UNIQUE INDEX IF NOT EXISTS")
+                dc.execute(sql_idem)
+            except Exception as e:
+                print(f"[recover] index {name} failed: {e}")
+        print(f"[recover] per-table: kept={total_kept} dropped={total_dropped}")
+        return total_kept > 0
+    except Exception as e:
+        print(f"[recover] per-table copy failed: {e}")
+        return False
+    finally:
+        for c in (sc, dc):
+            if c is not None:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+        gc.collect()
 
 
 def reseed_product_registry(db_path: str, normalized_dir: str) -> int:
@@ -275,11 +337,10 @@ def main() -> int:
     shm = db + "-shm"
     for p in (wal, shm):
         if os.path.exists(p):
-            try:
-                Path(p).unlink()
+            if _force_unlink(p):
                 print(f"Removed {p}")
-            except Exception as e:
-                print(f"WARNING: cannot remove {p}: {e}. Close other processes using the DB.")
+            else:
+                print(f"WARNING: cannot remove {p}. Close other processes using the DB and re-run.")
 
     recovered = db + ".recovered"
     print()
@@ -291,6 +352,10 @@ def main() -> int:
         ("Per-table row copy", try_per_table_copy),
     ]:
         print(f"--- Trying: {strategy_name} ---")
+        # Clear any leftover from previous strategy (locked-file safety)
+        _force_unlink(recovered)
+        _force_unlink(recovered + ".recover.sql")
+        _force_unlink(recovered + ".iterdump.sql")
         if fn(db, recovered):
             ok2, errs2 = integrity_check(recovered)
             if ok2:
@@ -312,11 +377,28 @@ def main() -> int:
         print("\n[recover] All strategies failed. Manual intervention required.")
         return 2
 
-    # Swap files
+    # Swap files. shutil.move may also need retries on Windows if the
+    # corrupt file is briefly held by something.
+    gc.collect()
     ts = time.strftime("%Y%m%d_%H%M%S")
     malformed = f"{db}.malformed_{ts}"
-    shutil.move(db, malformed)
-    shutil.move(recovered, db)
+    for attempt in range(6):
+        try:
+            shutil.move(db, malformed)
+            break
+        except PermissionError:
+            time.sleep(0.5)
+            gc.collect()
+    else:
+        print(f"[recover] cannot rename {db} -> {malformed}. Is another process using the DB?")
+        return 3
+    for attempt in range(6):
+        try:
+            shutil.move(recovered, db)
+            break
+        except PermissionError:
+            time.sleep(0.5)
+            gc.collect()
     print(f"\n[recover] OK. Corrupt file kept as: {malformed}")
 
     # Recreate indexes that were absent in the recovery (safety net)
