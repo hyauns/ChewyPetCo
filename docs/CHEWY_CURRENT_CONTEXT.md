@@ -1,6 +1,6 @@
 # Chewy Scraper — Current Context
 
-**Updated:** 2026-05-15 (session 2 — ending at commit `9aa09cb`)
+**Updated:** 2026-05-16 (session 2 continued — ending at commit `efa4b7c`)
 **Repo:** https://github.com/hyauns/ChewyPetCo
 **Purpose of this file:** Single source of truth for a future Claude session to pick up where this one left off, without re-reading the full chat. Read this first.
 
@@ -18,6 +18,8 @@ This project scrapes Chewy.com product pages **and enriches them in a single pas
 - **Scraper helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) moved into `chewy_next_json_extractor.py`** — one source of truth. `chewy_enrich.py` re-exports for any caller that imports `chewy_enrich.X`.
 - **Subprocess wiring fixed.** `resumable_scraper_runner.py` used to spawn `test_single_product.py`, which was deleted in commit `f3abfb7` months ago. Symptom: scraper "completed" in seconds without doing work, because `existing_json_output_ok` short-circuited before the subprocess ever ran. Now spawns `chewy_product_scraper.py --url <url>`, reusing the runner's already-open browser via `ADSP_BROWSER_WS_URL`.
 - **Proxy-dead → profile rebuild.** When `page.goto` raises `ERR_CONNECTION_CLOSED/RESET/REFUSED/ABORTED/PROXY/TUNNEL/SOCKS/TIMED_OUT/NETWORK_CHANGED`, or `scrape_single_product` raises `WhiteScreenException`, the scraper emits the existing `[WHITE_SCREEN_RESULT]` marker line. The runner already knows how to handle it: quarantine profile, mark item pending, rebuild slot, retry. Same exit code = item failed without quarantine — that was the old behavior that left bad profiles stuck.
+- **Missing `__NEXT_DATA__` is treated as white-screen** (`2e4374d`). When Chewy/Akamai serves a soft-block page (HTTP 200 + challenge body, no Apollo state), the scraper now calls `detect_white_screen_block` and raises `WhiteScreenException`. Even if that detection misses, a `next_data is None` after the build_id fallback also raises — on Chewy PDPs every legitimate page has Apollo, so a missing one is almost always profile-throttled. Without this fix all 3 workers were churning through hundreds of URLs in a row, every one failing with "Failed to extract __NEXT_DATA__", with no profile rebuild.
+- **Profile-leak fix in `auto_rebuild_profile`** (`efa4b7c`). Previously each rebuild was leaking an AdsPower profile to the user's 55-profile plan limit because (a) the DB template's `adspower_profile_id` was stale across sessions and pointed at a long-deleted profile (delete-by-id silently no-oped), and (b) the new helper that scans AdsPower by display_name to find the actual orphan was hitting AdsPower's per-second rate limit (`code=-1 "Too many request per second"`) and silently returning empty. Fixed by adding retry+backoff to `_list_adspower_profile_ids_by_name`, and by collecting **all** stale ids per slot (DB id + every AdsPower profile sharing the slot's `display_name`) before creating the new one. Net result on local: 25 → 23 profiles after one CW_1 rebuild that cleaned up 3 orphans; each slot now ends with exactly 1 profile after a rebuild.
 - **BOM-safe URL ingestion.** `read_urls_file` now reads with `utf-8-sig` so a PowerShell `Set-Content -Encoding utf8` (utf-8-with-BOM) file doesn't leak `﻿` into the first URL.
 - **Compounded products filtered out** from the input list (`chewy_enrich.py` for the old path; the URL list emitted by `tools/prepare_rescrape.py` is unfiltered because all-product compounded URLs still scrape fine — the filter only mattered for the deprecated enrich path; the user does not sell Chewy-exclusive compounded meds on Shopify).
 
@@ -27,9 +29,10 @@ This project scrapes Chewy.com product pages **and enriches them in a single pas
 - Resume verified end-to-end: cancel job mid-flight → resume picks up only the pending/failed items, skipping done ones via `existing_json_output_ok`.
 
 **What's running on VPS** (`C:\Users\Administrator\Downloads\ChewyPetCo`):
-- Latest commit: `9aa09cb`.
+- Latest commit: `efa4b7c`.
 - Workflow now: `prepare_rescrape.py` → `resumable_scraper_runner.py create --urls urls_all.txt` → `start --workers 3` → `tools/build_shopify_jsonl.py`. See §12.
 - Profile IDs and proxies live in `.env` only (never in git).
+- **Recommended after pulling the orphan-leak fix:** manually trigger `auto_rebuild_profile` for each CW_1/CW_2/CW_3 slot once before resuming the scrape, to clean up any orphan profiles already accumulated on AdsPower. One-liner included in §12 runbook.
 
 ---
 
@@ -440,6 +443,14 @@ python chewy_enrich.py --input output/normalized_products --mode all --parallel 
 
 (Newest first.)
 
+### Session 2 continued (2026-05-15 evening → 2026-05-16) — Profile-leak + missing __NEXT_DATA__ fixes
+
+| Commit | What | Why |
+|---|---|---|
+| `efa4b7c` | Fix orphan profile leak in `auto_rebuild_profile` | The user's AdsPower account was filling up toward its 55-profile plan limit because each white-screen rebuild was leaking one profile. Two compounding bugs: (1) the DB template's `adspower_profile_id` was stale across sessions and pointed at a long-deleted id — delete-by-id silently no-oped and the actual orphan with the same `display_name` was never touched. (2) The new helper that scans AdsPower by `display_name` was hitting AdsPower's per-second rate limit (`code=-1 "Too many request per second"`) and silently returning empty — verified by running the helper twice back-to-back (3 ids then `[]`). Fixed by adding retry+backoff in `_list_adspower_profile_ids_by_name`, and by collecting **all** stale ids per slot (DB id + every AdsPower profile sharing the slot's `display_name`) before creating the new one. Tested end-to-end on local: 25 → 23 profiles after one rebuild that cleaned up 3 CW_1 orphans; each slot now ends with exactly 1 profile after a rebuild. |
+| `2e4374d` | Treat missing `__NEXT_DATA__` as white-screen | When Chewy / Akamai serves a soft-block page (HTTP 200 + challenge body, no Apollo state), the scraper was just printing "Failed to extract `__NEXT_DATA__`" and returning None; main() exited 1 without emitting the `[WHITE_SCREEN_RESULT]` marker, so the runner marked the item as generic `network_error` and let the worker keep claiming URLs against the same dead profile. Production manifested as all 3 workers churning through hundreds of URLs in a row with the same failure. Fix: add `detect_white_screen_block(page, url)` right after `fetch_initial_html` (this is the same explicit check the legacy `chewy_enrich.get_build_id` used — it was dropped during the pipeline merge in `a5cb64e`). And if `next_data` is still None after the build_id fallback, raise `WhiteScreenException` — Chewy PDPs always have Apollo, a missing one is almost always a profile-throttled soft block. Both paths reuse the existing marker emit in `main()`. |
+| `f59626a` | Doc: capture session 2 architecture in `docs/CHEWY_CURRENT_CONTEXT.md` | Reflect the pipeline merge, deprecated `chewy_enrich.py`, three-file-per-pid output, `tools/build_shopify_jsonl.py` as final aggregation, and the new `resumable_scraper_runner` canonical CLI. |
+
 ### Session 2 (2026-05-15 afternoon) — Pipeline merge
 
 | Commit | What | Why |
@@ -471,17 +482,47 @@ python chewy_enrich.py --input output/normalized_products --mode all --parallel 
 2. **Shopify CSV/JSON import format.** `build_shopify_jsonl.py` produces the deduped *grouped* JSON-lines, but the actual Shopify-import CSV (or whichever flavor the store uses) is not wired yet. Likely a separate `chewy_to_shopify_csv.py` that reads `shopify_import_*.jsonl` and emits Shopify product CSV (handles, variants, metafields). Decide schema with the user before writing.
 3. **White-screen `.env` mismatch (carryover).** `auto_rebuild_profile` creates a new profile_id but `.env` still points at the old one. Worker auto-creates a fresh profile on each run (since `d8c184f`), so this is not blocking — but `.env` drifts away from reality. Decide: (a) auto-write new id back, (b) accept the drift and document.
 4. **`chewy_enrich.py` and `parallel_enrich_runner.py` are formally deprecated.** Decide when to delete them outright vs. keep as compatibility shims. The helpers they re-export now live in `chewy_next_json_extractor.py`. Leaving them in for now buys backward compatibility for any in-flight scripts.
-5. **Stale orphan profiles on AdsPower** from earlier sessions — user has many unused profiles in AdsPower UI. Not destructive; manual cleanup whenever convenient.
+5. **~~Stale orphan profiles on AdsPower~~** — RESOLVED in `efa4b7c`. `auto_rebuild_profile` now cleans up all orphans sharing the slot's `display_name` before creating a new one. After pulling the fix, run the one-liner in §12 ("Cleanup orphan profiles") once to reclaim the slots already accumulated on the user's account.
 6. **`output/scraper_jobs.db`** (separate file from root `scraper_jobs.db`) — 8.1 MB, untouched. Possibly older backup. Verify before purging.
 
 ---
 
 ## 12. Operational Runbook (VPS)
 
+### Cleanup orphan profiles (one-time after pulling `efa4b7c`)
+
+Before the fix, every white-screen rebuild leaked an AdsPower profile under
+the slot's `display_name` (CW_1 / CW_2 / CW_3). Run this once after pull to
+reclaim the leaked plan slots (the fix runs the same cleanup automatically
+on every subsequent rebuild, so this is only catching up):
+
+```powershell
+python -c @"
+import time
+import adsp_profile_recovery_manager as r
+for slot in ('CW_1','CW_2','CW_3'):
+    print(f'Rebuilding {slot}...')
+    result = r.auto_rebuild_profile(slot, reason='post_fix_cleanup', delay_seconds=0, delete_old_profile=True)
+    print(f'  success={result.get(\"success\")} new={result.get(\"new_profile_id\")}')
+    time.sleep(3)
+"@
+
+# Verify: should be exactly one profile per slot
+python -c @"
+import requests, config
+profiles = requests.get(f'{config.ADSPOWER_API_BASE}/api/v1/user/list', params={'page_size': 100}, timeout=15).json()['data']['list']
+for name in ('CW_1','CW_2','CW_3'):
+    items = [p['user_id'] for p in profiles if p.get('name')==name]
+    print(f'{name}: {items} (count={len(items)})')
+print(f'Total AdsPower profiles: {len(profiles)}')
+"@
+```
+
 ### Run order — full re-scrape (3115 URLs)
 
 ```powershell
-# 1. Pull latest (4 commits from session 2: 9182991, 90ec3ff, a5cb64e, 9aa09cb)
+# 1. Pull latest (commits from session 2: 9182991, 90ec3ff, a5cb64e, 9aa09cb,
+#    f59626a, 2e4374d, efa4b7c)
 git pull origin main
 
 # 2. Generate URL list FROM existing normalized files (must run BEFORE deleting them)
