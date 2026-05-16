@@ -99,6 +99,12 @@ def repair_db(db_path: str | Path = DB_PATH) -> bool:
                 fixed = line.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ")
                 fixed = fixed.replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ")
                 fixed = fixed.replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ")
+                # B-tree corruption can cause iterdump() to emit the same row
+                # twice via different page paths. INSERT OR IGNORE lets the
+                # replay drop those duplicates instead of failing the whole
+                # rebuild on a UNIQUE constraint violation.
+                if fixed.startswith("INSERT INTO"):
+                    fixed = "INSERT OR IGNORE INTO" + fixed[len("INSERT INTO"):]
                 f.write(fixed + "\n")
         dump_conn.close()
         dump_conn = None

@@ -689,6 +689,16 @@ def parse_apollo_product(next_data: dict, source_url: str) -> dict:
                     if isinstance(it, dict) and it.get("__ref"):
                         canonical_refs.add(it["__ref"])
                 break
+        # Breadcrumbs live as an inline list inside the Product node; the
+        # top-level scan above misses them. Pull them in order here.
+        if not breadcrumbs:
+            bc_list = product_node.get("breadcrumbs")
+            if isinstance(bc_list, list):
+                for bc in bc_list:
+                    if isinstance(bc, dict):
+                        nm = bc.get("name")
+                        if nm:
+                            breadcrumbs.append(nm)
     if canonical_refs:
         item_nodes = [(k, v) for k, v in item_nodes if k in canonical_refs]
             
