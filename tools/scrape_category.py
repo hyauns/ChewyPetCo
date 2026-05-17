@@ -167,7 +167,8 @@ async def crawl_category(
                     )
                     c["price_parsed"] = parsed_price
                     c["filter"] = filt
-                    if filt["status"] == "ok":
+                    # category_price_filter returns "filtered_in" / "filtered_out"
+                    if filt["status"] == "filtered_in":
                         kept += 1
                         cards_organic.append(c)
                     else:
