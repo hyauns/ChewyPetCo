@@ -55,11 +55,20 @@ def main() -> None:
     )
     ap.add_argument("--matrixify", action="store_true",
                     help="Emit Matrixify Excelify-style columns")
+    ap.add_argument("--pids-file", help="Path to text file with one source product_id per line. Only files whose pid is in this set are processed.")
+    ap.add_argument("--normalized-dir", default="output/normalized_products",
+                    help="Directory containing normalized chewy_*.json files (used to enrich resolver with category_path); searched recursively.")
     args = ap.parse_args()
 
     files = sorted(
         glob.glob(os.path.join(args.input, "chewy_grouped_by_flavor_*.json"))
     )
+    if args.pids_file:
+        with open(args.pids_file, "r", encoding="utf-8") as pf:
+            kept = {line.strip() for line in pf if line.strip()}
+        before = len(files)
+        files = [f for f in files if os.path.basename(f).removeprefix("chewy_grouped_by_flavor_").removesuffix(".json") in kept]
+        print(f"Filtered by --pids-file: {before} -> {len(files)} files")
     all_grouped = []
     for f in files:
         try:
@@ -70,9 +79,9 @@ def main() -> None:
     kept = [p for p in res["kept_products"]
             if p.get("import_mode") != "blocked" and (p.get("variants") or [])]
 
-    # Build normalized index for resolver
+    # Build normalized index for resolver (recursive to support per-species subfolders)
     norm_index: dict[str, dict] = {}
-    for nf in glob.glob("output/normalized_products/chewy_*.json"):
+    for nf in glob.glob(os.path.join(args.normalized_dir, "**", "chewy_*.json"), recursive=True):
         try:
             nd = json.load(open(nf, "r", encoding="utf-8"))
         except Exception:

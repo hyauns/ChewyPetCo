@@ -429,9 +429,10 @@ def export_csv(
     status: str,
     in_stock_qty: int,
     include_blocked: bool,
+    normalized_dir: str = "output/normalized_products",
 ) -> dict:
     stats = Counter()
-    pat_index = load_pat_index("output/normalized_products")
+    pat_index = load_pat_index(normalized_dir)
 
     # 1. Load all grouped wrappers
     all_grouped: list[dict] = []
@@ -498,9 +499,9 @@ def export_csv(
                 seen[h] = 1
 
     # 4b. Resolve category for every candidate (breadcrumb cache → title regex)
-    # Index normalized files by pid for resolver lookups.
+    # Index normalized files by pid for resolver lookups (recursive — supports per-species subfolders).
     norm_index: dict[str, dict] = {}
-    for nf in glob.glob("output/normalized_products/chewy_*.json"):
+    for nf in glob.glob(os.path.join(normalized_dir, "**", "chewy_*.json"), recursive=True):
         try:
             nd = json.load(open(nf, "r", encoding="utf-8"))
         except Exception:
@@ -663,6 +664,9 @@ def main() -> None:
     ap.add_argument("--status", default="draft", choices=["draft", "active"])
     ap.add_argument("--in-stock-qty", type=int, default=999)
     ap.add_argument("--include-blocked", action="store_true")
+    ap.add_argument("--pids-file", help="Path to a text file with one source product_id per line. Only files whose pid is in this set are exported.")
+    ap.add_argument("--normalized-dir", default="output/normalized_products",
+                    help="Directory containing normalized chewy_*.json files (used to enrich resolver with category_path); searched recursively.")
     args = ap.parse_args()
 
     files = sorted(
@@ -671,6 +675,16 @@ def main() -> None:
     if not files:
         print(f"No grouped files in {args.input}")
         return
+
+    if args.pids_file:
+        with open(args.pids_file, "r", encoding="utf-8") as pf:
+            kept = {line.strip() for line in pf if line.strip()}
+        before = len(files)
+        files = [f for f in files if os.path.basename(f).removeprefix("chewy_grouped_by_flavor_").removesuffix(".json") in kept]
+        print(f"Filtered by --pids-file: {before} -> {len(files)} files")
+        if not files:
+            print("No files matched the pid filter.")
+            return
 
     os.makedirs(args.output_dir, exist_ok=True)
     out_products = os.path.join(args.output_dir, "shopify_products.csv")
@@ -685,6 +699,7 @@ def main() -> None:
         args.status,
         args.in_stock_qty,
         args.include_blocked,
+        args.normalized_dir,
     )
 
     print(f"Read {len(files)} grouped files")
