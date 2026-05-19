@@ -1,5 +1,12 @@
 """Quick diagnostic: show CW slot status from DB."""
-import job_store
+import os
+import sys
+
+_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _BASE not in sys.path:
+    sys.path.insert(0, _BASE)
+
+import job_store  # noqa: E402
 
 job_store.init_db()
 conn = job_store.connect()

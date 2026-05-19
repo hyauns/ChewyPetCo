@@ -13,5 +13,9 @@ tools/urls_*.txt
 .venv/
 venv/
 *.malformed
+*.malformed_*
 *.recovered
 *.recovered.sql
+scraper_jobs.db.*
+.understand-anything/
+Log.txt

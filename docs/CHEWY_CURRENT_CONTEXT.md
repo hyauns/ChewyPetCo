@@ -4,7 +4,7 @@
 **Repo:** https://github.com/hyauns/ChewyPetCo
 **Purpose of this file:** Single source of truth for a future Claude session to pick up where this one left off, without re-reading the full chat. Read this first.
 
-> **🚨 BIG ARCHITECTURAL CHANGE THIS SESSION:** The two-pass pipeline (scrape → enrich) was merged into a **single-pass scraper**. `chewy_enrich.py` is now DEPRECATED. Per-product enrichment now runs inline inside `chewy_product_scraper.py`, writing `normalized + grouped + validation` files per pid. Final aggregation is `tools/build_shopify_jsonl.py` (dedupe across pages → Shopify JSONL). The decision to re-scrape from scratch was driven by the discovery that ~25–50% of legacy 5-digit variant IDs in the original 3115 dataset had been delisted from Chewy and return 404.
+> **🚨 BIG ARCHITECTURAL CHANGE:** The two-pass pipeline (scrape → enrich) was merged into a **single-pass scraper**. `chewy_enrich.py` + `parallel_enrich_runner.py` have been **removed** (2026-05-19). Per-product enrichment now runs inline inside `chewy_product_scraper.py`, writing `normalized + grouped + validation` files per pid. Final aggregation is `tools/build_shopify_jsonl.py` (dedupe across pages → Shopify JSONL). The decision to re-scrape from scratch was driven by the discovery that ~25–50% of legacy 5-digit variant IDs in the original 3115 dataset had been delisted from Chewy and return 404.
 
 ---
 
@@ -14,14 +14,13 @@ This project scrapes Chewy.com product pages **and enriches them in a single pas
 
 **Current state of the code (after session 2):**
 - **Single-pass pipeline.** `chewy_product_scraper.scrape_single_product` does: fetch HTML → parse Apollo → normalize → `enrich_variants_from_api` (variant-API content + entry_id backfill + stock fields) → `split_product_by_flavor` → `validate_normalized_product` → `sanitize_product`. Three files written per pid: normalized, grouped (Shopify-shaped, with `validation` embedded), validation.
-- **`chewy_enrich.py` is DEPRECATED** (kept as a thin module re-exporting helpers for backward compat; its CLI still works on old-format normalized files but is no longer the canonical flow).
-- **Scraper helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) moved into `chewy_next_json_extractor.py`** — one source of truth. `chewy_enrich.py` re-exports for any caller that imports `chewy_enrich.X`.
+- **Scraper helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) live in `chewy_next_json_extractor.py`** — one source of truth.
 - **Subprocess wiring fixed.** `resumable_scraper_runner.py` used to spawn `test_single_product.py`, which was deleted in commit `f3abfb7` months ago. Symptom: scraper "completed" in seconds without doing work, because `existing_json_output_ok` short-circuited before the subprocess ever ran. Now spawns `chewy_product_scraper.py --url <url>`, reusing the runner's already-open browser via `ADSP_BROWSER_WS_URL`.
 - **Proxy-dead → profile rebuild.** When `page.goto` raises `ERR_CONNECTION_CLOSED/RESET/REFUSED/ABORTED/PROXY/TUNNEL/SOCKS/TIMED_OUT/NETWORK_CHANGED`, or `scrape_single_product` raises `WhiteScreenException`, the scraper emits the existing `[WHITE_SCREEN_RESULT]` marker line. The runner already knows how to handle it: quarantine profile, mark item pending, rebuild slot, retry. Same exit code = item failed without quarantine — that was the old behavior that left bad profiles stuck.
 - **Missing `__NEXT_DATA__` is treated as white-screen** (`2e4374d`). When Chewy/Akamai serves a soft-block page (HTTP 200 + challenge body, no Apollo state), the scraper now calls `detect_white_screen_block` and raises `WhiteScreenException`. Even if that detection misses, a `next_data is None` after the build_id fallback also raises — on Chewy PDPs every legitimate page has Apollo, so a missing one is almost always profile-throttled. Without this fix all 3 workers were churning through hundreds of URLs in a row, every one failing with "Failed to extract __NEXT_DATA__", with no profile rebuild.
 - **Profile-leak fix in `auto_rebuild_profile`** (`efa4b7c`). Previously each rebuild was leaking an AdsPower profile to the user's 55-profile plan limit because (a) the DB template's `adspower_profile_id` was stale across sessions and pointed at a long-deleted profile (delete-by-id silently no-oped), and (b) the new helper that scans AdsPower by display_name to find the actual orphan was hitting AdsPower's per-second rate limit (`code=-1 "Too many request per second"`) and silently returning empty. Fixed by adding retry+backoff to `_list_adspower_profile_ids_by_name`, and by collecting **all** stale ids per slot (DB id + every AdsPower profile sharing the slot's `display_name`) before creating the new one. Net result on local: 25 → 23 profiles after one CW_1 rebuild that cleaned up 3 orphans; each slot now ends with exactly 1 profile after a rebuild.
 - **BOM-safe URL ingestion.** `read_urls_file` now reads with `utf-8-sig` so a PowerShell `Set-Content -Encoding utf8` (utf-8-with-BOM) file doesn't leak `﻿` into the first URL.
-- **Compounded products filtered out** from the input list (`chewy_enrich.py` for the old path; the URL list emitted by `tools/prepare_rescrape.py` is unfiltered because all-product compounded URLs still scrape fine — the filter only mattered for the deprecated enrich path; the user does not sell Chewy-exclusive compounded meds on Shopify).
+- **Compounded products**: the URL list emitted by `tools/prepare_rescrape.py` is unfiltered because all-product compounded URLs still scrape fine. The user does not sell Chewy-exclusive compounded meds on Shopify.
 
 **Pipeline runtime sanity (verified on local demo this session):**
 - 10 URLs × 3 workers: 9/10 succeed, ~3.9 minutes. The one failure (`pid 607894 Nulo Freestyle Turkey`) was a legitimate "no title" parse — the product appears delisted on Chewy.
@@ -91,17 +90,15 @@ Before spawning the scraper subprocess, the runner checks both the grouped file 
 ### Production code (commit, run on VPS)
 | File | Role |
 |---|---|
-| `chewy_next_json_extractor.py` (~2265 LoC) | Core extractor. Parses Apollo, normalizes, enriches via variant API, splits by discriminator, validates, sanitizes, dedupes. **All Shopify-shaping helpers live here since session 2** (was previously split with `chewy_enrich.py`). |
+| `chewy_next_json_extractor.py` (~2265 LoC) | Core extractor. Parses Apollo, normalizes, enriches via variant API, splits by discriminator, validates, sanitizes, dedupes. **All Shopify-shaping helpers live here** (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`). |
 | `chewy_product_scraper.py` | **Single-pass scrape+enrich CLI.** `scrape_single_product` runs the full pipeline in-process; `main()` writes normalized + grouped + validation. Subprocess entry for `resumable_scraper_runner`. Reuses runner's browser via `ADSP_BROWSER_WS_URL` env var. Emits `[WHITE_SCREEN_RESULT]` markers on proxy errors so the runner rebuilds the bad profile. |
 | `resumable_scraper_runner.py` | Production scrape runner. Per-URL DB state, subprocess spawn, white-screen parsing. `create / start / resume / pause / cancel / status / retry-failed / skip-current` subcommands. Reads URL files with `utf-8-sig` (BOM-safe). |
 | `parallel_resumable_runner.py` | Multi-worker scrape runner. Each worker owns one CW slot, keeps an AdsPower browser open across items, atomically claims via `job_store.claim_next_item`. White-screen / throttle → slot status flips to `rebuilding` → loop rebuilds + restarts browser. |
-| `chewy_enrich.py` | **DEPRECATED.** Re-exports helpers (`FLAVOR_KEYWORDS`, `has_real_images`, `detect_flavor_mismatch`, `sanitize_product`) from the extractor for backward compatibility. The CLI still works for re-enriching legacy normalized files, but the canonical flow no longer uses it. |
-| `parallel_enrich_runner.py` | **DEPRECATED** (paired with `chewy_enrich.py`). Still importable, no role in the new flow. |
-| `category_scraper.py` / `category_discovery*.py` | Discover product URLs by category. Not used in this session's re-scrape (URLs come from existing normalized files via `prepare_rescrape.py`). |
+| `category_job_runner.py` / `category_discovery*.py` | Discover product URLs by category (5-step DB-backed flow). Newer one-shot alternative: `tools/scrape_category.py`. Not used in this session's re-scrape (URLs come from existing normalized files via `prepare_rescrape.py`). |
 | `adspower.py` | AdsPower local API client. |
 | `adsp_profile_pool_manager.py` | Profile pool + white-screen detection (used by both scrape and old enrich runners). |
 | `adsp_profile_recovery_manager.py` | Slot template management, `auto_rebuild_profile`, proxy-soft-toggle helpers, `.env` config sync. |
-| `job_store.py` | SQLite layer. `scrape_jobs / scrape_job_items` + `chewy_enrichment_state` (legacy, unused by new flow) + claim primitives + orphan reset helpers. |
+| `job_store.py` | SQLite layer. `scrape_jobs / scrape_job_items` + claim primitives + orphan reset helpers. (`chewy_enrichment_state` table + its claim helpers are legacy holdovers — no current writer; future cleanup.) |
 | `config.py` | Reads `.env`. `ADSPOWER_PROFILE_ID`, `ADSP_CW_{1,2,3}_PROFILE_ID`, proxy URLs, slot count, timeouts. |
 | `job_exporter.py` | Export normalized → grouped products (legacy, superseded by single-pass scraper writing both). |
 
@@ -115,9 +112,7 @@ Before spawning the scraper subprocess, the runner checks both the grouped file 
 ### Audit / one-off
 | File | Notes |
 |---|---|
-| `audit_normalized_dataset.py` | Dataset-wide audit; produces `audit_reports/`. |
-| `bulk_quality_audit.py` | Batch pipeline auditor. |
-| `check_slots.py` | Quick CW slot diagnostic. |
+| `tools/check_slots.py` | Quick CW slot diagnostic. |
 
 ### Test/dev artifacts (in repo but not on critical path)
 | Path | Notes |
@@ -300,7 +295,7 @@ Each line is a `grouped` dict with this shape (abbreviated):
 
 ### Slot mapping
 - Each worker is bound to exactly one CW slot: `worker_1 -> CW_1`, `worker_2 -> CW_2`, `worker_3 -> CW_3`.
-- Slot -> profile resolution priority (in `parallel_enrich_runner._get_slot_profile`):
+- Slot -> profile resolution priority (in `parallel_resumable_runner._get_slot_profile`):
   1. `.env` var `ADSP_CW_1_PROFILE_ID` (and `_2`, `_3`) — WINS if set
   2. `adsp_profile_templates.adspower_profile_id` in DB — fallback
   3. If both empty, worker auto-provisions via AdsPower API (initial setup only)
@@ -335,40 +330,18 @@ SQLite WAL + `busy_timeout=60s` + `BEGIN IMMEDIATE` serializes. No duplicate cla
 - On next CLI start: `recover_stale_enrichment_states(stale_minutes=30)` resets pids whose `last_started_at` > 30 min ago back to `pending`.
 - Re-claimed by any worker.
 
-> **NOTE — sections B, C, D below describe the OLD enrich-worker flow (`parallel_enrich_runner`).** The new scrape-subprocess flow has a different shape:
-> - **White-screen / proxy-dead detection** happens inside the `chewy_product_scraper.py` subprocess. It emits a `[WHITE_SCREEN_RESULT] {json}` line and exits non-zero.
-> - **Profile quarantine + slot rebuild** happens in `resumable_scraper_runner.process_single_item` (parses the marker) and `parallel_resumable_runner._worker_loop` (sees `slot.status='rebuilding'` next iteration, calls `auto_rebuild_profile`, restarts browser, retries the item — DB-backed, the slot template stays under management).
-> - **Item state** is `scrape_job_items.status` in the DB, not `chewy_enrichment_state`. Reset via `mark_orphan_running_items` / `mark_stale_running_items` on resume.
-> The legacy text below is still accurate for anyone running the deprecated `chewy_enrich.py --parallel`. Treat it as historical.
-
-### B. White-screen on a pid (Akamai bot detection OR HTTP 429/403/503 throttle)
-**Two trigger sources, same handler:**
-- (i) HTML body looks like a block page on `page.goto` — detected by `adsp_profile_pool_manager.detect_white_screen_block` inside `chewy_enrich.get_build_id`.
-- (ii) Any variant `/_next/data/.../dp/{X}.json` call returns HTTP 429/403/503 — `fetch_next_data_json` raises `WhiteScreenException` (added in `fadbcbd`). Statuses in `chewy_next_json_extractor.PROFILE_BLOCKED_STATUSES`.
-
-Both paths raise the same `WhiteScreenException` (canonical home: `chewy_next_json_extractor.py`; re-exported from `chewy_enrich.py`).
-
-**Worker flow (since `d8c184f`, pure AdsPower API, no DB):**
-1. Worker catches `WhiteScreenException` from `chewy_enrich.process_product`.
-2. `release_enrichment_claim(pid, reset_to='pending')` — pid back to queue.
-3. `_stop_browser(profile_id)`.
-4. `recovery.delete_profile_via_api(profile_id)` — best-effort delete on AdsPower.
-5. `recovery.create_profile_via_api(slot_template)` — creates a fresh profile with `.env` proxy. Returns new profile_id.
-6. Worker updates its in-memory `profile_id` to the new value. Opens browser. Continues claiming.
-7. `.env` is NOT modified. Next CLI invocation starts again from the .env profile_id; if that profile doesn't exist (because the previous run rebuilt past it), the worker creates a new one on the fly via the same `_provision_profile` path. No accumulated state.
+### B. White-screen on an item (Akamai bot detection OR HTTP 429/403/503 throttle)
+- **Detected in the subprocess.** `chewy_product_scraper.py` calls `adsp_profile_pool_manager.detect_white_screen_block` right after `fetch_initial_html`, and `chewy_next_json_extractor.fetch_next_data_json` raises `WhiteScreenException` on HTTP 429/403/503 (statuses listed in `PROFILE_BLOCKED_STATUSES`).
+- **Subprocess emits** a `[WHITE_SCREEN_RESULT] {json}` line and exits non-zero.
+- `resumable_scraper_runner.process_single_item` parses the marker, marks the slot template `rebuilding` via `mark_template_white_screen`, releases the item back to `pending`.
+- `parallel_resumable_runner._worker_loop` sees `slot.status='rebuilding'` next iteration, stops the browser, calls `recovery.auto_rebuild_profile(slot_id)` — this deletes the old AdsPower profile, creates a new one using the `.env` proxy from the slot template, then the worker reopens the browser and continues claiming. `.env` is NOT modified.
 
 ### C. Proxy dead (`ERR_CONNECTION_CLOSED`, `ERR_SOCKS_*`, `ERR_TUNNEL_*`)
-1. Worker catches the error, detected via `recovery.is_proxy_connection_error(e)`.
-2. `release_enrichment_claim(pid, reset_to='pending')` — pid back to queue.
-3. `_stop_browser(profile_id)`.
-4. `recovery.switch_profile_to_local_via_api(profile_id)` — calls AdsPower `/api/v1/user/update` with `user_proxy_config={"proxy_soft": "no_proxy"}` on the **SAME** profile_id. **No delete, no create. No DB write.**
-5. Worker restarts the SAME profile (now using host's network directly) and continues.
-6. **No persistence:** the in-memory profile_id tracks the local state. Next CLI invocation reads .env again and starts fresh. If the proxy is back, normal flow resumes; if still dead, the same swap-to-local happens during this run.
+- Detected via `recovery.is_proxy_connection_error(e)` in the runner.
+- Same handler path: slot flipped to `rebuilding`, worker stops browser, `auto_rebuild_profile` runs with `use_local_network=True` to swap the profile's proxy to local via AdsPower API (no delete/create — `switch_profile_to_local_via_api`). Worker restarts the same profile on host network and continues. No DB persistence of the local-mode flag.
 
 ### D. Profile missing (`does not exist` from AdsPower)
-Since `d8c184f` (DB-free profile management):
-- Worker tries the `.env` profile_id. If AdsPower says it doesn't exist, the worker **automatically creates a new one** via `_provision_profile` using the .env proxy config and continues. No DB read, no error stop.
-- This handles the case where a previous run's white-screen handler deleted the .env profile — the worker just rebuilds and keeps going on the new id (in-memory).
+- Worker tries the slot profile id. If AdsPower returns "does not exist", `auto_rebuild_profile(reason="profile_missing_...")` provisions a fresh one with the .env proxy and the worker keeps going. No DB read, no error stop.
 
 ---
 
@@ -406,16 +379,6 @@ python tools\build_shopify_jsonl.py
 - `--retry-failed` — pick `failed` items whose `attempts < max_attempts`. Default-on for `resume`, default-off for `start`.
 - `--force-retry` — pick `failed` items even past `max_attempts`. Use sparingly.
 - `--reset-profile-attempts` (resume only) — clear `profile_attempts_json` and `white_screen_count` for pending/failed/paused items; release all quarantined profiles. Use after fixing a proxy issue at the .env level.
-
-### Legacy CLI (deprecated — for reference only)
-
-```powershell
-# These still run; they operate on the chewy_enrichment_state table and read
-# existing normalized files. They will NOT scrape from scratch — for that,
-# use the canonical flow above.
-python chewy_enrich.py --input output/normalized_products --mode all
-python chewy_enrich.py --input output/normalized_products --mode all --parallel --workers 3 --limit 20 --force-reenrich
-```
 
 ---
 
@@ -483,7 +446,7 @@ python chewy_enrich.py --input output/normalized_products --mode all --parallel 
 
 3. **Scraper now captures `Product.breadcrumbs` (commit pending).** Previously the breadcrumb extraction in `parse_apollo_product` scanned only top-level Apollo state keys; Chewy stores breadcrumbs as an inline list inside the `Product:<id>` node, so `category_path` came back empty. Fix: after locating `product_node`, also iterate `product_node.get("breadcrumbs")` for inline Breadcrumb objects. After the next full rescrape, `output/normalized_products/*.json` will have populated `category_path` and `category_resolver.py` will prefer it over title regex automatically (no code change needed in the resolver).
 3. **White-screen `.env` mismatch (carryover).** `auto_rebuild_profile` creates a new profile_id but `.env` still points at the old one. Worker auto-creates a fresh profile on each run (since `d8c184f`), so this is not blocking — but `.env` drifts away from reality. Decide: (a) auto-write new id back, (b) accept the drift and document.
-4. **`chewy_enrich.py` and `parallel_enrich_runner.py` are formally deprecated.** Decide when to delete them outright vs. keep as compatibility shims. The helpers they re-export now live in `chewy_next_json_extractor.py`. Leaving them in for now buys backward compatibility for any in-flight scripts.
+4. **~~`chewy_enrich.py` and `parallel_enrich_runner.py` deprecation~~** — RESOLVED 2026-05-19: both modules removed from the repo. The helpers they re-exported live in `chewy_next_json_extractor.py`.
 5. **~~Stale orphan profiles on AdsPower~~** — RESOLVED in `efa4b7c`. `auto_rebuild_profile` now cleans up all orphans sharing the slot's `display_name` before creating a new one. After pulling the fix, run the one-liner in §12 ("Cleanup orphan profiles") once to reclaim the slots already accumulated on the user's account.
 6. **`output/scraper_jobs.db`** (separate file from root `scraper_jobs.db`) — 8.1 MB, untouched. Possibly older backup. Verify before purging.
 
@@ -624,7 +587,7 @@ ADSP_CW_3_PROXY_URL=socks5h://USER:PASS@host:port
 | **How does the runner invoke the scraper?** | `resumable_scraper_runner.process_single_item` → `subprocess.Popen([..., 'chewy_product_scraper.py', '--url', url], env=ADSP_BROWSER_WS_URL+ADSPOWER_PROFILE_ID)`. |
 | How does a variant URL get built? | `chewy_next_json_extractor.parse_apollo_product` ("variant_url"). Uses entry_id. |
 | How is a variant decided OOS? | `derive_stock_fields()` in `chewy_next_json_extractor.py`. Multiple signals. |
-| How do scrape workers claim work? | `job_store.claim_next_item` — BEGIN IMMEDIATE. (Old `claim_next_enrichment_pid` is for the deprecated `chewy_enrichment_state` table.) |
+| How do scrape workers claim work? | `job_store.claim_next_item` — BEGIN IMMEDIATE. (`claim_next_enrichment_pid` still exists in job_store.py for the now-unused `chewy_enrichment_state` table — slated for cleanup.) |
 | How does white-screen rebuild a profile? | Scraper emits `[WHITE_SCREEN_RESULT]` marker → `resumable_scraper_runner.process_single_item` (~line 720) parses it, calls `quarantine_profile` + `mark_template_white_screen`, marks item pending → `parallel_resumable_runner._worker_loop` sees `slot.status == 'rebuilding'` next iteration → `auto_rebuild_profile`. |
 | How does the scraper recognize proxy-dead errors? | `chewy_product_scraper.main()` — `PROXY_DEAD_TOKENS` set (ERR_CONNECTION_*, SOCKS, TUNNEL, TIMED_OUT, NETWORK_CHANGED) caught around `page.goto` and `scrape_single_product`. Emits the same white-screen marker. |
 | How does proxy come back from local? | `adsp_profile_recovery_manager.restore_runtime_local_slots_from_env` — toggle `proxy_soft`. |
