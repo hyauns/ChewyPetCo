@@ -1348,9 +1348,24 @@ def normalize_chewy_product(raw_product: dict) -> dict:
     }
     
     path_str = " ".join(raw_product.get("category_path", [])).lower()
-    
-    if "dog" in path_str or "dog" in title_lower: product_facts["pet_type"] = "Dog"
-    elif "cat" in path_str or "cat" in title_lower: product_facts["pet_type"] = "Cat"
+
+    # Multi-species detection from Chewy breadcrumb / title. Order matters:
+    # more specific keywords first (e.g. "wild bird" before "bird").
+    _SPECIES_RULES = [
+        ("Dog", ("dog", "puppy", "canine")),
+        ("Cat", ("cat", "kitten", "feline")),
+        ("Horse", ("horse", "equine")),
+        ("Wild Bird", ("wild bird",)),
+        ("Bird", ("bird", "parakeet", "parrot", "cockatiel", "canary", "finch")),
+        ("Fish", ("fish", "aquarium", "pond")),
+        ("Reptile", ("reptile", "lizard", "snake", "turtle", "tortoise", "gecko")),
+        ("Small Pet", ("small pet", "rabbit", "hamster", "guinea pig", "ferret", "chinchilla", "hedgehog")),
+        ("Farm Animal", ("farm animal", "chicken", "goat", "sheep", "cattle", "pig", "duck")),
+    ]
+    for species, keywords in _SPECIES_RULES:
+        if any(kw in path_str or kw in title_lower for kw in keywords):
+            product_facts["pet_type"] = species
+            break
     
     if "dry food" in path_str or "dry food" in title_lower: product_facts["food_form"] = "Dry Food"
     elif "wet food" in path_str or "wet food" in title_lower: product_facts["food_form"] = "Wet Food"
@@ -2116,8 +2131,8 @@ def validate_normalized_product(normalized_product: dict, grouped_product: dict)
 
 
 # ── Shopify import sanitization ────────────────────────────────────────
-# Previously in chewy_enrich.py. Moved here so the unified scraper can run
-# them inline; chewy_enrich.py still re-exports for backward compatibility.
+# Helpers used by the unified scraper to validate / sanitize per-product output
+# inline (FLAVOR_KEYWORDS, has_real_images, detect_flavor_mismatch, sanitize_product).
 
 FLAVOR_KEYWORDS = [
     "duck", "chicken", "beef", "lamb", "salmon", "turkey", "venison",

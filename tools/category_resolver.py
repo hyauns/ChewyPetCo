@@ -1,13 +1,25 @@
 """Resolve Chewy-style 3-tier category for each product.
 
 Priority:
-  1. Apollo `Product.breadcrumbs` from cached next_data (output/cache/) —
-     authoritative (Chewy's own classification).
-  2. Title-regex fallback using ProductCategory + title keywords +
-     product_facts (food_form, package_type, life_stage).
+  1. `normalized.category_path` (populated when the scraper captured
+     Apollo `Product.breadcrumbs`) — authoritative for any species.
+  2. Breadcrumb cache in `output/cache/<pid>_chewy-pdp-ui-*.json` — same shape,
+     populated by the PDP UI cache files.
+  3. Species-aware fallback:
+     - If `product_facts.pet_type` is known, return `["<Species> Supplies"]`
+       and, for Dog products, run the legacy keyword rules to pick a 2nd/3rd
+       segment (Dry Dog Food, Joint Supplements, etc.).
+     - For non-Dog species we DO NOT guess a sub-category — Chewy's hierarchy
+       for Horse/Bird/Fish/etc. isn't encoded here; the top segment is enough
+       to drive Shopify collections.
+     - If pet_type is unknown, return `["Pet Supplies"]` generic.
 
-Output for each product: list[str] like
-    ["Dog Supplies", "Dog Food", "Dry Dog Food"]
+Output for each product:
+    {
+      "path": ["Dog Supplies", "Dog Food", "Dry Dog Food"],
+      "source": "normalized_category_path" | "breadcrumb" | "title_regex",
+      "is_bundle": bool,
+    }
 
 The first segment is always present, the deeper levels are best-effort.
 
@@ -71,9 +83,8 @@ def breadcrumb_for(pid: str) -> list[str] | None:
     return _BREADCRUMB_INDEX.get(str(pid))
 
 
-# -- Title regex rules --------------------------------------------------------
-# Each rule: (regex, top, mid, leaf). Order matters — first match wins.
-# top is always 'Dog Supplies' since dataset is 100% Dog.
+# -- Dog-specific title-regex rules (legacy fallback for existing dataset) ----
+# These only apply when pet_type == "Dog" and breadcrumb is missing.
 
 FOOD_RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bfreeze[\s\-]?dried\b", re.I), "Freeze-Dried Food"),
@@ -139,17 +150,14 @@ def _is_bundle(title: str) -> bool:
     )
 
 
-def title_regex_category(
-    title: str,
-    product_category: str | None,
-    product_facts: dict | None = None,
+def _dog_title_regex(
+    title: str, product_category: str | None, product_facts: dict
 ) -> list[str]:
-    """Title-based category fallback. Returns 2-3 segment list."""
+    """Dog-only title-regex fallback (existing 2,800-pid dataset)."""
     t = title or ""
     pc = (product_category or "").strip()
     pf = product_facts or {}
 
-    # ProductCategory drives top mid-tier.
     if pc == "Treats":
         leaf = _apply_rules(TREAT_RULES, t) or "Dog Treats"
         return ["Dog Supplies", "Dog Treats", leaf] if leaf != "Dog Treats" else ["Dog Supplies", "Dog Treats"]
@@ -166,10 +174,8 @@ def title_regex_category(
         leaf = _apply_rules(GROOMING_RULES, t) or "Dog Grooming"
         return ["Dog Supplies", "Dog Grooming", leaf] if leaf != "Dog Grooming" else ["Dog Supplies", "Dog Grooming"]
 
-    # Default to Food (covers 'Food' + 'Unknown' which look like food bundles)
     leaf = _apply_rules(FOOD_RULES, t)
     if not leaf:
-        # Use product_facts hints
         ff = (pf.get("food_form") or "").strip().lower()
         if "treat" in ff:
             return ["Dog Supplies", "Dog Treats"]
@@ -180,7 +186,6 @@ def title_regex_category(
         elif "raw" in ff:
             leaf = "Raw Dog Food"
         else:
-            # Package_type fallback
             pkg = (pf.get("package_type") or "").strip().lower()
             if pkg == "can":
                 leaf = "Wet Dog Food"
@@ -191,6 +196,34 @@ def title_regex_category(
     return ["Dog Supplies", "Dog Food", leaf] if leaf != "Dog Food" else ["Dog Supplies", "Dog Food"]
 
 
+def title_regex_category(
+    title: str,
+    product_category: str | None,
+    product_facts: dict | None = None,
+) -> list[str]:
+    """Title-based category fallback.
+
+    For Dog products: applies the full keyword rule set inherited from the
+    Dog-only era (covers the existing 2,800-pid dataset that was scraped
+    before the breadcrumb fix landed).
+
+    For other species: returns just `["<Species> Supplies"]` based on
+    `product_facts.pet_type`. We do not try to guess deeper levels because
+    Chewy's hierarchy for Horse/Bird/Fish/etc. is not encoded here — the top
+    segment is enough to drive Shopify Smart Collections.
+
+    If pet_type is missing entirely, returns `["Pet Supplies"]`.
+    """
+    pf = product_facts or {}
+    species = (pf.get("pet_type") or "").strip()
+
+    if species == "Dog":
+        return _dog_title_regex(title, product_category, pf)
+    if species:
+        return [f"{species} Supplies"]
+    return ["Pet Supplies"]
+
+
 # -- Public API ---------------------------------------------------------------
 def resolve_category(
     normalized: dict, grouped_product: dict | None = None
@@ -199,9 +232,9 @@ def resolve_category(
 
     Returns dict:
         {
-          'path': [...],         # 2-3 segment list
+          'path': [...],         # 1-3 segment list (always 1+ elements)
           'source': 'normalized_category_path'|'breadcrumb'|'title_regex',
-          'is_bundle': bool,     # heuristic for bundle products
+          'is_bundle': bool,
         }
     """
     pid = str(normalized.get("source_product_id") or "")
@@ -211,7 +244,7 @@ def resolve_category(
     bundle = _is_bundle(title)
 
     # Highest priority: category_path already in normalized file (post-rescrape
-    # with the breadcrumb fix). Already authoritative; no need to look further.
+    # with the breadcrumb fix). Already authoritative for any species.
     cp = normalized.get("category_path") or []
     if cp:
         return {"path": list(cp), "source": "normalized_category_path", "is_bundle": bundle}
@@ -223,7 +256,7 @@ def resolve_category(
     pat = normalized.get("product_attributes_table") or {}
     pcs = pat.get("ProductCategory") or []
     pc = pcs[0] if pcs else None
-    pf = (grouped_product or {}).get("product_facts") or {}
+    pf = (grouped_product or {}).get("product_facts") or normalized.get("product_facts") or {}
     path = title_regex_category(title, pc, pf)
     return {"path": path, "source": "title_regex", "is_bundle": bundle}
 
@@ -258,7 +291,7 @@ def main() -> None:
             tag = f"[{res['source']}]" if args.show_source else ""
             bundle = " (bundle)" if res["is_bundle"] else ""
             sample_lines.append(
-                f"  {tag:18} {' > '.join(res['path']):60s}  {(d.get('title') or '')[:60]}{bundle}"
+                f"  {tag:28} {' > '.join(res['path']):60s}  {(d.get('title') or '')[:60]}{bundle}"
             )
 
     print(f"Source distribution: {dict(source_count)}")

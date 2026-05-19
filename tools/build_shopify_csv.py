@@ -248,8 +248,9 @@ def product_type(pat: dict, category_path: list[str] | None = None) -> str:
     Fall back to ProductCategory from product_attributes_table.
     """
     if category_path:
-        # Skip the always-present "Dog Supplies" top segment.
-        meaningful = [s for s in category_path if s and s != "Dog Supplies"]
+        # Skip the species top segment ("Dog Supplies", "Cat Supplies",
+        # "Horse Supplies", ...) — Shopify Type column wants the leaf.
+        meaningful = [s for s in category_path[1:] if s]
         if meaningful:
             return meaningful[-1]
     vals = pat.get("ProductCategory") or []
