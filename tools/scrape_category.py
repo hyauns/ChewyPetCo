@@ -42,12 +42,17 @@ from playwright.async_api import async_playwright  # noqa: E402
 
 import adspower  # noqa: E402
 import adsp_profile_pool_manager  # noqa: E402
+import adsp_profile_recovery_manager as recovery  # noqa: E402
 import config  # noqa: E402
 import category_price_filter  # noqa: E402
 from category_discovery import extract_product_cards  # noqa: E402
 
 URL_DIR = os.path.join("output", "category_urls")
 NORMALIZED_DIR = os.path.join("output", "normalized_products")
+# Reuse slot CW_1 infrastructure for discovery: auto-rebuild on missing profile,
+# auto-rebuild on white-screen, all via the .env proxy already configured for CW_1.
+DISCOVERY_SLOT = "CW_1"
+MAX_WHITE_SCREEN_REBUILDS_PER_PAGE = 3
 
 
 def slugify(s: str) -> str:
@@ -69,6 +74,74 @@ def load_existing_pids() -> set[str]:
     return pids
 
 
+def _get_slot_profile(slot_id: str) -> str | None:
+    row = recovery.get_template(slot_id)
+    return str(row["adspower_profile_id"]) if row and row.get("adspower_profile_id") else None
+
+
+async def _start_browser_with_rebuild(p, slot_id: str, current_pid: str | None):
+    """Start AdsPower browser with auto-rebuild on 'profile does not exist'.
+
+    Mirrors parallel_resumable_runner._start_worker_browser. Returns
+    (browser, context, working_profile_id). Raises RuntimeError if even the
+    rebuilt profile cannot be started.
+    """
+    pid = current_pid
+    if not pid:
+        ensure = recovery.ensure_slot_profile(slot_id, delay_seconds=0)
+        if not ensure.get("success"):
+            raise RuntimeError(f"Slot {slot_id} unavailable: {ensure.get('message')}")
+        pid = _get_slot_profile(slot_id)
+        if not pid:
+            raise RuntimeError(f"Slot {slot_id} has no profile id after ensure_slot_profile.")
+
+    for attempt in range(2):  # original + 1 rebuild retry
+        try:
+            profile_data = adspower.start_profile(pid)
+            ws_url = adspower.get_ws_endpoint(profile_data)
+            browser = await p.chromium.connect_over_cdp(ws_url)
+            ctx = browser.contexts[0] if browser.contexts else (await browser.new_context())
+            print(f"[crawl] AdsPower CDP connected  (profile {pid})")
+            return browser, ctx, pid
+        except Exception as exc:
+            err = str(exc).lower()
+            if attempt == 0 and ("does not exist" in err or "not exist" in err):
+                print(f"[crawl] Profile {pid} missing on AdsPower — rebuilding via slot {slot_id} (.env proxy)...")
+                rebuild = recovery.auto_rebuild_profile(
+                    slot_id,
+                    reason=f"profile_missing_{pid}",
+                    delay_seconds=0,
+                    delete_old_profile=False,
+                )
+                if not rebuild.get("success"):
+                    raise RuntimeError(f"Profile rebuild failed: {rebuild.get('message')}")
+                pid = rebuild.get("new_profile_id") or _get_slot_profile(slot_id)
+                if not pid:
+                    raise RuntimeError("Rebuild reported success but no new profile id available.")
+                print(f"[crawl] Rebuild OK — new profile {pid}. Retrying start...")
+                continue
+            raise
+    raise RuntimeError("Unreachable")
+
+
+async def _close_browser_safely(browser, ctx, pid: str | None):
+    for action in (
+        lambda: ctx.close() if ctx else None,
+        lambda: browser.close() if browser else None,
+    ):
+        try:
+            res = action()
+            if res is not None and hasattr(res, "__await__"):
+                await res
+        except Exception:
+            pass
+    if pid:
+        try:
+            adspower.stop_profile(pid)
+        except Exception:
+            pass
+
+
 async def crawl_category(
     category_url: str,
     max_pages: int | None,
@@ -76,27 +149,18 @@ async def crawl_category(
     price_max: float | None,
     delay_seconds: float,
     profile_id: str,
+    slot_id: str = DISCOVERY_SLOT,
 ) -> dict:
-    """Crawl category pages and return cards + per-page stats."""
+    """Crawl category pages with auto-rebuild on missing profile / white-screen."""
     per_page_stats: list[dict] = []
     cards_organic: list[dict] = []
-    parsed = urlparse(category_url)
     stopped_reason = "completed"
 
+    # Sync slot templates from .env before any browser ops (parity with parallel_resumable_runner).
+    recovery.sync_profile_templates_to_db()
+
     async with async_playwright() as p:
-        try:
-            profile_data = adspower.start_profile(profile_id)
-            ws_url = adspower.get_ws_endpoint(profile_data)
-            browser = await p.chromium.connect_over_cdp(ws_url)
-            ctx = browser.contexts[0]
-            print(f"[crawl] AdsPower CDP @ {ws_url}")
-        except Exception as e:
-            print(f"[crawl] AdsPower connect failed ({e}). Falling back to launch.")
-            browser = await p.chromium.launch(headless=True)
-            ctx = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
+        browser, ctx, profile_id = await _start_browser_with_rebuild(p, slot_id, profile_id)
         page = await ctx.new_page()
 
         previous_first_urls: list[str] = []
@@ -114,99 +178,136 @@ async def crawl_category(
                     sep = "&" if "?" in category_url else "?"
                     page_url = f"{category_url}{sep}page={current_page}"
 
-                print(f"[crawl] page {current_page}: {page_url}")
-                try:
-                    await page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
-                    await page.wait_for_timeout(3000)
-                except Exception as e:
-                    print(f"[crawl] page.goto failed on page {current_page}: {e}")
-                    stopped_reason = f"page_load_failed_at_{current_page}"
-                    break
+                # Retry loop for this page (covers white-screen rebuild + reload)
+                page_handled = False
+                for ws_attempt in range(MAX_WHITE_SCREEN_REBUILDS_PER_PAGE + 1):
+                    print(f"[crawl] page {current_page}: {page_url}  (attempt {ws_attempt + 1})")
+                    try:
+                        await page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
+                        await page.wait_for_timeout(3000)
+                    except Exception as e:
+                        print(f"[crawl] page.goto failed on page {current_page}: {e}")
+                        stopped_reason = f"page_load_failed_at_{current_page}"
+                        page_handled = True
+                        break  # bail out of attempt loop into outer loop
 
-                final_url = page.url
-                ws_check = await adsp_profile_pool_manager.detect_white_screen_block(page, final_url)
-                if ws_check.get("is_white_screen"):
-                    print(f"[crawl] WHITE SCREEN on page {current_page}. Stopping.")
-                    stopped_reason = f"white_screen_at_{current_page}"
-                    break
+                    final_url = page.url
+                    ws_check = await adsp_profile_pool_manager.detect_white_screen_block(page, final_url)
+                    if ws_check.get("is_white_screen"):
+                        if ws_attempt >= MAX_WHITE_SCREEN_REBUILDS_PER_PAGE:
+                            print(f"[crawl] WHITE SCREEN persists after {MAX_WHITE_SCREEN_REBUILDS_PER_PAGE} rebuilds. Giving up.")
+                            stopped_reason = f"white_screen_unrecoverable_at_{current_page}"
+                            page_handled = True
+                            break
+                        print(f"[crawl] WHITE SCREEN on page {current_page} — rebuilding profile {profile_id}...")
+                        try:
+                            await page.close()
+                        except Exception:
+                            pass
+                        await _close_browser_safely(browser, ctx, profile_id)
+                        rebuild = recovery.auto_rebuild_profile(
+                            slot_id,
+                            reason=f"white_screen_at_page_{current_page}",
+                            delay_seconds=0,
+                            delete_old_profile=True,
+                        )
+                        if not rebuild.get("success"):
+                            print(f"[crawl] Profile rebuild FAILED: {rebuild.get('message')}")
+                            stopped_reason = f"rebuild_failed_at_{current_page}"
+                            page_handled = True
+                            browser = ctx = None
+                            break
+                        new_pid = rebuild.get("new_profile_id") or _get_slot_profile(slot_id)
+                        print(f"[crawl] Profile rebuilt: {profile_id} -> {new_pid}. Re-opening browser...")
+                        browser, ctx, profile_id = await _start_browser_with_rebuild(p, slot_id, new_pid)
+                        page = await ctx.new_page()
+                        continue  # retry SAME page
 
-                content = (await page.content()).lower()
-                if "we couldn't find any results" in content or "page not found" in content:
-                    print(f"[crawl] No more products on page {current_page}.")
-                    stopped_reason = f"no_results_at_{current_page}"
-                    break
-
-                cards_data = await extract_product_cards(page)
-                if not cards_data:
-                    print(f"[crawl] zero cards extracted, stopping.")
-                    stopped_reason = f"zero_cards_at_{current_page}"
-                    break
-
-                organic = [c for c in cards_data if not c.get("is_sponsored")]
-                sponsored = [c for c in cards_data if c.get("is_sponsored")]
-
-                first5 = [c["url"] for c in organic[:5]]
-                if current_page > 1 and first5 == previous_first_urls:
-                    stale_attempts += 1
-                    print(f"[crawl] page {current_page} matches previous page first-5. stale={stale_attempts}")
-                    if stale_attempts > 1:
-                        stopped_reason = f"stale_pagination_at_{current_page}"
+                    # No white screen — process page
+                    content = (await page.content()).lower()
+                    if "we couldn't find any results" in content or "page not found" in content:
+                        print(f"[crawl] No more products on page {current_page}.")
+                        stopped_reason = f"no_results_at_{current_page}"
+                        page_handled = True
                         break
-                else:
-                    stale_attempts = 0
-                previous_first_urls = first5
 
-                # Price-filter each card
-                kept = 0
-                price_filtered = 0
-                for c in organic:
-                    raw_price = c.get("price", "")
-                    parsed_price = category_price_filter.parse_price_to_float(raw_price)
-                    filt = category_price_filter.product_card_matches_price_filter(
-                        parsed_price, price_min, price_max, mode="card_price_prefilter"
-                    )
-                    c["price_parsed"] = parsed_price
-                    c["filter"] = filt
-                    # category_price_filter returns "filtered_in" / "filtered_out"
-                    if filt["status"] == "filtered_in":
-                        kept += 1
-                        cards_organic.append(c)
+                    cards_data = await extract_product_cards(page)
+                    if not cards_data:
+                        print(f"[crawl] zero cards extracted, stopping.")
+                        stopped_reason = f"zero_cards_at_{current_page}"
+                        page_handled = True
+                        break
+
+                    organic = [c for c in cards_data if not c.get("is_sponsored")]
+                    sponsored = [c for c in cards_data if c.get("is_sponsored")]
+
+                    first5 = [c["url"] for c in organic[:5]]
+                    if current_page > 1 and first5 == previous_first_urls:
+                        stale_attempts += 1
+                        print(f"[crawl] page {current_page} matches previous page first-5. stale={stale_attempts}")
+                        if stale_attempts > 1:
+                            stopped_reason = f"stale_pagination_at_{current_page}"
+                            page_handled = True
+                            break
                     else:
-                        price_filtered += 1
+                        stale_attempts = 0
+                    previous_first_urls = first5
 
-                per_page_stats.append({
-                    "page": current_page,
-                    "raw_cards": len(cards_data),
-                    "organic": len(organic),
-                    "sponsored": len(sponsored),
-                    "price_kept": kept,
-                    "price_filtered_out": price_filtered,
-                })
-                print(f"  raw={len(cards_data)} organic={len(organic)} sponsored={len(sponsored)} "
-                      f"price_kept={kept} filtered={price_filtered}")
+                    # Price-filter each card
+                    kept = 0
+                    price_filtered = 0
+                    for c in organic:
+                        raw_price = c.get("price", "")
+                        parsed_price = category_price_filter.parse_price_to_float(raw_price)
+                        filt = category_price_filter.product_card_matches_price_filter(
+                            parsed_price, price_min, price_max, mode="card_price_prefilter"
+                        )
+                        c["price_parsed"] = parsed_price
+                        c["filter"] = filt
+                        if filt["status"] == "filtered_in":
+                            kept += 1
+                            cards_organic.append(c)
+                        else:
+                            price_filtered += 1
 
-                if len(organic) < 10:
-                    print(f"[crawl] <10 organic cards on page {current_page}, assuming last page.")
+                    per_page_stats.append({
+                        "page": current_page,
+                        "raw_cards": len(cards_data),
+                        "organic": len(organic),
+                        "sponsored": len(sponsored),
+                        "price_kept": kept,
+                        "price_filtered_out": price_filtered,
+                    })
+                    print(f"  raw={len(cards_data)} organic={len(organic)} sponsored={len(sponsored)} "
+                          f"price_kept={kept} filtered={price_filtered}")
+
+                    if len(organic) < 10:
+                        print(f"[crawl] <10 organic cards on page {current_page}, assuming last page.")
+                        stopped_reason = f"sparse_page_{current_page}"
+                        page_handled = True
+                        break
+
+                    page_handled = True
+                    break  # leave attempt loop normally
+
+                # Decide if outer loop should continue
+                if not page_handled or stopped_reason != "completed":
+                    if stopped_reason in (f"sparse_page_{current_page}",):
+                        # treat sparse page as terminal
+                        stopped_reason = "completed_sparse_last_page"
                     break
 
                 current_page += 1
                 await asyncio.sleep(delay_seconds)
         finally:
-            try:
-                await ctx.close()
-                await browser.close()
-            except Exception:
-                pass
-            try:
-                adspower.stop_profile(profile_id)
-            except Exception:
-                pass
+            await _close_browser_safely(browser, ctx, profile_id)
 
     return {
         "cards": cards_organic,
         "per_page_stats": per_page_stats,
         "stopped_reason": stopped_reason,
         "total_pages": current_page,
+        "final_profile_id": profile_id,
     }
 
 
@@ -347,10 +448,18 @@ def main() -> int:
 
     if hasattr(config, "reload_from_env_file"):
         config.reload_from_env_file(override=True)
-    profile_id = config.ADSPOWER_PROFILE_ID
-    if not profile_id:
-        print("ERROR: ADSPOWER_PROFILE_ID is not set in .env")
-        return 1
+
+    # Discovery uses slot CW_1 infrastructure (auto-rebuild on missing profile,
+    # auto-rebuild on white-screen). Initial profile_id preference:
+    #   1. .env ADSPOWER_PROFILE_ID (legacy single-profile var)
+    #   2. .env ADSP_CW_1_PROFILE_ID (slot CW_1)
+    #   3. None — _start_browser_with_rebuild will ensure_slot_profile()
+    profile_id = (
+        config.ADSPOWER_PROFILE_ID
+        or getattr(config, "ADSP_CW_1_PROFILE_ID", "")
+        or None
+    )
+    slot_id = DISCOVERY_SLOT
 
     parsed = urlparse(args.category_url)
     slug_match = re.search(r"/b/([^/?]+)", parsed.path)
@@ -359,8 +468,8 @@ def main() -> int:
     base_name = f"{ts}_{slug}"
 
     print(f"=== Discover: {args.category_url} ===")
-    print(f"=== Profile: {profile_id}  max_pages={args.max_pages}  "
-          f"price=[{args.price_min},{args.price_max}] ===\n")
+    print(f"=== Slot: {slot_id}  Initial profile: {profile_id or '(auto-provision)'}  "
+          f"max_pages={args.max_pages}  price=[{args.price_min},{args.price_max}] ===\n")
 
     crawl_result = asyncio.run(crawl_category(
         args.category_url,
@@ -369,6 +478,7 @@ def main() -> int:
         args.price_max,
         args.delay_seconds,
         profile_id,
+        slot_id=slot_id,
     ))
 
     dedupe_result = dedupe_and_filter(
