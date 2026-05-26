@@ -272,6 +272,72 @@ def _build_product_url(hit: dict) -> str | None:
 # Core: Fetch category products from Algolia
 # ─────────────────────────────────────────────────────────
 
+def _query_algolia(cat_path: str, *, page: int = 0, hpp: int = HITS_PER_PAGE) -> dict:
+    """Low-level Algolia query. Returns the raw response dict."""
+    payload = {
+        "params": (
+            f"hitsPerPage={hpp}"
+            f"&page={page}"
+            f'&filters=custom_category_names:"{cat_path}"'
+        )
+    }
+    resp = requests.post(ALGOLIA_URL, json=payload, headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _get_sub_categories(parent_path: str) -> list[str]:
+    """Get direct child category paths under *parent_path*."""
+    payload = {
+        "params": (
+            'hitsPerPage=0'
+            '&facets=["custom_category_names"]'
+            f'&filters=custom_category_names:"{parent_path}"'
+        )
+    }
+    try:
+        resp = requests.post(ALGOLIA_URL, json=payload, headers=HEADERS, timeout=15)
+        cats = resp.json().get("facets", {}).get("custom_category_names", {})
+    except Exception:
+        return []
+
+    parent_depth = parent_path.count(">")
+    children = [
+        c for c in cats
+        if c.startswith(parent_path + " > ") and c.count(">") == parent_depth + 1
+    ]
+    return sorted(children)
+
+
+def _fetch_single_path(cat_path: str, *, delay: float, label: str = "") -> list[dict]:
+    """Fetch up to 1000 products for a single category path."""
+    prefix = f"  [{label}] " if label else "  "
+    all_hits: list[dict] = []
+    page = 0
+
+    while True:
+        try:
+            data = _query_algolia(cat_path, page=page)
+        except Exception as exc:
+            print(f"{prefix}ERROR on page {page}: {exc}")
+            break
+
+        hits = data.get("hits", [])
+        total = data.get("nbHits", 0)
+        nb_pages = data.get("nbPages", 0)
+
+        all_hits.extend(hits)
+        print(f"{prefix}Page {page + 1}/{nb_pages}: {len(hits)} products (total: {total})")
+
+        if not hits or page + 1 >= nb_pages:
+            break
+        page += 1
+        if delay > 0:
+            time.sleep(delay)
+
+    return all_hits
+
+
 def fetch_category(
     category_url: str,
     *,
@@ -280,50 +346,63 @@ def fetch_category(
 ) -> list[dict]:
     """Fetch all products from a PetSmart category via Algolia.
 
-    Returns list of raw Algolia hit dicts.
+    If the category has >1000 products (Algolia hard limit), it
+    automatically splits into sub-categories and merges results
+    with deduplication by product id.
     """
     cat_path = resolve_category_path(category_url)
     print(f"Category: {cat_path}")
 
+    # Probe total count
+    try:
+        probe = _query_algolia(cat_path, hpp=0)
+        total = probe.get("nbHits", 0)
+    except Exception as exc:
+        print(f"  ERROR probing category: {exc}")
+        return []
+
+    print(f"  Total products in category: {total}")
+
+    if total <= 1000:
+        # Simple path: fits in one batch
+        return _fetch_single_path(cat_path, delay=delay)
+
+    # Over 1000 — split into sub-categories
+    print(f"  Exceeds 1000 limit. Splitting into sub-categories...")
+    sub_cats = _get_sub_categories(cat_path)
+
+    if not sub_cats:
+        print(f"  WARNING: No sub-categories found. Will only get first 1000.")
+        return _fetch_single_path(cat_path, delay=delay)
+
+    print(f"  Found {len(sub_cats)} sub-categories:")
+    for sc in sub_cats:
+        print(f"    - {sc}")
+
+    seen_ids: set[int] = set()
     all_hits: list[dict] = []
-    page = 0
 
-    while True:
-        if max_pages is not None and page >= max_pages:
-            print(f"  Reached max-pages limit ({max_pages}).")
-            break
+    for i, sc in enumerate(sub_cats, 1):
+        label = f"{i}/{len(sub_cats)} {sc.split(' > ')[-1]}"
+        hits = _fetch_single_path(sc, delay=delay, label=label)
 
-        payload = {
-            "params": (
-                f"hitsPerPage={HITS_PER_PAGE}"
-                f"&page={page}"
-                f'&filters=custom_category_names:"{cat_path}"'
-            )
-        }
+        # Dedup by product id
+        new_hits = []
+        for h in hits:
+            pid = h.get("id")
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                new_hits.append(h)
+        all_hits.extend(new_hits)
 
-        try:
-            resp = requests.post(ALGOLIA_URL, json=payload, headers=HEADERS, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as exc:
-            print(f"  ERROR on page {page}: {exc}")
-            break
+        dupes = len(hits) - len(new_hits)
+        if dupes:
+            print(f"  [{label}] {dupes} duplicates removed")
 
-        hits = data.get("hits", [])
-        total = data.get("nbHits", 0)
-        nb_pages = data.get("nbPages", 0)
-
-        all_hits.extend(hits)
-        print(f"  Page {page + 1}/{nb_pages}: {len(hits)} products (total: {total})")
-
-        if not hits or page + 1 >= nb_pages:
-            break
-
-        page += 1
         if delay > 0:
             time.sleep(delay)
 
-    print(f"  Fetched {len(all_hits)} products total.")
+    print(f"  Fetched {len(all_hits)} unique products total.")
     return all_hits
 
 
