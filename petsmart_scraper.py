@@ -338,6 +338,110 @@ def _fetch_single_path(cat_path: str, *, delay: float, label: str = "") -> list[
     return all_hits
 
 
+def _fetch_by_brand_split(cat_path: str, *, delay: float) -> list[dict]:
+    """Split a >1000 category by brand facet to fetch all products."""
+    # Get brands in this category
+    payload = {
+        "params": (
+            'hitsPerPage=0'
+            '&facets=["brand"]'
+            f'&filters=custom_category_names:"{cat_path}"'
+        )
+    }
+    try:
+        resp = requests.post(ALGOLIA_URL, json=payload, headers=HEADERS, timeout=15)
+        brands = resp.json().get("facets", {}).get("brand", {})
+    except Exception:
+        brands = {}
+
+    if not brands:
+        print(f"  WARNING: No brands found either. Will only get first 1000.")
+        return _fetch_single_path(cat_path, delay=delay)
+
+    # Sort brands by count descending
+    sorted_brands = sorted(brands.items(), key=lambda x: -x[1])
+    print(f"  Found {len(sorted_brands)} brands to iterate.")
+
+    seen_ids: set[int] = set()
+    all_hits: list[dict] = []
+
+    for i, (brand, count) in enumerate(sorted_brands, 1):
+        # Query with brand filter
+        brand_escaped = brand.replace('"', '\\"')
+        filter_str = f'custom_category_names:"{cat_path}" AND brand:"{brand_escaped}"'
+        payload = {
+            "params": f"hitsPerPage={HITS_PER_PAGE}&page=0&filters={filter_str}"
+        }
+        try:
+            resp = requests.post(ALGOLIA_URL, json=payload, headers=HEADERS, timeout=30)
+            data = resp.json()
+            hits = data.get("hits", [])
+        except Exception as exc:
+            print(f"  [{i}/{len(sorted_brands)} {brand}] ERROR: {exc}")
+            continue
+
+        new_count = 0
+        for h in hits:
+            pid = h.get("id")
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                all_hits.append(h)
+                new_count += 1
+
+        if i <= 5 or i == len(sorted_brands):
+            print(f"  [{i}/{len(sorted_brands)}] {brand}: {len(hits)} hits, {new_count} new")
+
+        if delay > 0:
+            time.sleep(delay)
+
+    print(f"  Fetched {len(all_hits)} unique products via brand split.")
+    return all_hits
+
+
+def _collect_with_dedup(
+    paths: list[str], *, delay: float, seen_ids: set[int], all_hits: list[dict],
+    parent_cat: str,
+) -> None:
+    """Fetch products from multiple paths, dedup, and handle >1000 sub-cats."""
+    for i, sc in enumerate(paths, 1):
+        label = f"{i}/{len(paths)} {sc.split(' > ')[-1]}"
+
+        # Probe this sub-cat
+        try:
+            probe = _query_algolia(sc, hpp=0)
+            sc_total = probe.get("nbHits", 0)
+        except Exception:
+            sc_total = 0
+
+        if sc_total > 1000:
+            # This sub-cat itself exceeds 1000 — try deeper split
+            deeper = _get_sub_categories(sc)
+            if deeper:
+                print(f"  [{label}] {sc_total} products — splitting further into {len(deeper)} sub-sub-categories")
+                _collect_with_dedup(deeper, delay=delay, seen_ids=seen_ids,
+                                    all_hits=all_hits, parent_cat=sc)
+                continue
+            else:
+                print(f"  [{label}] {sc_total} products — no deeper split, using brand split")
+                hits = _fetch_by_brand_split(sc, delay=delay)
+        else:
+            hits = _fetch_single_path(sc, delay=delay, label=label)
+
+        new_hits = []
+        for h in hits:
+            pid = h.get("id")
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                new_hits.append(h)
+        all_hits.extend(new_hits)
+
+        dupes = len(hits) - len(new_hits)
+        if dupes:
+            print(f"  [{label}] {dupes} duplicates removed")
+
+        if delay > 0:
+            time.sleep(delay)
+
 def fetch_category(
     category_url: str,
     *,
@@ -372,8 +476,9 @@ def fetch_category(
     sub_cats = _get_sub_categories(cat_path)
 
     if not sub_cats:
-        print(f"  WARNING: No sub-categories found. Will only get first 1000.")
-        return _fetch_single_path(cat_path, delay=delay)
+        # Fallback: split by brand
+        print(f"  No sub-categories found. Splitting by brand instead...")
+        return _fetch_by_brand_split(cat_path, delay=delay)
 
     print(f"  Found {len(sub_cats)} sub-categories:")
     for sc in sub_cats:
@@ -381,26 +486,8 @@ def fetch_category(
 
     seen_ids: set[int] = set()
     all_hits: list[dict] = []
-
-    for i, sc in enumerate(sub_cats, 1):
-        label = f"{i}/{len(sub_cats)} {sc.split(' > ')[-1]}"
-        hits = _fetch_single_path(sc, delay=delay, label=label)
-
-        # Dedup by product id
-        new_hits = []
-        for h in hits:
-            pid = h.get("id")
-            if pid not in seen_ids:
-                seen_ids.add(pid)
-                new_hits.append(h)
-        all_hits.extend(new_hits)
-
-        dupes = len(hits) - len(new_hits)
-        if dupes:
-            print(f"  [{label}] {dupes} duplicates removed")
-
-        if delay > 0:
-            time.sleep(delay)
+    _collect_with_dedup(sub_cats, delay=delay, seen_ids=seen_ids,
+                        all_hits=all_hits, parent_cat=cat_path)
 
     print(f"  Fetched {len(all_hits)} unique products total.")
     return all_hits
