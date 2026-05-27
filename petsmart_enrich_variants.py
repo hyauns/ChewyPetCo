@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -161,13 +162,18 @@ def fetch_product_variants(product: dict, session: requests.Session) -> list[dic
     url = build_pdp_url(product)
     if not url:
         return None
-    try:
-        resp = session.get(url, headers=HEADERS, timeout=20)
-        if resp.status_code != 200:
+    for attempt in range(2):
+        try:
+            resp = session.get(url, headers=HEADERS, timeout=10)
+            if resp.status_code != 200:
+                return None
+            return extract_variants(resp.text)
+        except requests.exceptions.Timeout:
+            if attempt == 0:
+                continue  # retry once
             return None
-        return extract_variants(resp.text)
-    except Exception:
-        return None
+        except Exception:
+            return None
 
 
 # ─────────────────────────────────────────────────────────
@@ -180,15 +186,12 @@ def enrich_products(
     workers: int = 3,
     delay: float = 0.2,
 ) -> tuple[list[dict], int, int]:
-    """Enrich products with variant pricing.
+    """Enrich products with variant pricing using ThreadPoolExecutor.
 
     Returns (enriched_products, success_count, skip_count).
     """
     total = len(products)
-    enriched = 0
-    skipped = 0
-    session = requests.Session()
-
+    
     # Group by master_product_id to avoid duplicate PDP fetches
     master_groups: dict[int, list[int]] = {}
     for i, p in enumerate(products):
@@ -196,31 +199,108 @@ def enrich_products(
         if mid:
             master_groups.setdefault(mid, []).append(i)
 
-    unique_masters = len(master_groups)
-    print(f"  {total} products, {unique_masters} unique master products to fetch")
-
-    # Process each unique master product
-    processed = 0
+    # Filter out groups that are already enriched
+    groups_to_fetch = []
+    already_enriched_count = 0
+    
     for mid, indices in master_groups.items():
+        # Check if any product in this group lacks variants
+        needs_fetch = False
+        for idx in indices:
+            p = products[idx]
+            if "variants" not in p or not p["variants"]:
+                needs_fetch = True
+                break
+        if needs_fetch:
+            groups_to_fetch.append((mid, indices))
+        else:
+            already_enriched_count += len(indices)
+
+    unique_masters = len(master_groups)
+    to_fetch_masters = len(groups_to_fetch)
+    
+    print(f"  Total products: {total}")
+    print(f"  Unique master products: {unique_masters}")
+    print(f"  Already enriched products: {already_enriched_count} (skipped)")
+    print(f"  Unique master products to fetch: {to_fetch_masters}")
+    sys.stdout.flush()
+
+    if to_fetch_masters == 0:
+        return products, 0, 0
+
+    enriched = 0
+    skipped = 0
+    processed = 0
+    start = time.time()
+    
+    # Thread-local storage for sessions to avoid sharing session among concurrent requests
+    thread_local = threading.local()
+
+    def get_session():
+        if not hasattr(thread_local, "session"):
+            thread_local.session = requests.Session()
+        return thread_local.session
+
+    def worker_task(group_data):
+        mid, indices = group_data
         # Use first product in group as representative
         rep = products[indices[0]]
+        session = get_session()
         variants = fetch_product_variants(rep, session)
-
-        if variants:
-            # Apply variants to all products with same master_product_id
-            for idx in indices:
-                products[idx]["variants"] = variants
-            enriched += len(indices)
-        else:
-            skipped += len(indices)
-
-        processed += 1
-        if processed % 50 == 0 or processed == unique_masters:
-            pct = processed / unique_masters * 100
-            print(f"  Progress: {processed}/{unique_masters} ({pct:.0f}%) — {enriched} enriched, {skipped} skipped")
-
         if delay > 0:
             time.sleep(delay)
+        return mid, indices, variants
+
+    # Run ThreadPoolExecutor if workers > 1
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(worker_task, group) for group in groups_to_fetch]
+            
+            for future in as_completed(futures):
+                try:
+                    mid, indices, variants = future.result()
+                    if variants:
+                        for idx in indices:
+                            products[idx]["variants"] = variants
+                        enriched += len(indices)
+                    else:
+                        skipped += len(indices)
+                except Exception as e:
+                    # If an unexpected error happens in worker
+                    pass
+                
+                processed += 1
+                if processed % 20 == 0 or processed == to_fetch_masters:
+                    elapsed = time.time() - start
+                    rate = processed / elapsed if elapsed > 0 else 0
+                    eta = (to_fetch_masters - processed) / rate if rate > 0 else 0
+                    pct = processed / to_fetch_masters * 100
+                    print(f"  Progress: {processed}/{to_fetch_masters} ({pct:.0f}%) — {enriched} enriched, {skipped} skipped | {rate:.1f}/s ETA {eta:.0f}s")
+                    sys.stdout.flush()
+    else:
+        # Sequential processing
+        session = get_session()
+        for mid, indices in groups_to_fetch:
+            rep = products[indices[0]]
+            variants = fetch_product_variants(rep, session)
+            if variants:
+                for idx in indices:
+                    products[idx]["variants"] = variants
+                enriched += len(indices)
+            else:
+                skipped += len(indices)
+            
+            if delay > 0:
+                time.sleep(delay)
+
+            processed += 1
+            if processed % 20 == 0 or processed == to_fetch_masters:
+                elapsed = time.time() - start
+                rate = processed / elapsed if elapsed > 0 else 0
+                eta = (to_fetch_masters - processed) / rate if rate > 0 else 0
+                pct = processed / to_fetch_masters * 100
+                print(f"  Progress: {processed}/{to_fetch_masters} ({pct:.0f}%) — {enriched} enriched, {skipped} skipped | {rate:.1f}/s ETA {eta:.0f}s")
+                sys.stdout.flush()
 
     return products, enriched, skipped
 
