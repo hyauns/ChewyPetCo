@@ -68,6 +68,29 @@ EXTRA_MF_KEYS = [CATEGORY_KEY_PATH, CATEGORY_KEY_LEAF, CATEGORY_KEY_SOURCE]
 
 # Other text-ish keys are emitted as single_line_text_field.
 
+# -- Rx / vet-restricted title patterns (mirror tools/filter_rx_products.py) ---
+RX_PATTERNS = [
+    re.compile(r"\bcompounded\b", re.I),
+    re.compile(r"\bcapsules?\b", re.I),
+    re.compile(r"\btablets?\b", re.I),
+    re.compile(r"\binjections?\b", re.I),
+    re.compile(r"\binjectables?\b", re.I),
+    re.compile(r"\bophthalmic\b", re.I),
+    re.compile(r"\botic\b", re.I),
+    re.compile(r"\bprescription\b", re.I),
+    re.compile(r"\boral\s+suspension\b", re.I),
+    re.compile(r"\boral\s+solution\b", re.I),
+    re.compile(r"\binsulin\b", re.I),
+    re.compile(r"\bsuppositor(y|ies)\b", re.I),
+    re.compile(r"\brx\b", re.I),
+]
+
+
+def is_rx_title(title: str) -> bool:
+    """True if the product title looks like an Rx / vet-restricted item."""
+    t = title or ""
+    return any(pat.search(t) for pat in RX_PATTERNS)
+
 
 def shopify_metafield_type(key: str) -> str:
     if key in JSON_KEYS:
@@ -430,9 +453,24 @@ def export_csv(
     in_stock_qty: int,
     include_blocked: bool,
     normalized_dir: str = "output/normalized_products",
+    min_variant_price: float | None = None,
+    exclude_rx: bool = False,
 ) -> dict:
     stats = Counter()
     pat_index = load_pat_index(normalized_dir)
+
+    _price_re = re.compile(r"[\d,]+\.?\d*")
+
+    def _parse_price(s) -> float | None:
+        if not s:
+            return None
+        m = _price_re.search(str(s).replace(",", ""))
+        if not m:
+            return None
+        try:
+            return float(m.group(0))
+        except ValueError:
+            return None
 
     # 1. Load all grouped wrappers
     all_grouped: list[dict] = []
@@ -441,6 +479,39 @@ def export_csv(
             all_grouped.append(json.load(open(f, "r", encoding="utf-8")))
         except Exception:
             stats["file_load_error"] += 1
+
+    # 1a. Optional Rx / vet-restricted exclusion (title-based, BEFORE dedupe).
+    if exclude_rx:
+        dropped_rx = 0
+        for wrapper in all_grouped:
+            kept_products = []
+            for p in wrapper.get("products") or []:
+                if is_rx_title(p.get("title") or ""):
+                    dropped_rx += 1
+                    continue
+                kept_products.append(p)
+            wrapper["products"] = kept_products
+        stats["products_dropped_rx"] = dropped_rx
+
+    # 1b. Optional variant-level price filter (applied BEFORE dedupe so that
+    # duplicate-detection doesn't tie-break on variants we're about to drop).
+    if min_variant_price is not None:
+        dropped_variants = 0
+        emptied_products = 0
+        for wrapper in all_grouped:
+            for p in wrapper.get("products") or []:
+                kept_variants = []
+                for v in p.get("variants") or []:
+                    price = _parse_price(v.get("price"))
+                    if price is None or price < min_variant_price:
+                        dropped_variants += 1
+                        continue
+                    kept_variants.append(v)
+                if not kept_variants and (p.get("variants") or []):
+                    emptied_products += 1
+                p["variants"] = kept_variants
+        stats[f"variants_dropped_below_{int(min_variant_price)}"] = dropped_variants
+        stats[f"products_emptied_below_{int(min_variant_price)}"] = emptied_products
 
     # 2. Dedupe across landing pages
     dedupe_res = dedupe_products_across_pages(all_grouped)
@@ -528,6 +599,7 @@ def export_csv(
             mp[CATEGORY_KEY_LEAF] = res["path"][-1]
         mp[CATEGORY_KEY_SOURCE] = res["source"]
 
+    stats["category_normalized_path"] = cat_source_count.get("normalized_category_path", 0)
     stats["category_breadcrumb"] = cat_source_count.get("breadcrumb", 0)
     stats["category_title_regex"] = cat_source_count.get("title_regex", 0)
 
@@ -667,6 +739,10 @@ def main() -> None:
     ap.add_argument("--pids-file", help="Path to a text file with one source product_id per line. Only files whose pid is in this set are exported.")
     ap.add_argument("--normalized-dir", default="output/normalized_products",
                     help="Directory containing normalized chewy_*.json files (used to enrich resolver with category_path); searched recursively.")
+    ap.add_argument("--min-variant-price", type=float, default=None,
+                    help="Drop any variant whose price is below this USD threshold. Products that end up with zero variants are skipped.")
+    ap.add_argument("--exclude-rx", action="store_true",
+                    help="Drop Rx / vet-restricted products by title regex (compounded/capsule/tablet/injection/Rx...), mirroring tools/filter_rx_products.py.")
     args = ap.parse_args()
 
     files = sorted(
@@ -700,6 +776,8 @@ def main() -> None:
         args.in_stock_qty,
         args.include_blocked,
         args.normalized_dir,
+        args.min_variant_price,
+        args.exclude_rx,
     )
 
     print(f"Read {len(files)} grouped files")
